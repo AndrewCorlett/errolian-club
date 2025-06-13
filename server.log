@@ -1,0 +1,12 @@
+
+> errolian-club@0.0.0 dev
+> vite --host --port 3000
+
+7:40:57 AM [vite] (client) Re-optimizing dependencies because lockfile has changed
+
+  VITE v6.3.5  ready in 226 ms
+
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://10.255.255.254:3000/
+  ➜  Network: http://172.28.90.86:3000/
+7:41:46 AM [vite] (client) hmr update /src/components/layout/BottomNavigation.tsx, /src/index.css
