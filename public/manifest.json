@@ -1,0 +1,35 @@
+{
+  "name": "Errolian Club",
+  "short_name": "Errolian Club", 
+  "description": "Your adventure planning hub",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "32x32",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["travel", "social", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "description": "View club events",
+      "url": "/calendar",
+      "icons": [{ "src": "/vite.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Split-Pay",
+      "short_name": "Split-Pay", 
+      "description": "Manage shared expenses",
+      "url": "/split-pay",
+      "icons": [{ "src": "/vite.svg", "sizes": "96x96" }]
+    }
+  ]
+}
