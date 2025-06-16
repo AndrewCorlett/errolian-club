@@ -75,13 +75,13 @@ export default function MobileSelect({
         onClick={handleToggle}
         disabled={disabled}
         className={cn(
-          'flex h-11 w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2',
+          'flex h-11 w-full items-center justify-between rounded-xl border bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 px-4 py-3 text-sm transition-all duration-200',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900',
           'disabled:cursor-not-allowed disabled:opacity-50',
           error 
             ? 'border-red-300 focus:border-red-500 hover:border-red-400' 
             : 'border-gray-300 focus:border-blue-500 hover:border-gray-400',
-          isOpen && 'border-blue-500 ring-2 ring-blue-500 ring-offset-2'
+          isOpen && 'border-blue-500 ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-gray-900'
         )}
       >
         <span className="flex items-center gap-2 text-left">
@@ -95,7 +95,7 @@ export default function MobileSelect({
         
         <svg
           className={cn(
-            'h-5 w-5 text-gray-400 transition-transform duration-200',
+            'h-5 w-5 text-gray-400 dark:text-gray-300 transition-transform duration-200',
             isOpen && 'rotate-180'
           )}
           fill="none"
@@ -114,18 +114,18 @@ export default function MobileSelect({
       {/* Dropdown Content */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 z-50 mt-1 animate-in fade-in-0 zoom-in-95 duration-200">
-          <div className="rounded-xl border border-gray-200 bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5">
             
             {/* Search Input */}
             {options.length > 5 && (
-              <div className="p-3 border-b border-gray-100">
+              <div className="p-3 border-b border-gray-100 dark:border-gray-700">
                 <input
                   ref={searchInputRef}
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search options..."
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             )}
@@ -139,7 +139,7 @@ export default function MobileSelect({
                     onClick={() => handleSelect(option.value)}
                     className={cn(
                       'flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors duration-150',
-                      'hover:bg-gray-50 focus:bg-gray-50 focus:outline-none',
+                      'hover:bg-gray-50 dark:hover:bg-gray-700 focus:bg-gray-50 dark:focus:bg-gray-700 focus:outline-none',
                       'first:rounded-t-xl last:rounded-b-xl',
                       option.value === value && 'bg-blue-50 text-blue-600'
                     )}

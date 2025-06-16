@@ -15,16 +15,16 @@ export default function LoadingSkeleton({
   
   if (variant === 'card') {
     return (
-      <div className={cn("p-6 bg-white rounded-xl border border-gray-200", className)}>
+      <div className={cn("p-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700", className)}>
         <div className="space-y-4">
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
           <div className="space-y-2">
-            <div className="h-3 bg-gray-200 rounded"></div>
-            <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="h-8 w-8 bg-gray-200 rounded-full"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-8 w-8 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+            <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
           </div>
         </div>
       </div>
@@ -33,13 +33,13 @@ export default function LoadingSkeleton({
 
   if (variant === 'circle') {
     return (
-      <div className={cn(baseClasses, "rounded-full bg-gray-200", className)} />
+      <div className={cn(baseClasses, "rounded-full bg-gray-200 dark:bg-gray-700", className)} />
     )
   }
 
   if (variant === 'rectangle') {
     return (
-      <div className={cn(baseClasses, "bg-gray-200", className)} />
+      <div className={cn(baseClasses, "bg-gray-200 dark:bg-gray-700", className)} />
     )
   }
 
@@ -51,7 +51,7 @@ export default function LoadingSkeleton({
           key={i} 
           className={cn(
             baseClasses, 
-            "h-4 bg-gray-200",
+            "h-4 bg-gray-200 dark:bg-gray-700",
             i === lines - 1 && lines > 1 ? "w-3/4" : "w-full"
           )} 
         />

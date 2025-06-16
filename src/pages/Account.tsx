@@ -76,13 +76,13 @@ export default function Account() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-xl font-bold text-gray-900">Account</h1>
-            <p className="text-sm text-gray-600">Manage your profile and preferences</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Account</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your profile and preferences</p>
           </div>
         </div>
       </div>
@@ -155,7 +155,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{currentUser.name}</p>
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">{currentUser.name}</p>
                     )}
                   </div>
 
@@ -170,7 +170,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{currentUser.email}</p>
+                      <p className="text-gray-900 dark:text-gray-100 font-medium">{currentUser.email}</p>
                     )}
                   </div>
 
@@ -190,7 +190,7 @@ export default function Account() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Member Since
                     </label>
-                    <p className="text-gray-900 font-medium">{memberSinceDate}</p>
+                    <p className="text-gray-900 dark:text-gray-100 font-medium">{memberSinceDate}</p>
                   </div>
                 </div>
               </div>
@@ -239,13 +239,13 @@ export default function Account() {
                 <button
                   onClick={() => setTheme('light')}
                   className={`p-3 rounded-lg border-2 transition-colors ${
-                    !isDark 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                    !isDark
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-white border border-gray-300 rounded"></div>
+                    <div className="w-4 h-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded"></div>
                     <span className="text-sm font-medium">Light</span>
                   </div>
                 </button>
@@ -253,9 +253,9 @@ export default function Account() {
                 <button
                   onClick={() => setTheme('dark')}
                   className={`p-3 rounded-lg border-2 transition-colors ${
-                    isDark 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
+                    isDark
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -266,10 +266,10 @@ export default function Account() {
                 
                 <button
                   onClick={() => setTheme('system')}
-                  className="p-3 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors"
+                  className="p-3 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gradient-to-br from-white to-gray-800 border border-gray-300 rounded"></div>
+                    <div className="w-4 h-4 bg-gradient-to-br from-white to-gray-800 dark:from-gray-700 dark:to-gray-900 border border-gray-300 dark:border-gray-700 rounded"></div>
                     <span className="text-sm font-medium">System</span>
                   </div>
                 </button>
@@ -285,13 +285,13 @@ export default function Account() {
                 {Object.entries(notifications).map(([key, enabled]) => (
                   <div key={key} className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-gray-900 capitalize">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">
                         {key === 'events' ? 'Event Updates' :
                          key === 'expenses' ? 'Expense Notifications' :
                          key === 'documents' ? 'Document Alerts' :
                          'System Notifications'}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
                         {key === 'events' ? 'New events, cancellations, and updates' :
                          key === 'expenses' ? 'Payment requests and settlements' :
                          key === 'documents' ? 'New documents and approvals' :
@@ -301,11 +301,11 @@ export default function Account() {
                     <button
                       onClick={() => setNotifications(prev => ({ ...prev, [key]: !enabled }))}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        enabled ? 'bg-blue-600' : 'bg-gray-200'
+                        enabled ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-200 dark:bg-gray-700'
                       }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-300 transition-transform ${
                           enabled ? 'translate-x-6' : 'translate-x-1'
                         }`}
                       />
@@ -325,8 +325,8 @@ export default function Account() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-900">Change Password</p>
-                <p className="text-xs text-gray-500">Update your account password</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Change Password</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Update your account password</p>
               </div>
               <Button variant="outline" size="sm">
                 Change
@@ -335,8 +335,8 @@ export default function Account() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-900">Two-Factor Authentication</p>
-                <p className="text-xs text-gray-500">Add an extra layer of security</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Two-Factor Authentication</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Add an extra layer of security</p>
               </div>
               <Button variant="outline" size="sm">
                 Enable
@@ -345,8 +345,8 @@ export default function Account() {
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-900">Privacy Settings</p>
-                <p className="text-xs text-gray-500">Control who can see your information</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Privacy Settings</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Control who can see your information</p>
               </div>
               <Button variant="outline" size="sm">
                 Manage
@@ -356,27 +356,27 @@ export default function Account() {
         </Card>
 
         {/* Danger Zone */}
-        <Card className="border-red-200">
+        <Card className="border-red-200 dark:border-red-400">
           <CardHeader>
-            <CardTitle className="text-lg text-red-800">Danger Zone</CardTitle>
+            <CardTitle className="text-lg text-red-800 dark:text-red-400">Danger Zone</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-900">Export Data</p>
-                <p className="text-xs text-red-600">Download all your club data</p>
+                <p className="text-sm font-medium text-red-900 dark:text-red-400">Export Data</p>
+                <p className="text-xs text-red-600 dark:text-red-300">Download all your club data</p>
               </div>
-              <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
+              <Button variant="outline" size="sm" className="border-red-200 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
                 Export
               </Button>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-red-900">Delete Account</p>
-                <p className="text-xs text-red-600">Permanently delete your account and data</p>
+                <p className="text-sm font-medium text-red-900 dark:text-red-400">Delete Account</p>
+                <p className="text-xs text-red-600 dark:text-red-300">Permanently delete your account and data</p>
               </div>
-              <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50">
+              <Button variant="outline" size="sm" className="border-red-200 dark:border-red-400 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
                 Delete
               </Button>
             </div>

@@ -12,12 +12,12 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-xl bg-white text-gray-900 transition-all-smooth",
+      "rounded-xl bg-white text-gray-900 dark:bg-gray-800 dark:text-gray-100 transition-all-smooth",
       {
-        'shadow-sm border border-gray-200/60': variant === 'default',
-        'shadow-lg border border-gray-200/60 hover-lift': variant === 'elevated',
+        'shadow-sm border border-gray-200/60 dark:border-gray-700/60': variant === 'default',
+        'shadow-lg border border-gray-200/60 dark:border-gray-700/60 hover-lift': variant === 'elevated',
         'glass shadow-lg': variant === 'glass',
-        'border-2 border-gray-200 bg-white': variant === 'outlined',
+        'border-2 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800': variant === 'outlined',
         'hover-lift cursor-pointer': hover,
       },
       className

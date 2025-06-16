@@ -64,16 +64,16 @@ export default function IOSHeader({
   }, [onScroll])
 
   return (
-    <header 
+    <header
       className={`
-        fixed top-0 left-0 right-0 z-40 transition-all duration-300
-        ${isScrolled 
-          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm' 
-          : 'bg-white/80 backdrop-blur-md'
-        }
-        safe-area-top
-        ${className}
-      `}
+          fixed top-0 left-0 right-0 z-40 transition-all duration-300
+          ${isScrolled
+            ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm'
+            : 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-md'
+          }
+          safe-area-top
+          ${className}
+        `}
     >
       <div className="px-4 pt-3 pb-2">
         {/* Navigation Row */}
@@ -95,11 +95,11 @@ export default function IOSHeader({
 
         {/* Title Section */}
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-base text-gray-600 mt-1 leading-relaxed">
+            <p className="text-base text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
               {subtitle}
             </p>
           )}
@@ -108,7 +108,7 @@ export default function IOSHeader({
 
       {/* Subtle inner shadow when scrolled */}
       {isScrolled && (
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
       )}
     </header>
   )

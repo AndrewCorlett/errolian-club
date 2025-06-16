@@ -54,7 +54,7 @@ export default function BottomNavigation() {
   const location = useLocation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 z-50 safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-t border-gray-200/50 dark:border-gray-700/50 z-50 safe-area-bottom">
       <div className="flex justify-around px-2 py-1">
         {navItems.map((item, index) => {
           const isActive = location.pathname === item.href
@@ -63,14 +63,14 @@ export default function BottomNavigation() {
               key={item.name}
               to={item.href}
               className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all-smooth relative stagger-item hover-lift ${
-                isActive 
-                  ? 'text-blue-600' 
-                  : 'text-gray-500 hover:text-gray-900'
+                isActive
+                  ? 'text-blue-600'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               {isActive && (
-                <div className="absolute inset-0 bg-blue-50 rounded-xl animate-scale-in" />
+                <div className="absolute inset-0 bg-blue-50 dark:bg-blue-900 rounded-xl animate-scale-in" />
               )}
               <div className="relative z-10 flex flex-col items-center">
                 <IconComponent icon={item.icon} isActive={isActive} />
