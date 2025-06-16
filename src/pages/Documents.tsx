@@ -152,7 +152,7 @@ export default function Documents() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-gray-100 border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-between mb-4">

@@ -78,7 +78,7 @@ export default function Account() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-gray-100 border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-xl font-bold text-gray-900">Account</h1>

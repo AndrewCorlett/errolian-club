@@ -67,9 +67,9 @@ export default function IOSHeader({
     <header 
       className={`
         fixed top-0 left-0 right-0 z-40 transition-all duration-300
-        ${isScrolled 
-          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm' 
-          : 'bg-white/80 backdrop-blur-md'
+        ${isScrolled
+          ? 'bg-gray-100/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm'
+          : 'bg-gray-100/80 backdrop-blur-md'
         }
         safe-area-top
         ${className}

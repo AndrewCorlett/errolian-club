@@ -54,7 +54,7 @@ export default function BottomNavigation() {
   const location = useLocation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 z-50 safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-100/95 backdrop-blur-xl border-t border-gray-200/50 z-50 safe-area-bottom">
       <div className="flex justify-around px-2 py-1">
         {navItems.map((item, index) => {
           const isActive = location.pathname === item.href
