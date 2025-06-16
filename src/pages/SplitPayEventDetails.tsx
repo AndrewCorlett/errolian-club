@@ -27,7 +27,7 @@ export default function SplitPayEventDetails() {
   
   if (!event) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen pb-24 bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Not Found</h2>
           <Button onClick={() => navigate('/split-pay')}>
@@ -51,7 +51,7 @@ export default function SplitPayEventDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-yellow-50">
+    <div className="min-h-screen pb-24 bg-gradient-to-br from-orange-50 via-white to-yellow-50">
       {/* Fixed Header */}
       <FixedHeader 
         title={event.title}

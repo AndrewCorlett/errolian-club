@@ -23,7 +23,7 @@ export default function Home() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20 flex items-center justify-center">
+      <div className="min-h-screen pb-24 bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md mx-4">
           <CardContent className="text-center py-8">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Welcome to Errolian Club</h2>
@@ -49,7 +49,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen pb-24 bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* iOS Header */}
       <IOSHeader 
         title={getGreeting()} 
