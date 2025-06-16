@@ -27,42 +27,46 @@ export interface Event {
   isPublic: boolean
 }
 
-export type ItineraryType = 'flight' | 'travel' | 'accommodation' | 'activity' | 'meal' | 'other'
+export type ItineraryType = 'travel' | 'accommodation' | 'activity' | 'meal' | 'other'
+export type DifficultyLevel = 'easy' | 'moderate' | 'challenging' | 'extreme'
 
 export interface ItineraryItem {
   id: string
   eventId: string
   type: ItineraryType
   title: string
-  description?: string
-  startTime: Date
-  endTime?: Date
-  location?: string | LocationData
-  cost?: number
-  notes?: string
+  description: string
+  startTime: string
+  endTime: string
+  location: string
+  cost: number
+  notes: string
   order: number
-  // Flight-specific fields
-  flightNumber?: string
-  departureAirport?: string
-  arrivalAirport?: string
-  airline?: string
-  // Accommodation-specific fields
-  hotelName?: string
-  roomType?: string
-  checkIn?: Date
-  checkOut?: Date
+  createdAt: Date
+  updatedAt: Date
+  
   // Travel-specific fields
-  transportType?: string
+  travelMethod?: string
   departureLocation?: string
   arrivalLocation?: string
+  confirmation?: string
+  
+  // Accommodation-specific fields
+  accommodationType?: string
+  address?: string
+  checkIn?: string
+  checkOut?: string
+  
   // Activity-specific fields
+  category?: string
   duration?: number
-  difficultyLevel?: string
-  equipmentProvided?: boolean
-  // Payment info
-  paidBy?: string
-  needsPayment?: boolean
-  splitParticipants?: string[]
+  difficulty?: DifficultyLevel
+  requirements?: string
+  
+  // Meal-specific fields
+  mealType?: string
+  cuisine?: string
+  reservation?: string
 }
 
 export function getEventStatusColor(status: EventStatus): string {

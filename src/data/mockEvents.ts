@@ -22,12 +22,14 @@ export const mockEvents: Event[] = [
         type: 'travel',
         title: 'Departure from Sydney Central',
         description: 'Meet at Platform 1 for train departure',
-        startTime: new Date('2025-01-20T09:00:00'),
-        endTime: new Date('2025-01-20T11:30:00'),
+        startTime: '09:00',
+        endTime: '11:30',
         location: 'Central Station, Sydney',
         cost: 25,
         notes: 'Bring train ticket and day pack',
-        order: 1
+        order: 1,
+        createdAt: new Date('2024-06-01T10:00:00'),
+        updatedAt: new Date('2024-06-15T14:30:00')
       },
       {
         id: 'i2',
@@ -35,11 +37,14 @@ export const mockEvents: Event[] = [
         type: 'activity',
         title: 'Three Sisters Lookout',
         description: 'Photo stop and short walk around the famous Three Sisters rock formation',
-        startTime: new Date('2025-01-20T12:00:00'),
-        endTime: new Date('2025-01-20T13:00:00'),
+        startTime: '12:00',
+        endTime: '13:00',
         location: 'Echo Point, Katoomba',
         cost: 0,
-        order: 2
+        notes: 'Don\'t forget your camera for stunning views',
+        order: 2,
+        createdAt: new Date('2024-06-01T10:00:00'),
+        updatedAt: new Date('2024-06-15T14:30:00')
       },
       {
         id: 'i3',
@@ -47,11 +52,14 @@ export const mockEvents: Event[] = [
         type: 'meal',
         title: 'Lunch at Mountain Cafe',
         description: 'Group lunch with mountain views',
-        startTime: new Date('2025-01-20T13:00:00'),
-        endTime: new Date('2025-01-20T14:00:00'),
+        startTime: '13:00',
+        endTime: '14:00',
         location: 'Katoomba',
         cost: 18,
-        order: 3
+        notes: 'Vegetarian and dietary options available',
+        order: 3,
+        createdAt: new Date('2024-06-01T10:00:00'),
+        updatedAt: new Date('2024-06-15T14:30:00')
       }
     ],
     estimatedCost: 180,
@@ -114,11 +122,14 @@ export const mockEvents: Event[] = [
         type: 'activity',
         title: 'Safety Briefing & Equipment Check',
         description: 'Introduction to climbing safety and equipment fitting',
-        startTime: new Date('2025-01-18T10:00:00'),
-        endTime: new Date('2025-01-18T10:30:00'),
+        startTime: '10:00',
+        endTime: '10:30',
         location: 'Climbing Gym - Training Room',
         cost: 0,
-        order: 1
+        notes: 'Mandatory attendance for all participants',
+        order: 1,
+        createdAt: new Date('2024-06-10T11:00:00'),
+        updatedAt: new Date('2024-06-25T13:20:00')
       },
       {
         id: 'i5',
@@ -126,11 +137,14 @@ export const mockEvents: Event[] = [
         type: 'activity',
         title: 'Basic Climbing Techniques',
         description: 'Learn basic holds, body positioning, and movement',
-        startTime: new Date('2025-01-18T10:30:00'),
-        endTime: new Date('2025-01-18T12:00:00'),
+        startTime: '10:30',
+        endTime: '12:00',
         location: 'Climbing Gym - Beginner Wall',
         cost: 0,
-        order: 2
+        notes: 'Comfortable athletic wear recommended',
+        order: 2,
+        createdAt: new Date('2024-06-10T11:00:00'),
+        updatedAt: new Date('2024-06-25T13:20:00')
       },
       {
         id: 'i6',
@@ -138,11 +152,14 @@ export const mockEvents: Event[] = [
         type: 'meal',
         title: 'Lunch Break',
         description: 'Catered lunch and group discussion',
-        startTime: new Date('2025-01-18T12:00:00'),
-        endTime: new Date('2025-01-18T13:00:00'),
+        startTime: '12:00',
+        endTime: '13:00',
         location: 'Climbing Gym - Cafe',
         cost: 15,
-        order: 3
+        notes: 'Please inform us of any dietary restrictions',
+        order: 3,
+        createdAt: new Date('2024-06-10T11:00:00'),
+        updatedAt: new Date('2024-06-25T13:20:00')
       }
     ],
     estimatedCost: 85,
@@ -193,11 +210,14 @@ export const mockItinerary: ItineraryItem[] = [
     type: 'travel',
     title: 'Departure from Sydney',
     description: 'Meet at Central Station, Platform 1',
-    startTime: new Date('2024-07-15T09:00:00'),
+    startTime: '09:00',
+    endTime: '11:30',
     location: 'Central Station, Sydney',
     cost: 25,
     notes: 'Bring train ticket and day pack',
-    order: 1
+    order: 1,
+    createdAt: new Date('2024-06-01T10:00:00'),
+    updatedAt: new Date('2024-06-15T14:30:00')
   },
   {
     id: 'i2',
@@ -205,22 +225,29 @@ export const mockItinerary: ItineraryItem[] = [
     type: 'activity',
     title: 'Three Sisters Lookout',
     description: 'Photo stop and short walk around the famous Three Sisters rock formation',
-    startTime: new Date('2024-07-15T11:30:00'),
-    endTime: new Date('2024-07-15T12:30:00'),
+    startTime: '11:30',
+    endTime: '12:30',
     location: 'Echo Point, Katoomba',
     cost: 0,
-    order: 2
+    notes: 'Perfect photo opportunity, bring your camera',
+    order: 2,
+    createdAt: new Date('2024-06-01T10:00:00'),
+    updatedAt: new Date('2024-06-15T14:30:00')
   },
   {
     id: 'i3',
     eventId: '1',
     type: 'meal',
     title: 'Lunch at Local Cafe',
-    startTime: new Date('2024-07-15T12:30:00'),
-    endTime: new Date('2024-07-15T13:30:00'),
+    description: 'Delicious local cuisine with mountain atmosphere',
+    startTime: '12:30',
+    endTime: '13:30',
     location: 'Katoomba',
     cost: 18,
-    order: 3
+    notes: 'Cash and card accepted',
+    order: 3,
+    createdAt: new Date('2024-06-01T10:00:00'),
+    updatedAt: new Date('2024-06-15T14:30:00')
   },
   {
     id: 'i4',
@@ -228,12 +255,14 @@ export const mockItinerary: ItineraryItem[] = [
     type: 'activity',
     title: 'Wentworth Falls Hike',
     description: 'Moderate 4km return hike to the base of Wentworth Falls',
-    startTime: new Date('2024-07-15T14:00:00'),
-    endTime: new Date('2024-07-15T17:00:00'),
+    startTime: '14:00',
+    endTime: '17:00',
     location: 'Wentworth Falls',
     cost: 0,
     notes: 'Bring plenty of water and wear hiking boots',
-    order: 4
+    order: 4,
+    createdAt: new Date('2024-06-01T10:00:00'),
+    updatedAt: new Date('2024-06-15T14:30:00')
   },
   {
     id: 'i5',
@@ -241,11 +270,14 @@ export const mockItinerary: ItineraryItem[] = [
     type: 'accommodation',
     title: 'Camping Setup',
     description: 'Set up tents at designated camping area',
-    startTime: new Date('2024-07-15T18:00:00'),
-    endTime: new Date('2024-07-15T19:00:00'),
+    startTime: '18:00',
+    endTime: '19:00',
     location: 'Blue Mountains Camping Ground',
     cost: 35,
-    order: 5
+    notes: 'Camping equipment provided, just bring personal items',
+    order: 5,
+    createdAt: new Date('2024-06-01T10:00:00'),
+    updatedAt: new Date('2024-06-15T14:30:00')
   }
 ]
 

@@ -7,13 +7,12 @@ import { useUserStore } from '@/store/userStore'
 import { hasPermission } from '@/types/user'
 import { getUserExpenses } from '@/data/mockExpenses'
 import { getUserEvents } from '@/data/mockEvents'
-
-type ThemeMode = 'light' | 'dark' | 'system'
+import { useDarkMode } from '@/hooks/useDarkMode'
 
 export default function Account() {
   const { currentUser } = useUserStore()
+  const { isDark, setTheme } = useDarkMode()
   const [isEditing, setIsEditing] = useState(false)
-  const [theme, setTheme] = useState<ThemeMode>('system')
   const [notifications, setNotifications] = useState({
     events: true,
     expenses: true,
@@ -27,7 +26,7 @@ export default function Account() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="text-center py-8">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,7 +76,7 @@ export default function Account() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
@@ -231,16 +230,16 @@ export default function Account() {
             <CardTitle className="text-lg">Preferences</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Theme Selection */}
+            {/* Appearance */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Theme
+                Appearance
               </label>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setTheme('light')}
                   className={`p-3 rounded-lg border-2 transition-colors ${
-                    theme === 'light' 
+                    !isDark 
                       ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
@@ -254,7 +253,7 @@ export default function Account() {
                 <button
                   onClick={() => setTheme('dark')}
                   className={`p-3 rounded-lg border-2 transition-colors ${
-                    theme === 'dark' 
+                    isDark 
                       ? 'border-blue-500 bg-blue-50' 
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
@@ -267,11 +266,7 @@ export default function Account() {
                 
                 <button
                   onClick={() => setTheme('system')}
-                  className={`p-3 rounded-lg border-2 transition-colors ${
-                    theme === 'system' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
+                  className="p-3 rounded-lg border-2 border-gray-200 hover:border-gray-300 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-gradient-to-br from-white to-gray-800 border border-gray-300 rounded"></div>

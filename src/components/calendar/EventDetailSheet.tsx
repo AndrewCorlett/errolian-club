@@ -45,8 +45,19 @@ export default function EventDetailSheet({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end">
-      <div className="bg-white w-full h-4/5 rounded-t-xl flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white w-full h-4/5 rounded-t-xl flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Pull Handle */}
+        <div className="flex justify-center py-3 cursor-pointer" onClick={onClose}>
+          <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+        </div>
+
         {/* Header */}
         <div className="flex items-start justify-between p-6 border-b border-gray-200">
           <div className="flex-1 mr-4">

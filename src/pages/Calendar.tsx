@@ -1,188 +1,170 @@
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import FloatingActionButton from '@/components/ui/FloatingActionButton'
-import FixedHeader from '@/components/layout/FixedHeader'
-import CalendarGrid from '@/components/calendar/CalendarGrid'
+import VerticalCalendar from '@/components/calendar/VerticalCalendar'
+import DayViewSheet from '@/components/calendar/DayViewSheet'
+import NewEventSheet from '@/components/calendar/NewEventSheet'
 import CalendarFilters from '@/components/calendar/CalendarFilters'
-import DayTimelineSheet from '@/components/calendar/DayTimelineSheet'
-import EnhancedEventCreateModal from '@/components/calendar/EnhancedEventCreateModal'
 import EventDetailSheet from '@/components/calendar/EventDetailSheet'
-import type { Event } from '@/types/events'
-import { useUserStore } from '@/store/userStore'
+import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
+import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
+import { mockEvents } from '@/data/mockEvents'
+import { portugalGolfTripEvent } from '@/data/portugalGolfTrip'
+import type { Event, ItineraryItem } from '@/types/events'
 
 export default function Calendar() {
-  const { currentUser } = useUserStore()
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [showDayTimeline, setShowDayTimeline] = useState(false)
-  const [showEventCreateModal, setShowEventCreateModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
+  const [showNewEventSheet, setShowNewEventSheet] = useState(false)
+  const [showDayViewSheet, setShowDayViewSheet] = useState(false)
   const [showEventDetail, setShowEventDetail] = useState(false)
-  const [filters, setFilters] = useState({
-    showEvents: true,
-    showAvailability: false,
-    showOfficerEvents: true
+  const [showItineraryDetail, setShowItineraryDetail] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [activeFilters, setActiveFilters] = useState({
+    events: true,
+    availability: false,
+    officers: false
   })
 
-  const handleDateSelect = (date: Date) => {
-    setSelectedDate(date)
-    setShowDayTimeline(true)
-  }
-
-  const handleEventCreate = () => {
-    setShowEventCreateModal(true)
-  }
-
-  const handleDateLongPress = (date: Date) => {
-    setSelectedDate(date)
-    setShowEventCreateModal(true)
-  }
+  // Combine regular events with Portugal golf trip
+  const [allEvents, setAllEvents] = useState<Event[]>([...mockEvents, portugalGolfTripEvent])
 
   const handleEventFormSubmit = (eventData: any) => {
-    // Generate new event ID
     const newEvent: Event = {
       id: `event_${Date.now()}`,
-      title: eventData.title,
-      description: eventData.description,
-      type: eventData.type,
-      status: eventData.status,
-      startDate: eventData.startDate,
-      endDate: eventData.endDate,
-      location: eventData.location || undefined,
-      maxParticipants: eventData.maxParticipants || undefined,
-      currentParticipants: eventData.invitees || (currentUser ? [currentUser.id] : []),
-      createdBy: currentUser?.id || '1',
+      ...eventData,
       createdAt: new Date(),
-      updatedAt: new Date(),
-      itinerary: [],
-      estimatedCost: eventData.estimatedCost || undefined,
-      isPublic: eventData.isPublic
+      updatedAt: new Date()
     }
     
-    // TODO: Save to backend/state management
+    setAllEvents(prev => [...prev, newEvent])
     console.log('New event created:', newEvent)
     alert(`Event "${eventData.title}" created successfully!`)
-    setShowEventCreateModal(false)
-  }
-
-  const handleItineraryCreate = (itineraryData: any) => {
-    // TODO: Handle itinerary creation and link to split-pay
-    console.log('New itinerary created:', itineraryData)
-    alert(`Itinerary "${itineraryData.title}" created successfully!`)
-    setShowEventCreateModal(false)
+    setShowNewEventSheet(false)
   }
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event)
     setShowEventDetail(true)
-    setShowDayTimeline(false) // Close day timeline if open
+    setShowDayViewSheet(false)
   }
 
-  const handleEventEdit = (event: Event) => {
-    // TODO: Implement event editing
-    console.log('Edit event:', event)
-    alert(`Edit "${event.title}" - Coming soon!`)
+  const handleItineraryClick = (item: ItineraryItem) => {
+    setSelectedItinerary(item)
+    setShowItineraryDetail(true)
+    setShowDayViewSheet(false)
+  }
+
+  const handleDayShortPress = (date: Date) => {
+    setSelectedDate(date)
+    setShowDayViewSheet(true)
     setShowEventDetail(false)
   }
 
-  const handleEventDelete = (event: Event) => {
-    // TODO: Implement event deletion
-    if (confirm(`Are you sure you want to delete "${event.title}"?`)) {
-      console.log('Delete event:', event)
-      alert(`Event "${event.title}" deleted!`)
-      setShowEventDetail(false)
-    }
+  const handleDayLongPress = (date: Date) => {
+    setSelectedDate(date)
+    setShowNewEventSheet(true)
   }
 
-  const handleEventJoinLeave = (event: Event, action: 'join' | 'leave') => {
-    if (!currentUser) return
-    
-    // TODO: Update event participants in state/backend
-    const actionText = action === 'join' ? 'joined' : 'left'
-    console.log(`User ${currentUser.name} ${actionText} event:`, event.title)
-    alert(`You have ${actionText} "${event.title}"!`)
-    
-    // Close detail sheet and refresh view
-    setShowEventDetail(false)
+
+  const handleNewEventFromFAB = () => {
+    setSelectedDate(new Date())
+    setShowNewEventSheet(true)
+  }
+
+  const handleNewEventFromDay = (date: Date) => {
+    setSelectedDate(date)
+    setShowNewEventSheet(true)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-blue-50 pb-20">
-      {/* Fixed Header */}
-      <FixedHeader 
-        title="Calendar" 
-        subtitle="Plan and view club events"
-      >
-        <Button
-          onClick={() => setSelectedDate(new Date())}
-          variant="outline"
-          size="sm"
-        >
-          Today
-        </Button>
-      </FixedHeader>
-
-      <div className="px-4 pt-24 pb-6 max-w-6xl mx-auto">
-
-        {/* Filters */}
-        <CalendarFilters 
-          filters={filters}
-          onFilterChange={setFilters}
-        />
-
-        {/* Quick Help */}
-        <div className="flex justify-end mb-4">
-          <div className="text-sm text-gray-600">
-            Tap a day to view timeline • Long press to create
-          </div>
-        </div>
-
-        {/* Calendar Grid */}
-        <CalendarGrid
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
-          onEventClick={handleEventClick}
-          onDateLongPress={handleDateLongPress}
-          filters={filters}
-        />
-
-        {/* Day Timeline Sheet */}
-        <DayTimelineSheet
-          selectedDate={selectedDate}
-          isOpen={showDayTimeline}
-          onClose={() => setShowDayTimeline(false)}
-          onEventCreate={handleEventCreate}
-          onEventClick={handleEventClick}
-        />
-
-        {/* Enhanced Event Creation Modal */}
-        <EnhancedEventCreateModal
-          isOpen={showEventCreateModal}
-          onClose={() => setShowEventCreateModal(false)}
-          selectedDate={selectedDate}
-          onEventCreate={handleEventFormSubmit}
-          onItineraryCreate={handleItineraryCreate}
-        />
-
-        {/* Event Detail Sheet */}
-        <EventDetailSheet
-          event={selectedEvent}
-          isOpen={showEventDetail}
-          onClose={() => setShowEventDetail(false)}
-          onEdit={handleEventEdit}
-          onDelete={handleEventDelete}
-          onJoinLeave={handleEventJoinLeave}
-        />
-
-        {/* Floating Action Button */}
-        <FloatingActionButton
-          onClick={handleEventCreate}
-          icon={
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* iOS Calendar Header */}
+      <IOSHeader 
+        title="Calendar"
+        rightActions={[
+          <IOSActionButton 
+            key="filters"
+            onClick={() => setShowFilters(true)}
+            aria-label="Open filters"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586a1 1 0 01-.293.707l-2 2A1 1 0 0111 21v-6.586a1 1 0 00-.293-.707L4.293 7.293A1 1 0 014 6.586V4z" 
+              />
             </svg>
-          }
+          </IOSActionButton>,
+          <IOSActionButton 
+            key="add-event"
+            onClick={handleNewEventFromFAB}
+            aria-label="Add new event"
+            variant="primary"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </IOSActionButton>
+        ]}
+      />
+
+      {/* Vertical Calendar */}
+      <div className="flex-1 pt-28">
+        <VerticalCalendar
+          events={allEvents}
+          onDayShortPress={handleDayShortPress}
+          onDayLongPress={handleDayLongPress}
+          initialDate={new Date()}
         />
       </div>
+
+
+      {/* New Event Sheet */}
+      <NewEventSheet
+        isOpen={showNewEventSheet}
+        onClose={() => setShowNewEventSheet(false)}
+        selectedDate={selectedDate}
+        onEventCreate={handleEventFormSubmit}
+      />
+
+      {/* Day View Sheet */}
+      <DayViewSheet
+        isOpen={showDayViewSheet}
+        onClose={() => setShowDayViewSheet(false)}
+        selectedDate={selectedDate}
+        events={allEvents}
+        onEventClick={handleEventClick}
+        onItineraryClick={handleItineraryClick}
+        onNewEvent={handleNewEventFromDay}
+      />
+
+      {/* Event Detail Sheet */}
+      <EventDetailSheet
+        event={selectedEvent}
+        isOpen={showEventDetail}
+        onClose={() => setShowEventDetail(false)}
+      />
+
+      {/* Itinerary Detail Sheet */}
+      <ItineraryDetailSheet
+        item={selectedItinerary}
+        isOpen={showItineraryDetail}
+        onClose={() => setShowItineraryDetail(false)}
+      />
+
+      {/* Calendar Filters */}
+      <CalendarFilters
+        isOpen={showFilters}
+        onClose={() => setShowFilters(false)}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+      />
     </div>
   )
 }

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { format, isToday, isTomorrow } from 'date-fns'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import FixedHeader from '@/components/layout/FixedHeader'
+import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
+import Logo from '@/components/ui/Logo'
 import { useUserStore } from '@/store/userStore'
 import { getUserBalance } from '@/data/mockExpenses'
 import { getUpcomingEvents } from '@/data/mockEvents'
@@ -48,14 +49,29 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-20">
-      {/* Fixed Header */}
-      <FixedHeader 
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* iOS Header */}
+      <IOSHeader 
         title={getGreeting()} 
         subtitle="Ready for your next adventure?"
+        leftActions={[
+          <Logo key="logo" size="sm" />
+        ]}
+        rightActions={[
+          <IOSActionButton key="notifications" aria-label="Notifications">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5 5-5" />
+            </svg>
+          </IOSActionButton>,
+          <IOSActionButton key="profile" aria-label="Profile" variant="primary">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </IOSActionButton>
+        ]}
       />
 
-      <div className="px-6 pt-24 pb-6 max-w-6xl mx-auto space-y-6">
+      <div className="px-6 pt-32 pb-6 max-w-6xl mx-auto space-y-6">
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4 stagger-item" style={{ animationDelay: '0.1s' }}>
           <Link to="/calendar">
