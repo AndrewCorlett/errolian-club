@@ -18,7 +18,7 @@ async function testHomeScreen() {
     console.log('📸 Screenshot saved as home-screen.png');
     
     // Test header elements
-    const greeting = await page.locator('text=/Good (morning|afternoon|evening)/).textContent();
+  const greeting = await page.locator('text=/Good (morning|afternoon|evening)/').textContent();
     console.log('👋 Greeting:', greeting);
     
     // Test Quick Actions
