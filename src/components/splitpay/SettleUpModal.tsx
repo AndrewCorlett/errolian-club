@@ -89,7 +89,7 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 pb-[33vh]">
           {/* Suggested Settlements */}
           {settlementSuggestions.length > 0 && (
             <div>

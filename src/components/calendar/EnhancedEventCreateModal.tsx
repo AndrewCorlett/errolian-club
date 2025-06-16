@@ -150,7 +150,7 @@ export default function EnhancedEventCreateModal({
         {/* Content */}
         <div className="p-6">
           {activeTab === 'event' ? (
-            <form onSubmit={handleEventSubmit} className="space-y-6">
+            <form onSubmit={handleEventSubmit} className="space-y-6 pb-[33vh]">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Event Title *
