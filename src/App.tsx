@@ -1,5 +1,13 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 import BottomNavigation from './components/layout/BottomNavigation'
+
+// Public pages
+import Login from './pages/Login'
+import Register from './pages/Register'
+
+// Protected pages
 import Home from './pages/Home'
 import Calendar from './pages/Calendar'
 import SplitPay from './pages/SplitPay'
@@ -9,21 +17,98 @@ import Account from './pages/Account'
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <main className="pb-20 safe-area-bottom">
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-gray-50">
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/calendar" element={<Calendar />} />
-            <Route path="/split-pay" element={<SplitPay />} />
-            <Route path="/split-pay/event/:eventId" element={<SplitPayEventDetails />} />
-            <Route path="/docs" element={<Documents />} />
-            <Route path="/account" element={<Account />} />
+            {/* Public routes */}
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
+            
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <Home />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <Home />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/calendar" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <Calendar />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/split-pay" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <SplitPay />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/split-pay/event/:eventId" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <SplitPayEventDetails />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/docs" element={
+              <ProtectedRoute requirePermission="canUploadDocuments">
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <Documents />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/account" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <Account />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+
+            {/* Redirect root to dashboard for authenticated users */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
-        </main>
-        <BottomNavigation />
-      </div>
-    </Router>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 
