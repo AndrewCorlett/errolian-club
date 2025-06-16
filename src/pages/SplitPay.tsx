@@ -85,7 +85,7 @@ export default function SplitPay() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-yellow-50 dark:bg-gray-900 dark:bg-none">
       {/* iOS Header */}
       <IOSHeader 
         title="Split-Pay"

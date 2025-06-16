@@ -26,7 +26,7 @@ export default function Account() {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="text-center py-8">
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,9 +76,9 @@ export default function Account() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:bg-gray-900 dark:bg-none">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm dark:bg-gray-800 dark:border-gray-700">
         <div className="px-4 py-4">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-xl font-bold text-gray-900">Account</h1>

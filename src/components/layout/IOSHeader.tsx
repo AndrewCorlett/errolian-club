@@ -29,8 +29,8 @@ export function IOSActionButton({
       className={`
         flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 
         ${variant === 'primary' 
-          ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800' 
-          : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/80 active:bg-gray-300/80'
+          ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800'
+          : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/80 active:bg-gray-300/80 dark:bg-gray-700/70 dark:text-gray-100 dark:hover:bg-gray-600/70 dark:active:bg-gray-500/70'
         }
         hover:scale-105 active:scale-95
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
@@ -67,9 +67,9 @@ export default function IOSHeader({
     <header 
       className={`
         fixed top-0 left-0 right-0 z-40 transition-all duration-300
-        ${isScrolled 
-          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm' 
-          : 'bg-white/80 backdrop-blur-md'
+        ${isScrolled
+          ? 'bg-white/95 dark:bg-gray-800/90 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-sm'
+          : 'bg-white/80 dark:bg-gray-800/80 backdrop-blur-md'
         }
         safe-area-top
         ${className}
@@ -95,11 +95,11 @@ export default function IOSHeader({
 
         {/* Title Section */}
         <div className="mb-2">
-          <h1 className="text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-base text-gray-600 mt-1 leading-relaxed">
+            <p className="text-base text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
               {subtitle}
             </p>
           )}

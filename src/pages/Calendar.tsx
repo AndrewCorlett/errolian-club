@@ -77,7 +77,7 @@ export default function Calendar() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-gray-900 flex flex-col">
       {/* iOS Calendar Header */}
       <IOSHeader 
         title="Calendar"

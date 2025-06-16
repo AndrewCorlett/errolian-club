@@ -33,19 +33,19 @@ export default function FixedHeader({ title, subtitle, children, className = '' 
 
   return (
     <div className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 ${className}`}>
-      <div className={`bg-white/95 backdrop-blur-sm border-b border-gray-200 transition-all duration-300 ${
+      <div className={`bg-white/95 dark:bg-gray-800/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 transition-all duration-300 ${
         isScrolled ? 'py-2 shadow-lg' : 'py-4 shadow-sm'
       }`}>
         <div className="px-4 max-w-6xl mx-auto">
           <div className="flex items-center justify-between">
             <div className={`transition-all duration-300 ${isScrolled ? 'scale-90' : 'scale-100'}`}>
-              <h1 className={`font-bold text-gray-900 transition-all duration-300 ${
+              <h1 className={`font-bold text-gray-900 dark:text-gray-100 transition-all duration-300 ${
                 isScrolled ? 'text-lg' : 'text-2xl'
               }`}>
                 {title}
               </h1>
               {subtitle && !isScrolled && (
-                <p className="text-gray-600 text-sm mt-1 transition-opacity duration-300">
+                <p className="text-gray-600 dark:text-gray-300 text-sm mt-1 transition-opacity duration-300">
                   {subtitle}
                 </p>
               )}
