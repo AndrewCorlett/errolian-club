@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import VerticalCalendar from '@/components/calendar/VerticalCalendar'
 import DayViewSheet from '@/components/calendar/DayViewSheet'
 import NewEventSheet from '@/components/calendar/NewEventSheet'
@@ -8,9 +8,13 @@ import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import { mockEvents } from '@/data/mockEvents'
 import { portugalGolfTripEvent } from '@/data/portugalGolfTrip'
+import { eventService, itineraryService } from '@/lib/database'
+import { useAuth } from '@/hooks/useAuth'
 import type { Event, ItineraryItem } from '@/types/events'
+import type { EventInsert } from '@/types/supabase'
 
 export default function Calendar() {
+  const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
@@ -24,22 +28,135 @@ export default function Calendar() {
     availability: false,
     officers: false
   })
+  const [loading, setLoading] = useState(true)
 
-  // Combine regular events with Portugal golf trip
+  // Start with mock events, then load real events from Supabase
   const [allEvents, setAllEvents] = useState<Event[]>([...mockEvents, portugalGolfTripEvent])
 
-  const handleEventFormSubmit = (eventData: any) => {
-    const newEvent: Event = {
-      id: `event_${Date.now()}`,
-      ...eventData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  // Load events from Supabase on mount
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true)
+        const response = await eventService.getEvents(1, 100) // Get first 100 events
+        
+        // Convert Supabase events to frontend Event format
+        const supabaseEvents: Event[] = response.data.map((event: any) => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          type: event.type,
+          status: event.status,
+          startDate: new Date(event.start_date),
+          endDate: new Date(event.end_date),
+          location: event.location || '',
+          maxParticipants: event.max_participants,
+          isPublic: event.is_public,
+          estimatedCost: event.estimated_cost,
+          createdAt: new Date(event.created_at),
+          updatedAt: new Date(event.updated_at),
+          createdBy: event.created_by,
+          participants: event.participants || [],
+          itinerary: event.itinerary_items || []
+        }))
+
+        // Combine mock events with real events
+        setAllEvents([...mockEvents, portugalGolfTripEvent, ...supabaseEvents])
+      } catch (error) {
+        console.error('Error loading events:', error)
+        // Keep using mock events if Supabase fails
+      } finally {
+        setLoading(false)
+      }
     }
-    
-    setAllEvents(prev => [...prev, newEvent])
-    console.log('New event created:', newEvent)
-    alert(`Event "${eventData.title}" created successfully!`)
-    setShowNewEventSheet(false)
+
+    if (user) {
+      loadEvents()
+    }
+  }, [user])
+
+  const handleEventFormSubmit = async (eventData: any) => {
+    if (!user) {
+      alert('You must be logged in to create events')
+      return
+    }
+
+    try {
+      // Prepare data for Supabase
+      const eventInsert: EventInsert = {
+        title: eventData.title,
+        description: eventData.description || eventData.notes || '',
+        type: eventData.type || 'other',
+        status: 'published', // Officers can publish directly
+        start_date: eventData.startDate.toISOString(),
+        end_date: eventData.endDate.toISOString(),
+        location: eventData.location,
+        max_participants: eventData.maxParticipants,
+        is_public: eventData.isPublic !== false,
+        estimated_cost: eventData.estimatedCost,
+        created_by: user.id
+      }
+
+      console.log('Creating event in Supabase:', eventInsert)
+      
+      // Save to Supabase
+      const supabaseEvent = await eventService.createEvent(eventInsert)
+      console.log('Event created in Supabase:', supabaseEvent)
+
+      // Convert to frontend format and add to local state
+      const newEvent: Event = {
+        id: supabaseEvent.id,
+        title: supabaseEvent.title,
+        description: supabaseEvent.description,
+        type: supabaseEvent.type,
+        status: supabaseEvent.status,
+        startDate: new Date(supabaseEvent.start_date),
+        endDate: new Date(supabaseEvent.end_date),
+        location: supabaseEvent.location || '',
+        maxParticipants: supabaseEvent.max_participants,
+        isPublic: supabaseEvent.is_public,
+        estimatedCost: supabaseEvent.estimated_cost,
+        createdAt: new Date(supabaseEvent.created_at),
+        updatedAt: new Date(supabaseEvent.updated_at),
+        createdBy: supabaseEvent.created_by,
+        participants: [],
+        itinerary: []
+      }
+      
+      setAllEvents(prev => [...prev, newEvent])
+      alert(`Event "${eventData.title}" created successfully!`)
+      setShowNewEventSheet(false)
+
+      // If there are itinerary items, create them too
+      if (eventData.itinerary && eventData.itinerary.length > 0) {
+        console.log('Creating itinerary items:', eventData.itinerary)
+        for (const item of eventData.itinerary) {
+          try {
+            const itineraryInsert = {
+              event_id: supabaseEvent.id,
+              type: item.type,
+              title: item.title,
+              description: item.description,
+              start_time: item.startTime,
+              end_time: item.endTime,
+              location: item.location,
+              cost: item.cost,
+              notes: item.notes,
+              order_index: item.order || 0
+            }
+            
+            await itineraryService.createItineraryItem(itineraryInsert)
+            console.log('Itinerary item created:', item.title)
+          } catch (itineraryError) {
+            console.error('Error creating itinerary item:', itineraryError)
+          }
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error creating event:', error)
+      alert('Failed to create event. Please try again.')
+    }
   }
 
   const handleEventClick = (event: Event) => {
