@@ -96,7 +96,7 @@ export default function DocumentCard({ document, onClick }: DocumentCardProps) {
                     <img src={uploader.avatar} alt={uploader.name} className="w-4 h-4 rounded-full" />
                   ) : (
                     <span className="text-xs font-medium text-blue-600">
-                      {uploader?.name.split(' ').map(n => n[0]).join('')}
+                      {uploader?.name.split(' ').map((n: string) => n[0]).join('')}
                     </span>
                   )}
                 </div>

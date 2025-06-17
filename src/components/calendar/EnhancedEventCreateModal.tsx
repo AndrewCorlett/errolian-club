@@ -287,7 +287,7 @@ export default function EnhancedEventCreateModal({
                             <img src={activeUser.avatar_url} alt={activeUser.name} className="w-6 h-6 rounded-full" />
                           ) : (
                             <span className="text-xs font-medium text-blue-600">
-                              {activeUser.name.split(' ').map(n => n[0]).join('')}
+                              {activeUser.name.split(' ').map((n: string) => n[0]).join('')}
                             </span>
                           )}
                         </div>

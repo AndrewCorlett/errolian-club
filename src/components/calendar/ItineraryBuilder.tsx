@@ -845,7 +845,7 @@ export default function ItineraryBuilder({
                                 <div className="flex items-center gap-1">
                                   <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
                                     <span className="text-xs font-medium text-blue-600">
-                                      {user.name.split(' ').map(n => n[0]).join('')}
+                                      {user.name.split(' ').map((n: string) => n[0]).join('')}
                                     </span>
                                   </div>
                                   <span className="truncate">

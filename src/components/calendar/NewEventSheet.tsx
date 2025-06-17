@@ -100,7 +100,7 @@ export default function NewEventSheet({
       status: 'published' as EventStatus,
       startDate: startDateTime,
       endDate: endDateTime,
-      location: eventData.location?.address || eventData.location?.name || null,
+      location: eventData.location?.address || null,
       is_public: true,
       max_participants: null,
       created_by: user.id,
