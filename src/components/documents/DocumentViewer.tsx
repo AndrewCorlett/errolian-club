@@ -171,7 +171,7 @@ export default function DocumentViewer({
                           <img src={uploader.avatar} alt={uploader.name} className="w-6 h-6 rounded-full" />
                         ) : (
                           <span className="text-xs font-medium text-blue-600">
-                            {uploader?.name.split(' ').map(n => n[0]).join('')}
+                            {uploader?.name.split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         )}
                       </div>
@@ -195,7 +195,7 @@ export default function DocumentViewer({
                               <img src={approver.avatar} alt={approver.name} className="w-6 h-6 rounded-full" />
                             ) : (
                               <span className="text-xs font-medium text-green-600">
-                                {approver?.name.split(' ').map(n => n[0]).join('')}
+                                {approver?.name.split(' ').map((n: string) => n[0]).join('')}
                               </span>
                             )}
                           </div>

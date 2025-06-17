@@ -65,7 +65,7 @@ export default function FixedHeader({ title, subtitle, children, className = '' 
                     />
                   ) : (
                     <span className="text-sm font-medium text-blue-600">
-                      {currentUser?.name.split(' ').map(n => n[0]).join('') || 'U'}
+                      {currentUser?.name.split(' ').map((n: string) => n[0]).join('') || 'U'}
                     </span>
                   )}
                 </div>

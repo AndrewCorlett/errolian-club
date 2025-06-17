@@ -45,7 +45,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
   const [participants, setParticipants] = useState<ParticipantShare[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [events, setEvents] = useState<EventWithDetails[]>([])
-  const [loading, setLoading] = useState(false)
 
   // Load users and events when modal opens
   useEffect(() => {
@@ -168,7 +167,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
 
 
   const selectedParticipants = participants.filter(p => p.isSelected)
-  const totalShares = selectedParticipants.reduce((sum, p) => sum + p.shareAmount, 0)
+  const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + p.shareAmount, 0)
   const totalAmount = parseFloat(formData.amount) || 0
   const isValidSplit = Math.abs(totalShares - totalAmount) < 0.01
 
@@ -366,7 +365,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                             <img src={userOption.avatar_url} alt={userOption.name} className="w-8 h-8 rounded-full" />
                           ) : (
                             <span className="text-sm font-medium text-royal-600">
-                              {userOption.name.split(' ').map(n => n[0]).join('')}
+                              {userOption.name.split(' ').map((n: string) => n[0]).join('')}
                             </span>
                           )}
                         </div>
@@ -427,7 +426,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 bg-royal-100 rounded-full flex items-center justify-center">
                                 <span className="text-xs font-medium text-royal-600">
-                                  {participantUser?.name.split(' ').map(n => n[0]).join('')}
+                                  {participantUser?.name.split(' ').map((n: string) => n[0]).join('')}
                                 </span>
                               </div>
                               <span className="text-sm font-medium">

@@ -7,7 +7,6 @@ interface IOSHeaderProps {
   rightActions?: React.ReactNode[]
   onScroll?: (scrolled: boolean) => void
   className?: string
-  showDayHeaders?: boolean
 }
 
 interface IOSActionButtonProps {
@@ -49,8 +48,7 @@ export default function IOSHeader({
   leftActions = [], 
   rightActions = [],
   onScroll,
-  className = '',
-  showDayHeaders = false
+  className = ''
 }: IOSHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
 

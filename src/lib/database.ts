@@ -5,7 +5,6 @@ import type {
   EventUpdate,
   EventWithDetails,
   Expense,
-  ExpenseInsert,
   ExpenseUpdate,
   ExpenseWithDetails,
   ItineraryItem,
@@ -351,8 +350,8 @@ export const expenseService = {
 
     if (owedError || owingError) throw owedError || owingError
 
-    const totalOwed = owed?.reduce((sum, item) => sum + item.share_amount, 0) || 0
-    const totalOwing = owing?.reduce((sum, item) => sum + item.amount, 0) || 0
+    const totalOwed = owed?.reduce((sum: number, item: any) => sum + item.share_amount, 0) || 0
+    const totalOwing = owing?.reduce((sum: number, item: any) => sum + item.amount, 0) || 0
 
     return { owed: totalOwed, owing: totalOwing }
   }

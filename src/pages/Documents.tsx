@@ -8,7 +8,7 @@ import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
 import { documentService } from '@/lib/database'
-import type { Document, DocumentFolder } from '@/types/supabase'
+import type { Document, DocumentFolder, DocumentStatus } from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
 type ViewMode = 'folders' | 'all' | 'recent' | 'popular'
@@ -123,13 +123,13 @@ export default function Documents() {
     alert(`Downloaded: ${document.name}`)
   }
 
-  const handleDocumentUpload = (documentData: Omit<Document, 'id' | 'uploadedAt' | 'updatedAt' | 'downloadCount' | 'version'>) => {
+  const handleDocumentUpload = (documentData: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'download_count' | 'version'>) => {
     const newDocument: Document = {
       id: `doc_${Date.now()}`,
       ...documentData,
-      uploadedAt: new Date(),
-      updatedAt: new Date(),
-      downloadCount: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      download_count: 0,
       version: 1
     }
     

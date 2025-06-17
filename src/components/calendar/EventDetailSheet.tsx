@@ -207,7 +207,7 @@ export default function EventDetailSheet({
                           />
                         ) : (
                           <span className="text-sm font-medium text-blue-600">
-                            {participant.name.split(' ').map(n => n[0]).join('')}
+                            {participant.name.split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         )}
                       </div>

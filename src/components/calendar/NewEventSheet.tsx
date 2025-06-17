@@ -91,7 +91,7 @@ export default function NewEventSheet({
     const startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}:00`)
     const endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}:00`)
 
-    const totalCost = itineraryItems.reduce((sum, item) => sum + (item.cost || 0), 0)
+    const totalCost = itineraryItems.reduce((sum: number, item: any) => sum + (item.cost || 0), 0)
 
     onEventCreate({
       title: eventData.title,
