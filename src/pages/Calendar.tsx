@@ -61,12 +61,29 @@ export default function Calendar() {
     }
 
     try {
-      const newEvent = await eventService.createEvent({
+      // Map camelCase to snake_case for database fields if needed
+      const mappedEventData = {
         ...eventData,
-        created_by: eventData.created_by || user.id,
-        start_date: eventData.startDate?.toISOString() || new Date().toISOString(),
-        end_date: eventData.endDate?.toISOString() || new Date().toISOString()
-      })
+        // Ensure snake_case fields for database
+        start_date: eventData.start_date || eventData.startDate,
+        end_date: eventData.end_date || eventData.endDate,
+        created_by: eventData.created_by || eventData.createdBy || user.id,
+        max_participants: eventData.max_participants || eventData.maxParticipants,
+        estimated_cost: eventData.estimated_cost || eventData.estimatedCost,
+        is_public: eventData.is_public !== undefined ? eventData.is_public : eventData.isPublic
+      }
+
+      // Remove camelCase fields to avoid conflicts
+      delete mappedEventData.startDate
+      delete mappedEventData.endDate  
+      delete mappedEventData.createdBy
+      delete mappedEventData.maxParticipants
+      delete mappedEventData.estimatedCost
+      delete mappedEventData.isPublic
+
+      console.log('Creating event with mapped data:', mappedEventData)
+      
+      const newEvent = await eventService.createEvent(mappedEventData)
       
       // Reload events to get the new one with full details
       const response = await eventService.getEvents(1, 100)

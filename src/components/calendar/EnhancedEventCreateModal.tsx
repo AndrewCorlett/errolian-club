@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -74,14 +74,17 @@ export default function EnhancedEventCreateModal({
     const totalCost = itineraryItems.reduce((sum, item) => sum + (item.cost || 0), 0)
     
     onEventCreate({
-      ...eventData,
-      startDate: startDateTime,
-      endDate: endDateTime,
-      maxParticipants: eventData.invitees.length,
-      currentParticipants: eventData.invitees,
-      createdBy: user.id,
-      estimatedCost: totalCost,
-      itinerary: itineraryItems
+      title: eventData.title,
+      description: eventData.description,
+      type: eventData.type,
+      status: eventData.status,
+      start_date: startDateTime.toISOString(),
+      end_date: endDateTime.toISOString(),
+      location: eventData.location?.address || null,
+      is_public: eventData.isPublic,
+      max_participants: eventData.invitees.length > 0 ? eventData.invitees.length : null,
+      created_by: user.id,
+      estimated_cost: totalCost > 0 ? totalCost : null
     })
     
     // Reset form
@@ -267,28 +270,28 @@ export default function EnhancedEventCreateModal({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">Invite Members</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {activeUsers.map(user => (
+                  {users.map(activeUser => (
                     <button
-                      key={user.id}
+                      key={activeUser.id}
                       type="button"
-                      onClick={() => toggleInvitee(user.id)}
+                      onClick={() => toggleInvitee(activeUser.id)}
                       className={`p-3 rounded-xl border-2 transition-all-smooth text-left ${
-                        eventData.invitees.includes(user.id)
+                        eventData.invitees.includes(activeUser.id)
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} className="w-6 h-6 rounded-full" />
+                          {activeUser.avatar_url ? (
+                            <img src={activeUser.avatar_url} alt={activeUser.name} className="w-6 h-6 rounded-full" />
                           ) : (
                             <span className="text-xs font-medium text-blue-600">
-                              {user.name.split(' ').map(n => n[0]).join('')}
+                              {activeUser.name.split(' ').map(n => n[0]).join('')}
                             </span>
                           )}
                         </div>
-                        <span className="text-sm font-medium truncate">{user.name}</span>
+                        <span className="text-sm font-medium truncate">{activeUser.name}</span>
                       </div>
                     </button>
                   ))}
