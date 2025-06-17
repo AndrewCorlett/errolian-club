@@ -243,15 +243,41 @@ export const expenseService = {
     return data
   },
 
-  async createExpense(expense: ExpenseInsert): Promise<Expense> {
-    const { data, error } = await supabase
+  async createExpense(expenseData: any): Promise<Expense> {
+    // Extract participants from expense data
+    const { participants, ...expense } = expenseData
+    
+    // Create the expense first
+    const { data: createdExpense, error: expenseError } = await supabase
       .from('expenses')
       .insert(expense)
       .select()
       .single()
 
-    if (error) throw error
-    return data
+    if (expenseError) throw expenseError
+
+    // Create participants if provided
+    if (participants && participants.length > 0) {
+      const participantInserts = participants.map((p: any) => ({
+        expense_id: createdExpense.id,
+        user_id: p.user_id,
+        share_amount: p.share_amount,
+        is_paid: p.is_paid || false,
+        paid_at: p.paid_at || null
+      }))
+
+      const { error: participantsError } = await supabase
+        .from('expense_participants')
+        .insert(participantInserts)
+
+      if (participantsError) {
+        // If participants creation fails, delete the expense to maintain consistency
+        await supabase.from('expenses').delete().eq('id', createdExpense.id)
+        throw participantsError
+      }
+    }
+
+    return createdExpense
   },
 
   async updateExpense(id: string, updates: ExpenseUpdate): Promise<Expense> {

@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import type { Document } from '@/types/documents'
 import { getDocumentTypeIcon, getDocumentStatusColor, getDocumentTypeColor, formatFileSize } from '@/types/documents'
-import { getUserById } from '@/data/mockUsers'
+import { userService } from '@/lib/database'
 
 interface DocumentCardProps {
   document: Document
@@ -10,7 +11,19 @@ interface DocumentCardProps {
 }
 
 export default function DocumentCard({ document, onClick }: DocumentCardProps) {
-  const uploader = getUserById(document.uploadedBy)
+  const [uploader, setUploader] = useState<any>(null)
+
+  useEffect(() => {
+    const loadUploader = async () => {
+      try {
+        const user = await userService.getUser(document.uploadedBy)
+        setUploader(user)
+      } catch (error) {
+        console.error('Failed to load uploader:', error)
+      }
+    }
+    loadUploader()
+  }, [document.uploadedBy])
 
   return (
     <button

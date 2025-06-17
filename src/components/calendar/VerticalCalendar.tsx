@@ -12,11 +12,10 @@ import {
   startOfMonth,
   endOfMonth
 } from 'date-fns'
-import type { Event } from '@/types/events'
-import { getPortugalTripEventsByDate, getPortugalTripColors } from '@/data/portugalGolfTrip'
+import type { EventWithDetails } from '@/types/supabase'
 
 interface VerticalCalendarProps {
-  events: Event[]
+  events: EventWithDetails[]
   onDayShortPress: (date: Date) => void
   onDayLongPress: (date: Date) => void
   initialDate?: Date
@@ -43,7 +42,8 @@ export default function VerticalCalendar({
   const [months, setMonths] = useState<MonthData[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [currentMonthIndex, setCurrentMonthIndex] = useState(0)
-  const colors = getPortugalTripColors()
+  // Helper function to convert string dates to Date objects
+  const parseEventDate = (dateString: string): Date => new Date(dateString)
 
   // Initialize months (previous 6 months, current, next 18 months)
   useEffect(() => {
@@ -89,28 +89,23 @@ export default function VerticalCalendar({
   const getEventPillsForDay = (date: Date): EventPill[] => {
     const pills: EventPill[] = []
     
-    // Regular events
+    // Regular events from Supabase
     events.forEach(event => {
-      if (isSameDay(date, event.startDate) || 
-          (event.endDate && date >= event.startDate && date <= event.endDate)) {
+      const startDate = parseEventDate(event.start_date)
+      const endDate = parseEventDate(event.end_date)
+      
+      if (isSameDay(date, startDate) || 
+          (endDate && date >= startDate && date <= endDate)) {
         pills.push({
           id: event.id,
           title: event.title,
-          color: '#d7c6ff',
+          color: event.type === 'adventure' ? '#10b981' : 
+                 event.type === 'meeting' ? '#3b82f6' :
+                 event.type === 'social' ? '#f59e0b' :
+                 event.type === 'training' ? '#8b5cf6' : '#6b7280',
           isItinerary: false
         })
       }
-    })
-
-    // Portugal trip itinerary items
-    const itineraryItems = getPortugalTripEventsByDate(date)
-    itineraryItems.forEach(item => {
-      pills.push({
-        id: item.id,
-        title: item.title,
-        color: colors[item.type] || '#d7c6ff',
-        isItinerary: true
-      })
     })
 
     return pills.slice(0, 3)
@@ -118,33 +113,41 @@ export default function VerticalCalendar({
 
   const getMultiDayEvents = (date: Date) => {
     const multiDayEvents: Array<{
-      event: Event
+      event: EventWithDetails
       position: 'start' | 'middle' | 'end' | 'single'
       color: string
     }> = []
 
     events.forEach(event => {
-      if (event.endDate && event.startDate < event.endDate) {
-        const daysDiff = Math.ceil((event.endDate.getTime() - event.startDate.getTime()) / (1000 * 60 * 60 * 24))
+      const startDate = parseEventDate(event.start_date)
+      const endDate = parseEventDate(event.end_date)
+      
+      if (endDate && startDate < endDate) {
+        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
         
         if (daysDiff > 1) { // Multi-day event
-          if (isSameDay(date, event.startDate)) {
+          const eventColor = event.type === 'adventure' ? '#10b981' : 
+                            event.type === 'meeting' ? '#3b82f6' :
+                            event.type === 'social' ? '#f59e0b' :
+                            event.type === 'training' ? '#8b5cf6' : '#6b7280'
+          
+          if (isSameDay(date, startDate)) {
             multiDayEvents.push({
               event,
               position: 'start',
-              color: '#d7c6ff'
+              color: eventColor
             })
-          } else if (isSameDay(date, event.endDate)) {
+          } else if (isSameDay(date, endDate)) {
             multiDayEvents.push({
               event,
               position: 'end', 
-              color: '#d7c6ff'
+              color: eventColor
             })
-          } else if (date > event.startDate && date < event.endDate) {
+          } else if (date > startDate && date < endDate) {
             multiDayEvents.push({
               event,
               position: 'middle',
-              color: '#d7c6ff'
+              color: eventColor
             })
           }
         }
@@ -155,13 +158,13 @@ export default function VerticalCalendar({
   }
 
   const getOverflowCount = (date: Date): number => {
-    const regularEvents = events.filter(event => 
-      isSameDay(date, event.startDate) || 
-      (event.endDate && date >= event.startDate && date <= event.endDate)
-    ).length
-    const itineraryCount = getPortugalTripEventsByDate(date).length
-    const totalCount = regularEvents + itineraryCount
-    return Math.max(0, totalCount - 3)
+    const regularEvents = events.filter(event => {
+      const startDate = parseEventDate(event.start_date)
+      const endDate = parseEventDate(event.end_date)
+      return isSameDay(date, startDate) || 
+             (endDate && date >= startDate && date <= endDate)
+    }).length
+    return Math.max(0, regularEvents - 3)
   }
 
   const handleDayClick = (date: Date) => {
@@ -176,13 +179,13 @@ export default function VerticalCalendar({
 
   return (
     <div className="flex-1 overflow-hidden">
-      {/* Week headers - sticky */}
-      <div className="sticky top-14 z-30 bg-white border-b border-gray-100">
-        <div className="grid grid-cols-7 py-2">
+      {/* Week headers - sticky below main header */}
+      <div className="sticky top-[80px] z-30 bg-white/95 backdrop-blur-sm border-b border-primary-200/50 shadow-sm">
+        <div className="grid grid-cols-7 py-3">
           {weekDays.map(day => (
             <div 
               key={day} 
-              className="text-center text-xs font-semibold text-gray-500 py-2"
+              className="text-center text-xs font-semibold text-primary-700 py-1"
             >
               {day}
             </div>
@@ -199,8 +202,8 @@ export default function VerticalCalendar({
         {months.map((month) => (
           <div key={month.date.toISOString()} className="mb-6">
             {/* Month title */}
-            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm py-3 px-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+            <div className="sticky top-[130px] z-20 bg-white/95 backdrop-blur-sm py-2 px-4 border-b border-primary-100">
+              <h2 className="text-lg font-semibold text-primary-900">
                 {format(month.date, 'MMMM yyyy')}
               </h2>
             </div>

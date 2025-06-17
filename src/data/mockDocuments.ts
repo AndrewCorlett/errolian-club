@@ -10,7 +10,7 @@ export const mockFolders: DocumentFolder[] = [
     updatedAt: new Date('2024-06-20T14:30:00'),
     isPublic: true,
     color: 'blue',
-    icon: '📅'
+    icon: 'calendar'
   },
   {
     id: 'f2',
@@ -21,7 +21,7 @@ export const mockFolders: DocumentFolder[] = [
     updatedAt: new Date('2024-05-15T16:45:00'),
     isPublic: true,
     color: 'red',
-    icon: '🛡️'
+    icon: 'shield'
   },
   {
     id: 'f3',
@@ -33,7 +33,7 @@ export const mockFolders: DocumentFolder[] = [
     updatedAt: new Date('2024-07-01T13:20:00'),
     isPublic: false,
     color: 'green',
-    icon: '📋'
+    icon: 'clipboard'
   },
   {
     id: 'f4',

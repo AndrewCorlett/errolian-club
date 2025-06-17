@@ -1,54 +1,132 @@
-import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import { format } from 'date-fns'
-import { mockExpenses, getUserBalance } from '@/data/mockExpenses'
-import { getExpenseStatusColor, getExpenseCategoryColor } from '@/types/expenses'
-import { getUserById } from '@/data/mockUsers'
-import { getEventById } from '@/data/mockEvents'
-import { useUserStore } from '@/store/userStore'
+import { expenseService } from '@/lib/database'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 import SettleUpModal from '@/components/splitpay/SettleUpModal'
-import type { Expense } from '@/types/expenses'
+import type { ExpenseWithDetails } from '@/types/supabase'
 
 export default function SplitPay() {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
   const [showSettleUpModal, setShowSettleUpModal] = useState(false)
+  const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userBalance, setUserBalance] = useState({ owed: 0, owing: 0 })
   
   // Get open state from URL
   const openCardId = searchParams.get('open')
 
-  if (!currentUser) {
-    return <div>Please log in to view expenses</div>
+  // Auto-open add expense modal when on new-expense route
+  useEffect(() => {
+    if (location.pathname === '/split-pay/new-expense') {
+      setShowAddExpenseModal(true)
+    }
+  }, [location.pathname])
+
+  // Load expenses and user balance
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user) return
+      
+      try {
+        setLoading(true)
+        setError(null)
+        
+        // Load expenses and user balance in parallel
+        const [expensesResponse, balanceResponse] = await Promise.all([
+          expenseService.getExpenses(1, 100),
+          expenseService.getUserBalance(user.id)
+        ])
+        
+        setExpenses(expensesResponse.data)
+        setUserBalance(balanceResponse)
+      } catch (err) {
+        console.error('Failed to load split-pay data:', err)
+        setError('Failed to load expenses')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [user])
+
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Please log in to view expenses</div>
+      </div>
+    )
   }
 
-  const userBalance = getUserBalance(currentUser.id)
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading expenses...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    )
+  }
   
-  // Determine if user owes money or is owed money
-  const netBalance = userBalance.netBalance
-  const owesAmount = netBalance < 0 ? Math.abs(netBalance) : 0
-  const owedAmount = netBalance > 0 ? netBalance : 0
+  // Calculate net balance
+  const netBalance = userBalance.owing - userBalance.owed
+  const owesAmount = netBalance > 0 ? netBalance : 0
+  const owedAmount = netBalance < 0 ? Math.abs(netBalance) : 0
+
+  // Helper functions for styling
+  const getExpenseStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'bg-green-100 text-green-800'
+      case 'pending': return 'bg-yellow-100 text-yellow-800'
+      case 'draft': return 'bg-gray-100 text-gray-800'
+      case 'settled': return 'bg-blue-100 text-blue-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getExpenseCategoryColor = (category: string) => {
+    switch (category) {
+      case 'accommodation': return 'bg-purple-500'
+      case 'food': return 'bg-orange-500'
+      case 'transport': return 'bg-blue-500'
+      case 'activities': return 'bg-green-500'
+      case 'equipment': return 'bg-gray-500'
+      default: return 'bg-gray-500'
+    }
+  }
 
   // Filter expenses for current user
-  const userExpenses = mockExpenses.filter(expense => {
-    const userInvolved = expense.paidBy === currentUser.id || 
-                        expense.participants.some(p => p.userId === currentUser.id)
+  const userExpenses = expenses.filter(expense => {
+    const userInvolved = expense.paid_by === user.id || 
+                        expense.participants.some(p => p.user_id === user.id)
     return userInvolved
   })
 
   // Group expenses by event
   const groupedExpenses = userExpenses.reduce((groups, expense) => {
-    const key = expense.eventId || 'standalone'
+    const key = expense.event_id || 'standalone'
     if (!groups[key]) {
       groups[key] = []
     }
     groups[key].push(expense)
     return groups
-  }, {} as Record<string, Expense[]>)
+  }, {} as Record<string, ExpenseWithDetails[]>)
   
   const toggleCard = (cardId: string) => {
     if (openCardId === cardId) {
@@ -63,17 +141,48 @@ export default function SplitPay() {
     setShowAddExpenseModal(true)
   }
 
-  const handleExpenseCreate = (expenseData: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newExpense: Expense = {
-      id: `expense_${Date.now()}`,
-      ...expenseData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  const handleExpenseCreate = async (expenseData: any) => {
+    try {
+      // Extract participants before sending to service
+      const { participants, ...expenseOnly } = expenseData
+      
+      const newExpense = await expenseService.createExpense({
+        ...expenseOnly,
+        paid_by: user.id
+      })
+      
+      // Then add participants separately with all fields
+      if (participants && participants.length > 0) {
+        const participantInserts = participants.map((p: any) => ({
+          expense_id: newExpense.id,
+          user_id: p.user_id,
+          share_amount: p.share_amount,
+          is_paid: p.is_paid || false,
+          paid_at: p.paid_at || null
+        }))
+
+        const { error: participantsError } = await supabase
+          .from('expense_participants')
+          .insert(participantInserts)
+
+        if (participantsError) {
+          // If participants creation fails, delete the expense to maintain consistency
+          await supabase.from('expenses').delete().eq('id', newExpense.id)
+          throw participantsError
+        }
+      }
+      
+      // Reload expenses to show the new one
+      const expensesResponse = await expenseService.getExpenses(1, 100)
+      setExpenses(expensesResponse.data)
+      
+      console.log('New expense created:', newExpense)
+      alert(`Expense "${expenseData.title}" created successfully!`)
+      setShowAddExpenseModal(false)
+    } catch (err) {
+      console.error('Failed to create expense:', err)
+      alert('Failed to create expense. Please try again.')
     }
-    
-    console.log('New expense created:', newExpense)
-    alert(`Expense "${expenseData.title}" created successfully!`)
-    setShowAddExpenseModal(false)
   }
 
   const handleSettleUp = () => {
@@ -85,7 +194,7 @@ export default function SplitPay() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-yellow-50">
+    <div className="min-h-screen bg-gradient-to-br from-accent-50 via-primary-50 to-forest-50">
       {/* iOS Header */}
       <IOSHeader 
         title="Split-Pay"
@@ -103,7 +212,7 @@ export default function SplitPay() {
         ]}
       />
 
-      <div className="px-4 pt-32 pb-6 max-w-6xl mx-auto space-y-6">
+      <div className="px-4 pt-32 pb-24 max-w-6xl mx-auto space-y-6">
         {/* You Owe/You're Owed Banner */}
         {netBalance !== 0 && (
           <div className={`
@@ -116,7 +225,7 @@ export default function SplitPay() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className={`text-xl font-bold ${owesAmount > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                  {owesAmount > 0 ? `You owe $${owesAmount.toFixed(2)}` : `You're owed $${owedAmount.toFixed(2)}`}
+                  {owesAmount > 0 ? `You owe £${owesAmount.toFixed(2)}` : `You're owed £${owedAmount.toFixed(2)}`}
                 </h2>
                 <p className={`text-sm ${owesAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {owesAmount > 0 ? 'Outstanding balance to settle' : 'Others owe you money'}
@@ -142,9 +251,9 @@ export default function SplitPay() {
         {/* Expense Groups - Collapsible Cards */}
         <div className="space-y-4">
           {Object.entries(groupedExpenses).map(([groupKey, expenses]) => {
-            const event = groupKey !== 'standalone' ? getEventById(groupKey) : null
+            const event = expenses[0]?.event || null
             const groupTitle = event ? event.title : 'Personal Expenses'
-            const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+            const totalAmount = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
             const isOpen = openCardId === groupKey
             
             return (
@@ -157,14 +266,14 @@ export default function SplitPay() {
                     <div>
                       <CardTitle className="text-lg font-semibold">{groupTitle}</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">
-                        {expenses.length} expense{expenses.length !== 1 ? 's' : ''} • ${totalAmount.toFixed(2)} total
+                        {expenses.length} expense{expenses.length !== 1 ? 's' : ''} • £{totalAmount.toFixed(2)} total
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="text-lg font-semibold">${totalAmount.toFixed(2)}</div>
+                        <div className="text-lg font-semibold">£{totalAmount.toFixed(2)}</div>
                         <div className="text-xs text-gray-500">
-                          {event ? format(new Date(event.startDate), 'MMM d') : 'Various dates'}
+                          {event ? format(new Date(event.start_date), 'MMM d') : 'Various dates'}
                         </div>
                       </div>
                       <svg 
@@ -183,8 +292,8 @@ export default function SplitPay() {
                   <CardContent className="p-4 md:p-6 pt-0 border-t border-gray-100">
                     <div className="space-y-3">
                       {expenses.map(expense => {
-                        const paidByUser = getUserById(expense.paidBy)
-                        const userParticipant = expense.participants.find(p => p.userId === currentUser.id)
+                        const paidByUser = expense.paid_by_user
+                        const userParticipant = expense.participants.find(p => p.user_id === user.id)
                         
                         return (
                           <div key={expense.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
@@ -197,18 +306,18 @@ export default function SplitPay() {
                                 </span>
                               </div>
                               <p className="text-sm text-gray-600">
-                                Paid by {paidByUser?.name} • {format(expense.createdAt, 'MMM d')}
+                                Paid by {paidByUser?.name} • {format(new Date(expense.created_at), 'MMM d')}
                               </p>
                               {expense.description && (
                                 <p className="text-xs text-gray-500 mt-1">{expense.description}</p>
                               )}
                             </div>
                             <div className="text-right ml-4">
-                              <div className="font-semibold text-lg">${expense.amount.toFixed(2)}</div>
+                              <div className="font-semibold text-lg">£{Number(expense.amount).toFixed(2)}</div>
                               {userParticipant && (
-                                <div className={`text-sm font-medium ${userParticipant.isPaid ? 'text-green-600' : 'text-red-600'}`}>
-                                  Your share: ${userParticipant.shareAmount.toFixed(2)}
-                                  <span className="ml-1">{userParticipant.isPaid ? '✓' : '⏳'}</span>
+                                <div className={`text-sm font-medium ${userParticipant.is_paid ? 'text-green-600' : 'text-red-600'}`}>
+                                  Your share: £{Number(userParticipant.share_amount).toFixed(2)}
+                                  <span className="ml-1">{userParticipant.is_paid ? '✓' : '⏳'}</span>
                                 </div>
                               )}
                             </div>

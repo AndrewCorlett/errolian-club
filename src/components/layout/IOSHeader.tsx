@@ -29,11 +29,11 @@ export function IOSActionButton({
       className={`
         flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200 
         ${variant === 'primary' 
-          ? 'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800' 
-          : 'bg-gray-100/80 text-gray-700 hover:bg-gray-200/80 active:bg-gray-300/80'
+          ? 'bg-royal-600 text-white hover:bg-royal-700 active:bg-royal-800' 
+          : 'bg-primary-100/80 text-primary-700 hover:bg-primary-200/80 active:bg-primary-300/80'
         }
         hover:scale-105 active:scale-95
-        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+        focus:outline-none focus:ring-2 focus:ring-royal-500 focus:ring-offset-2
         disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
       `}
     >
@@ -68,16 +68,16 @@ export default function IOSHeader({
       className={`
         fixed top-0 left-0 right-0 z-40 transition-all duration-300
         ${isScrolled 
-          ? 'bg-white/95 backdrop-blur-xl border-b border-gray-200/50 shadow-sm' 
+          ? 'bg-white/95 backdrop-blur-xl border-b border-primary-200/50 shadow-sm' 
           : 'bg-white/80 backdrop-blur-md'
         }
         safe-area-top
         ${className}
       `}
     >
-      <div className="px-4 pt-3 pb-2">
+      <div className="px-4 pt-2 pb-1">
         {/* Navigation Row */}
-        <div className="flex items-center justify-between mb-2 min-h-[44px]">
+        <div className="flex items-center justify-between mb-1 min-h-[40px]">
           {/* Left Actions */}
           <div className="flex items-center gap-2">
             {leftActions.map((action, index) => (
@@ -94,12 +94,12 @@ export default function IOSHeader({
         </div>
 
         {/* Title Section */}
-        <div className="mb-2">
-          <h1 className="text-2xl font-bold text-gray-900 leading-tight tracking-tight">
+        <div className="mb-1">
+          <h1 className="text-xl font-bold text-primary-900 leading-tight tracking-tight">
             {title}
           </h1>
           {subtitle && (
-            <p className="text-base text-gray-600 mt-1 leading-relaxed">
+            <p className="text-sm text-primary-600 mt-0.5 leading-relaxed">
               {subtitle}
             </p>
           )}
@@ -108,7 +108,7 @@ export default function IOSHeader({
 
       {/* Subtle inner shadow when scrolled */}
       {isScrolled && (
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-200 to-transparent" />
       )}
     </header>
   )

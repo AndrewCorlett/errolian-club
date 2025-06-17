@@ -26,7 +26,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm"
       onClick={onClose}
       style={{ overscrollBehavior: 'contain' }}
     >

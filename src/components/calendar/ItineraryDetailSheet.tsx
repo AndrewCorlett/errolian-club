@@ -20,7 +20,7 @@ export default function ItineraryDetailSheet({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end"
+      className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-end"
       onClick={onClose}
       style={{ overscrollBehavior: 'contain' }}
     >

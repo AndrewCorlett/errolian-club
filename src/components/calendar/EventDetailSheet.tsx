@@ -1,20 +1,16 @@
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import type { Event, LocationData } from '@/types/events'
-import { getEventTypeColor, getEventStatusColor } from '@/types/events'
-import { getUserById } from '@/data/mockUsers'
-import { useUserStore } from '@/store/userStore'
-import { hasPermission } from '@/types/user'
-import LocationDisplay from '@/components/maps/LocationDisplay'
+import type { EventWithDetails } from '@/types/supabase'
+import { useAuth } from '@/hooks/useAuth'
 
 interface EventDetailSheetProps {
-  event: Event | null
+  event: EventWithDetails | null
   isOpen: boolean
   onClose: () => void
-  onEdit?: (event: Event) => void
-  onDelete?: (event: Event) => void
-  onJoinLeave?: (event: Event, action: 'join' | 'leave') => void
+  onEdit?: (event: EventWithDetails) => void
+  onDelete?: (event: EventWithDetails) => void
+  onJoinLeave?: (event: EventWithDetails, action: 'join' | 'leave') => void
 }
 
 export default function EventDetailSheet({ 
@@ -25,20 +21,41 @@ export default function EventDetailSheet({
   onDelete,
   onJoinLeave 
 }: EventDetailSheetProps) {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
 
   if (!isOpen || !event) return null
 
-  const creator = getUserById(event.createdBy)
-  const participants = event.currentParticipants.map(id => getUserById(id)).filter(Boolean)
-  const isParticipant = currentUser ? event.currentParticipants.includes(currentUser.id) : false
-  const isCreator = currentUser?.id === event.createdBy
-  const canEdit = currentUser ? (isCreator || hasPermission(currentUser.role, 'canEditAllEvents')) : false
-  const canDelete = currentUser ? (isCreator || hasPermission(currentUser.role, 'canDeleteAllEvents')) : false
-  const isFull = event.maxParticipants ? event.currentParticipants.length >= event.maxParticipants : false
+  const creator = event.creator
+  const participants = event.participants || []
+  const isParticipant = user ? participants.some(p => p.id === user.id) : false
+  const isCreator = user?.id === event.created_by
+  const canEdit = user ? (isCreator || user.role === 'super-admin' || user.role === 'commodore') : false
+  const canDelete = user ? (isCreator || user.role === 'super-admin' || user.role === 'commodore') : false
+  const isFull = event.max_participants ? participants.length >= event.max_participants : false
+  
+  // Helper functions for colors
+  const getEventTypeColor = (type: string) => {
+    switch (type) {
+      case 'adventure': return '#10b981'
+      case 'meeting': return '#3b82f6'
+      case 'social': return '#f59e0b'
+      case 'training': return '#8b5cf6'
+      default: return '#6b7280'
+    }
+  }
+  
+  const getEventStatusColor = (status: string) => {
+    switch (status) {
+      case 'published': return '#10b981'
+      case 'draft': return '#f59e0b'
+      case 'cancelled': return '#ef4444'
+      case 'completed': return '#6b7280'
+      default: return '#6b7280'
+    }
+  }
 
   const handleJoinLeave = () => {
-    if (!currentUser || !onJoinLeave) return
+    if (!user || !onJoinLeave) return
     
     const action = isParticipant ? 'leave' : 'join'
     onJoinLeave(event, action)
@@ -46,7 +63,7 @@ export default function EventDetailSheet({
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end"
+      className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-end"
       onClick={onClose}
     >
       <div 
@@ -68,7 +85,7 @@ export default function EventDetailSheet({
               <span className={`text-xs px-2 py-1 rounded-md ${getEventStatusColor(event.status)}`}>
                 {event.status}
               </span>
-              {!event.isPublic && (
+              {!event.is_public && (
                 <span className="text-xs px-2 py-1 rounded-md bg-gray-100 text-gray-800">
                   Private
                 </span>
@@ -76,7 +93,7 @@ export default function EventDetailSheet({
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-1">{event.title}</h2>
             <p className="text-gray-600 text-sm">
-              Created by {creator?.name || 'Unknown'} on {format(event.createdAt, 'MMM d, yyyy')}
+              Created by {creator?.name || 'Unknown'} on {format(new Date(event.created_at), 'MMM d, yyyy')}
             </p>
           </div>
           
@@ -113,8 +130,8 @@ export default function EventDetailSheet({
                     </svg>
                     Start Date
                   </div>
-                  <p className="font-medium">{format(event.startDate, 'EEEE, MMMM d, yyyy')}</p>
-                  <p className="text-sm text-gray-600">{format(event.startDate, 'h:mm a')}</p>
+                  <p className="font-medium">{format(new Date(event.start_date), 'EEEE, MMMM d, yyyy')}</p>
+                  <p className="text-sm text-gray-600">{format(new Date(event.start_date), 'h:mm a')}</p>
                 </div>
 
                 <div>
@@ -124,8 +141,8 @@ export default function EventDetailSheet({
                     </svg>
                     End Date
                   </div>
-                  <p className="font-medium">{format(event.endDate, 'EEEE, MMMM d, yyyy')}</p>
-                  <p className="text-sm text-gray-600">{format(event.endDate, 'h:mm a')}</p>
+                  <p className="font-medium">{format(new Date(event.end_date), 'EEEE, MMMM d, yyyy')}</p>
+                  <p className="text-sm text-gray-600">{format(new Date(event.end_date), 'h:mm a')}</p>
                 </div>
               </div>
 
@@ -138,15 +155,7 @@ export default function EventDetailSheet({
                     </svg>
                     Location
                   </div>
-                  {typeof event.location === 'object' && event.location.lat && event.location.lng ? (
-                    <LocationDisplay 
-                      location={event.location as LocationData}
-                      height="200px"
-                      zoom={15}
-                    />
-                  ) : (
-                    <p className="font-medium">{typeof event.location === 'string' ? event.location : (event.location as LocationData).address}</p>
-                  )}
+                  <p className="font-medium">{event.location}</p>
                 </div>
               )}
 
@@ -159,12 +168,12 @@ export default function EventDetailSheet({
                     Participants
                   </div>
                   <p className="font-medium">
-                    {event.currentParticipants.length}
-                    {event.maxParticipants ? ` / ${event.maxParticipants}` : ''}
+                    {participants.length}
+                    {event.max_participants ? ` / ${event.max_participants}` : ''}
                   </p>
                 </div>
 
-                {event.estimatedCost && (
+                {event.estimated_cost && (
                   <div>
                     <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -172,7 +181,7 @@ export default function EventDetailSheet({
                       </svg>
                       Estimated Cost
                     </div>
-                    <p className="font-medium">${event.estimatedCost.toFixed(2)}</p>
+                    <p className="font-medium">${Number(event.estimated_cost).toFixed(2)}</p>
                   </div>
                 )}
               </div>
@@ -190,23 +199,23 @@ export default function EventDetailSheet({
                   {participants.map(participant => (
                     <div key={participant!.id} className="flex items-center gap-3">
                       <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        {participant!.avatar ? (
+                        {participant.avatar_url ? (
                           <img 
-                            src={participant!.avatar} 
-                            alt={participant!.name}
+                            src={participant.avatar_url} 
+                            alt={participant.name}
                             className="w-8 h-8 rounded-full"
                           />
                         ) : (
                           <span className="text-sm font-medium text-blue-600">
-                            {participant!.name.split(' ').map(n => n[0]).join('')}
+                            {participant.name.split(' ').map(n => n[0]).join('')}
                           </span>
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-sm">{participant!.name}</p>
+                        <p className="font-medium text-sm">{participant.name}</p>
                         <p className="text-xs text-gray-500 capitalize">{participant!.role.replace('-', ' ')}</p>
                       </div>
-                      {participant!.id === event.createdBy && (
+                      {participant.id === event.created_by && (
                         <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
                           Organizer
                         </span>
@@ -226,9 +235,9 @@ export default function EventDetailSheet({
               <CardTitle className="text-lg">Itinerary</CardTitle>
             </CardHeader>
             <CardContent>
-              {event.itinerary.length > 0 ? (
+              {event.itinerary_items && event.itinerary_items.length > 0 ? (
                 <div className="space-y-3">
-                  {event.itinerary.map(item => (
+                  {event.itinerary_items.map((item: any) => (
                     <div key={item.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex-shrink-0 w-12 text-sm text-gray-500 font-medium">
                         {format(item.startTime, 'HH:mm')}
@@ -247,7 +256,7 @@ export default function EventDetailSheet({
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               </svg>
-                              {typeof item.location === 'string' ? item.location : (item.location as LocationData).address}
+                              {item.location}
                             </span>
                           )}
                           {item.cost && (
@@ -269,7 +278,7 @@ export default function EventDetailSheet({
         <div className="border-t border-gray-200 p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              {currentUser && (
+              {user && (
                 <Button
                   onClick={handleJoinLeave}
                   variant={isParticipant ? "outline" : "default"}

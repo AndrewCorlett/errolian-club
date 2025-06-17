@@ -1,16 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useUserStore } from '@/store/userStore'
-import { hasPermission } from '@/types/user'
-import { getUserExpenses } from '@/data/mockExpenses'
-import { getUserEvents } from '@/data/mockEvents'
+import { useAuth } from '@/hooks/useAuth'
 import { useDarkMode } from '@/hooks/useDarkMode'
 
 export default function Account() {
-  const { currentUser } = useUserStore()
+  const { user, profile, loading, signOut, updateProfile } = useAuth()
   const { isDark, setTheme } = useDarkMode()
   const [isEditing, setIsEditing] = useState(false)
   const [notifications, setNotifications] = useState({
@@ -20,11 +18,38 @@ export default function Account() {
     system: true
   })
   const [formData, setFormData] = useState({
-    name: currentUser?.name || '',
-    email: currentUser?.email || ''
+    name: profile?.name || '',
+    email: user?.email || ''
   })
 
-  if (!currentUser) {
+  // Update form data when profile loads
+  useEffect(() => {
+    if (profile && user) {
+      setFormData({
+        name: profile.name,
+        email: user.email || ''
+      })
+    }
+  }, [profile, user])
+
+  // Show loading state while authentication is being determined
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading account information...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show authentication required if no user is found
+  if (!user || !profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
@@ -32,29 +57,41 @@ export default function Account() {
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
-            <p className="text-gray-600">Please log in to view your account</p>
+            <p className="text-gray-600 mb-4">Please log in to view your account</p>
+            <Link to="/auth/login">
+              <Button className="w-full">Go to Login</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  const userExpenses = getUserExpenses(currentUser.id)
-  const userEvents = getUserEvents(currentUser.id)
-  const memberSinceDate = format(currentUser.memberSince, 'MMMM yyyy')
-  const permissions = hasPermission(currentUser.role, 'canCreateEvents') ? 'Full access' : 'Member access'
+  const memberSinceDate = profile.member_since ? format(new Date(profile.member_since), 'MMMM yyyy') : 'Unknown'
+  const permissions = profile.permissions ? 'Full access' : 'Member access'
 
-  const handleSaveProfile = () => {
-    // TODO: Save profile changes
-    console.log('Saving profile:', formData)
-    alert('Profile updated successfully!')
-    setIsEditing(false)
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await updateProfile({
+        name: formData.name
+      })
+      
+      if (error) {
+        alert('Error updating profile: ' + error.message)
+      } else {
+        alert('Profile updated successfully!')
+        setIsEditing(false)
+      }
+    } catch (error) {
+      alert('Error updating profile')
+      console.error('Profile update error:', error)
+    }
   }
 
   const handleCancelEdit = () => {
     setFormData({
-      name: currentUser.name,
-      email: currentUser.email
+      name: profile.name,
+      email: user.email || ''
     })
     setIsEditing(false)
   }
@@ -76,18 +113,70 @@ export default function Account() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-royal-50 via-primary-50 to-accent-50 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      <div className="sticky top-0 z-30 bg-white border-b border-primary-200 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-xl font-bold text-gray-900">Account</h1>
-            <p className="text-sm text-gray-600">Manage your profile and preferences</p>
+            <h1 className="text-xl font-bold text-primary-900">Account</h1>
+            <p className="text-sm text-primary-600">Manage your profile and preferences</p>
           </div>
         </div>
       </div>
 
       <div className="px-4 py-6 max-w-4xl mx-auto space-y-6">
+        {/* Authentication Status Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Authentication Status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${user ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                    <span className="font-medium">
+                      {user ? 'Authenticated' : 'Not Authenticated'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {user ? `Logged in as ${user.email}` : 'Using mock authentication'}
+                  </p>
+                  {profile && (
+                    <p className="text-sm text-gray-600">
+                      Role: <span className="font-medium">{getRoleDisplayName(profile.role)}</span>
+                    </p>
+                  )}
+                </div>
+                {user && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={async () => {
+                      const { error } = await signOut()
+                      if (error) {
+                        alert('Error signing out: ' + error.message)
+                      } else {
+                        alert('Signed out successfully')
+                      }
+                    }}
+                  >
+                    Sign Out
+                  </Button>
+                )}
+              </div>
+              {user && (
+                <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                  <strong>Session Info:</strong> 
+                  <br />User ID: {user.id}
+                  <br />Last Sign In: {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Unknown'}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Profile Card */}
         <Card>
           <CardHeader>
@@ -117,16 +206,16 @@ export default function Account() {
               {/* Avatar */}
               <div className="flex-shrink-0">
                 <div className="relative">
-                  {currentUser.avatar ? (
+                  {profile.avatar_url ? (
                     <img 
-                      src={currentUser.avatar} 
-                      alt={currentUser.name}
+                      src={profile.avatar_url} 
+                      alt={profile.name}
                       className="w-20 h-20 rounded-full border-4 border-white shadow-lg"
                     />
                   ) : (
                     <div className="w-20 h-20 bg-blue-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
                       <span className="text-2xl font-bold text-blue-600">
-                        {currentUser.name.split(' ').map(n => n[0]).join('')}
+                        {profile.name.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
                   )}
@@ -155,7 +244,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{currentUser.name}</p>
+                      <p className="text-gray-900 font-medium">{profile.name}</p>
                     )}
                   </div>
 
@@ -170,7 +259,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{currentUser.email}</p>
+                      <p className="text-gray-900 font-medium">{profile.email}</p>
                     )}
                   </div>
 
@@ -179,8 +268,8 @@ export default function Account() {
                       Club Role
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-lg border text-sm font-medium ${getRoleColor(currentUser.role)}`}>
-                        {getRoleDisplayName(currentUser.role)}
+                      <span className={`px-3 py-1 rounded-lg border text-sm font-medium ${getRoleColor(profile.role)}`}>
+                        {getRoleDisplayName(profile.role)}
                       </span>
                       <span className="text-sm text-gray-500">• {permissions}</span>
                     </div>
@@ -202,14 +291,14 @@ export default function Account() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="text-center py-6">
-              <div className="text-3xl font-bold text-blue-600 mb-2">{userEvents.length}</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">0</div>
               <div className="text-sm text-gray-600">Events Joined</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="text-center py-6">
-              <div className="text-3xl font-bold text-green-600 mb-2">{userExpenses.length}</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">0</div>
               <div className="text-sm text-gray-600">Expense Records</div>
             </CardContent>
           </Card>
@@ -217,7 +306,7 @@ export default function Account() {
           <Card>
             <CardContent className="text-center py-6">
               <div className="text-3xl font-bold text-purple-600 mb-2">
-                {Math.floor((Date.now() - currentUser.memberSince.getTime()) / (1000 * 60 * 60 * 24))}
+                {profile.member_since ? Math.floor((Date.now() - new Date(profile.member_since).getTime()) / (1000 * 60 * 60 * 24)) : 0}
               </div>
               <div className="text-sm text-gray-600">Days as Member</div>
             </CardContent>

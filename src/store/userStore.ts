@@ -1,15 +1,16 @@
 import { create } from 'zustand'
-import type { User } from '@/types/user'
-import { currentUser } from '@/data/mockUsers'
+
+// DEPRECATED: This store is deprecated. Use useAuth hook instead.
+// This is kept for backward compatibility during migration.
 
 interface UserStore {
-  currentUser: User | null
-  setCurrentUser: (user: User | null) => void
+  currentUser: any | null
+  setCurrentUser: (user: any | null) => void
   isAuthenticated: boolean
 }
 
 export const useUserStore = create<UserStore>((set) => ({
-  currentUser: currentUser, // Mock logged-in user
+  currentUser: null, // No longer using mock data
   setCurrentUser: (user) => set({ currentUser: user }),
-  isAuthenticated: true
+  isAuthenticated: false // Auth handled by useAuth hook
 }))

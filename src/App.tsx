@@ -18,8 +18,8 @@ import Account from './pages/Account'
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <div className="min-h-screen bg-gray-200">
           <Routes>
             {/* Public routes */}
             <Route path="/auth/login" element={<Login />} />
@@ -60,6 +60,17 @@ function App() {
             } />
             
             <Route path="/split-pay" element={
+              <ProtectedRoute>
+                <div>
+                  <main className="pb-20 safe-area-bottom">
+                    <SplitPay />
+                  </main>
+                  <BottomNavigation />
+                </div>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/split-pay/new-expense" element={
               <ProtectedRoute>
                 <div>
                   <main className="pb-20 safe-area-bottom">

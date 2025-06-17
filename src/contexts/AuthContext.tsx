@@ -38,6 +38,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (auth.user && !auth.profile) {
       const createProfile = async () => {
+        // First try to get the existing profile
+        const existingProfile = await authService.getUserProfile(auth.user!.id)
+        
+        if (existingProfile) {
+          console.log('Found existing user profile')
+          return
+        }
+        
+        // Only create if profile doesn't exist
         const profile = await authService.createUserProfile(
           auth.user!.id,
           auth.user!.email!,

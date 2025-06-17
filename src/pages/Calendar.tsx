@@ -1,16 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import VerticalCalendar from '@/components/calendar/VerticalCalendar'
 import DayViewSheet from '@/components/calendar/DayViewSheet'
 import NewEventSheet from '@/components/calendar/NewEventSheet'
 import CalendarFilters from '@/components/calendar/CalendarFilters'
 import EventDetailSheet from '@/components/calendar/EventDetailSheet'
 import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
+import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
+import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { mockEvents } from '@/data/mockEvents'
-import { portugalGolfTripEvent } from '@/data/portugalGolfTrip'
+import { eventService } from '@/lib/database'
+import { useAuth } from '@/hooks/useAuth'
 import type { Event, ItineraryItem } from '@/types/events'
+import type { EventWithDetails } from '@/types/supabase'
 
 export default function Calendar() {
+  const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
@@ -18,6 +22,7 @@ export default function Calendar() {
   const [showDayViewSheet, setShowDayViewSheet] = useState(false)
   const [showEventDetail, setShowEventDetail] = useState(false)
   const [showItineraryDetail, setShowItineraryDetail] = useState(false)
+  const [showAvailabilitySheet, setShowAvailabilitySheet] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [activeFilters, setActiveFilters] = useState({
     events: true,
@@ -25,21 +30,55 @@ export default function Calendar() {
     officers: false
   })
 
-  // Combine regular events with Portugal golf trip
-  const [allEvents, setAllEvents] = useState<Event[]>([...mockEvents, portugalGolfTripEvent])
+  // Real events from Supabase
+  const [allEvents, setAllEvents] = useState<EventWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleEventFormSubmit = (eventData: any) => {
-    const newEvent: Event = {
-      id: `event_${Date.now()}`,
-      ...eventData,
-      createdAt: new Date(),
-      updatedAt: new Date()
+  // Load events from Supabase
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await eventService.getEvents(1, 100) // Get more events for calendar view
+        setAllEvents(response.data)
+      } catch (err) {
+        console.error('Failed to load events:', err)
+        setError('Failed to load events')
+      } finally {
+        setLoading(false)
+      }
     }
-    
-    setAllEvents(prev => [...prev, newEvent])
-    console.log('New event created:', newEvent)
-    alert(`Event "${eventData.title}" created successfully!`)
-    setShowNewEventSheet(false)
+
+    loadEvents()
+  }, [])
+
+  const handleEventFormSubmit = async (eventData: any) => {
+    if (!user) {
+      alert('You must be logged in to create events')
+      return
+    }
+
+    try {
+      const newEvent = await eventService.createEvent({
+        ...eventData,
+        created_by: eventData.created_by || user.id,
+        start_date: eventData.startDate?.toISOString() || new Date().toISOString(),
+        end_date: eventData.endDate?.toISOString() || new Date().toISOString()
+      })
+      
+      // Reload events to get the new one with full details
+      const response = await eventService.getEvents(1, 100)
+      setAllEvents(response.data)
+      
+      console.log('New event created:', newEvent)
+      alert(`Event "${eventData.title}" created successfully!`)
+      setShowNewEventSheet(false)
+    } catch (err) {
+      console.error('Failed to create event:', err)
+      alert('Failed to create event. Please try again.')
+    }
   }
 
   const handleEventClick = (event: Event) => {
@@ -76,8 +115,13 @@ export default function Calendar() {
     setShowNewEventSheet(true)
   }
 
+  const handleMarkAvailability = () => {
+    setSelectedDate(new Date())
+    setShowAvailabilitySheet(true)
+  }
+
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col pb-20">
       {/* iOS Calendar Header */}
       <IOSHeader 
         title="Calendar"
@@ -101,27 +145,32 @@ export default function Calendar() {
               />
             </svg>
           </IOSActionButton>,
-          <IOSActionButton 
-            key="add-event"
-            onClick={handleNewEventFromFAB}
-            aria-label="Add new event"
-            variant="primary"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </IOSActionButton>
+          <CalendarActionDropdown
+            key="calendar-actions"
+            onCreateEvent={handleNewEventFromFAB}
+            onMarkAvailability={handleMarkAvailability}
+          />
         ]}
       />
 
       {/* Vertical Calendar */}
-      <div className="flex-1 pt-28">
-        <VerticalCalendar
-          events={allEvents}
-          onDayShortPress={handleDayShortPress}
-          onDayLongPress={handleDayLongPress}
-          initialDate={new Date()}
-        />
+      <div className="flex-1 pt-20">
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-gray-500">Loading calendar...</div>
+          </div>
+        ) : error ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-red-500">Error: {error}</div>
+          </div>
+        ) : (
+          <VerticalCalendar
+            events={allEvents}
+            onDayShortPress={handleDayShortPress}
+            onDayLongPress={handleDayLongPress}
+            initialDate={new Date()}
+          />
+        )}
       </div>
 
 
@@ -156,6 +205,17 @@ export default function Calendar() {
         item={selectedItinerary}
         isOpen={showItineraryDetail}
         onClose={() => setShowItineraryDetail(false)}
+      />
+
+      {/* Availability Sheet */}
+      <AvailabilitySheet
+        isOpen={showAvailabilitySheet}
+        onClose={() => setShowAvailabilitySheet(false)}
+        selectedDate={selectedDate}
+        onAvailabilitySubmit={(data) => {
+          console.log('Availability submitted:', data)
+          // In a real app, this would save to backend
+        }}
       />
 
       {/* Calendar Filters */}

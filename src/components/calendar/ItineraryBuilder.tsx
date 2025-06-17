@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import MobileSelect from '@/components/ui/MobileSelect'
-import { getActiveUsers } from '@/data/mockUsers'
-import { useUserStore } from '@/store/userStore'
+import { useAuth } from '@/hooks/useAuth'
+import { userService } from '@/lib/database'
 import type { ItineraryItem, ItineraryType } from '@/types/events'
 
 interface ItineraryBuilderProps {
@@ -32,12 +32,32 @@ type ItineraryFormData = Partial<ItineraryItem> & {
   participants?: string[]
 }
 
-const ITINERARY_TYPES: { value: ItineraryType; label: string; icon: string }[] = [
-  { value: 'travel', label: 'Travel', icon: '✈️' },
-  { value: 'accommodation', label: 'Stay', icon: '🏨' },
-  { value: 'activity', label: 'Activity', icon: '🎯' },
-  { value: 'meal', label: 'Meal', icon: '🍽️' },
-  { value: 'other', label: 'Other', icon: '📋' }
+const ITINERARY_TYPES: { value: ItineraryType; label: string; icon: React.ReactNode }[] = [
+  { 
+    value: 'travel', 
+    label: 'Travel', 
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+  },
+  { 
+    value: 'accommodation', 
+    label: 'Stay', 
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+  },
+  { 
+    value: 'activity', 
+    label: 'Activity', 
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+  },
+  { 
+    value: 'meal', 
+    label: 'Meal', 
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v4a2 2 0 01-2 2H9a2 2 0 01-2-2v-4m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" /></svg>
+  },
+  { 
+    value: 'other', 
+    label: 'Other', 
+    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+  }
 ]
 
 
@@ -47,10 +67,11 @@ export default function ItineraryBuilder({
   onItemsChange,
   onAddExpense 
 }: ItineraryBuilderProps) {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [items, setItems] = useState<ItineraryItem[]>(initialItems)
   const [isAddingItem, setIsAddingItem] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [users, setUsers] = useState<any[]>([])
   const [formData, setFormData] = useState<ItineraryFormData>({
     type: 'activity',
     title: '',
@@ -61,12 +82,24 @@ export default function ItineraryBuilder({
     cost: 0,
     notes: '',
     createExpense: false,
-    paidBy: currentUser?.id || '',
+    paidBy: user?.id || '',
     splitMethod: 'equal',
     participants: []
   })
 
-  const activeUsers = getActiveUsers()
+  // Load users from database
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const usersData = await userService.getUsers()
+        setUsers(usersData)
+      } catch (error) {
+        console.error('Failed to load users:', error)
+        setUsers([])
+      }
+    }
+    loadUsers()
+  }, [])
 
   const handleAddItem = () => {
     setIsAddingItem(true)
@@ -80,7 +113,7 @@ export default function ItineraryBuilder({
       cost: 0,
       notes: '',
       createExpense: false,
-      paidBy: currentUser?.id || '',
+      paidBy: user?.id || '',
       splitMethod: 'equal',
       participants: []
     })
@@ -91,7 +124,7 @@ export default function ItineraryBuilder({
     setFormData({
       ...item,
       createExpense: false,
-      paidBy: currentUser?.id || '',
+      paidBy: user?.id || '',
       splitMethod: 'equal',
       participants: []
     })
@@ -187,7 +220,7 @@ export default function ItineraryBuilder({
       cost: 0,
       notes: '',
       createExpense: false,
-      paidBy: currentUser?.id || '',
+      paidBy: user?.id || '',
       splitMethod: 'equal',
       participants: []
     })
@@ -222,7 +255,11 @@ export default function ItineraryBuilder({
   }
 
   const getTypeIcon = (type: ItineraryType) => {
-    return ITINERARY_TYPES.find(t => t.value === type)?.icon || '📋'
+    return ITINERARY_TYPES.find(t => t.value === type)?.icon || (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    )
   }
 
   const renderTypeSpecificFields = () => {
@@ -239,14 +276,14 @@ export default function ItineraryBuilder({
                 onChange={(value) => setFormData(prev => ({ ...prev, travelMethod: value }))}
                 options={[
                   { value: '', label: 'Select method' },
-                  { value: 'Flight', label: 'Flight', icon: '✈️' },
-                  { value: 'Train', label: 'Train', icon: '🚊' },
-                  { value: 'Bus', label: 'Bus', icon: '🚌' },
-                  { value: 'Car', label: 'Car', icon: '🚗' },
-                  { value: 'Ferry', label: 'Ferry', icon: '⛴️' },
-                  { value: 'Taxi', label: 'Taxi', icon: '🚕' },
-                  { value: 'Walking', label: 'Walking', icon: '🚶' },
-                  { value: 'Other', label: 'Other', icon: '🚚' }
+                  { value: 'Flight', label: 'Flight' },
+                  { value: 'Train', label: 'Train' },
+                  { value: 'Bus', label: 'Bus' },
+                  { value: 'Car', label: 'Car' },
+                  { value: 'Ferry', label: 'Ferry' },
+                  { value: 'Taxi', label: 'Taxi' },
+                  { value: 'Walking', label: 'Walking' },
+                  { value: 'Other', label: 'Other' }
                 ]}
                 placeholder="Select travel method"
               />
@@ -299,13 +336,13 @@ export default function ItineraryBuilder({
                 onChange={(value) => setFormData(prev => ({ ...prev, accommodationType: value }))}
                 options={[
                   { value: '', label: 'Select type' },
-                  { value: 'Hotel', label: 'Hotel', icon: '🏨' },
-                  { value: 'Hostel', label: 'Hostel', icon: '🏠' },
-                  { value: 'Airbnb', label: 'Airbnb', icon: '🏡' },
-                  { value: 'Camping', label: 'Camping', icon: '⛺' },
-                  { value: 'Resort', label: 'Resort', icon: '🏖️' },
-                  { value: 'Guesthouse', label: 'Guesthouse', icon: '🏘️' },
-                  { value: 'Other', label: 'Other', icon: '🏢' }
+                  { value: 'Hotel', label: 'Hotel' },
+                  { value: 'Hostel', label: 'Hostel' },
+                  { value: 'Airbnb', label: 'Airbnb' },
+                  { value: 'Camping', label: 'Camping' },
+                  { value: 'Resort', label: 'Resort' },
+                  { value: 'Guesthouse', label: 'Guesthouse' },
+                  { value: 'Other', label: 'Other' }
                 ]}
                 placeholder="Select accommodation type"
               />
@@ -367,13 +404,13 @@ export default function ItineraryBuilder({
                 onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                 options={[
                   { value: '', label: 'Select category' },
-                  { value: 'Sightseeing', label: 'Sightseeing', icon: '👀' },
-                  { value: 'Adventure', label: 'Adventure', icon: '🏔️' },
-                  { value: 'Cultural', label: 'Cultural', icon: '🏛️' },
-                  { value: 'Entertainment', label: 'Entertainment', icon: '🎭' },
-                  { value: 'Sports', label: 'Sports', icon: '⚽' },
-                  { value: 'Shopping', label: 'Shopping', icon: '🛍️' },
-                  { value: 'Other', label: 'Other', icon: '📋' }
+                  { value: 'Sightseeing', label: 'Sightseeing' },
+                  { value: 'Adventure', label: 'Adventure' },
+                  { value: 'Cultural', label: 'Cultural' },
+                  { value: 'Entertainment', label: 'Entertainment' },
+                  { value: 'Sports', label: 'Sports' },
+                  { value: 'Shopping', label: 'Shopping' },
+                  { value: 'Other', label: 'Other' }
                 ]}
                 placeholder="Select activity category"
               />
@@ -434,11 +471,11 @@ export default function ItineraryBuilder({
                 onChange={(value) => setFormData(prev => ({ ...prev, mealType: value }))}
                 options={[
                   { value: '', label: 'Select type' },
-                  { value: 'breakfast', label: 'Breakfast', icon: '🥐' },
-                  { value: 'lunch', label: 'Lunch', icon: '🥪' },
-                  { value: 'dinner', label: 'Dinner', icon: '🍽️' },
-                  { value: 'snack', label: 'Snack', icon: '🍿' },
-                  { value: 'drinks', label: 'Drinks', icon: '🥤' }
+                  { value: 'breakfast', label: 'Breakfast' },
+                  { value: 'lunch', label: 'Lunch' },
+                  { value: 'dinner', label: 'Dinner' },
+                  { value: 'snack', label: 'Snack' },
+                  { value: 'drinks', label: 'Drinks' }
                 ]}
                 placeholder="Select meal type"
               />
@@ -638,7 +675,7 @@ export default function ItineraryBuilder({
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="text-2xl mb-1">{type.icon}</div>
+                      <div className="mb-1 flex justify-center text-blue-600">{type.icon}</div>
                       <div className="text-xs font-medium">{type.label}</div>
                     </button>
                   ))}
@@ -757,9 +794,9 @@ export default function ItineraryBuilder({
                           <MobileSelect
                             value={formData.paidBy || ''}
                             onChange={(value) => setFormData(prev => ({ ...prev, paidBy: value }))}
-                            options={activeUsers.map(user => ({
+                            options={users.map(user => ({
                               value: user.id,
-                              label: `${user.name}${user.id === currentUser?.id ? ' (You)' : ''}`
+                              label: `${user.name}${user.id === user?.id ? ' (You)' : ''}`
                             }))}
                             placeholder="Who paid for this?"
                           />
@@ -773,8 +810,8 @@ export default function ItineraryBuilder({
                             value={formData.splitMethod || 'equal'}
                             onChange={(value) => setFormData(prev => ({ ...prev, splitMethod: value as 'equal' | 'custom' }))}
                             options={[
-                              { value: 'equal', label: 'Equal split', icon: '⚖️' },
-                              { value: 'custom', label: 'Custom amounts', icon: '✏️' }
+                              { value: 'equal', label: 'Equal split' },
+                              { value: 'custom', label: 'Custom amounts' }
                             ]}
                             placeholder="How to split this cost?"
                           />
@@ -786,7 +823,7 @@ export default function ItineraryBuilder({
                           Split between ({formData.participants?.length || 0} selected)
                         </label>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {activeUsers.map(user => {
+                          {users.map(user => {
                             const isSelected = formData.participants?.includes(user.id) || false
                             return (
                               <button
@@ -812,7 +849,7 @@ export default function ItineraryBuilder({
                                     </span>
                                   </div>
                                   <span className="truncate">
-                                    {user.name.split(' ')[0]} {user.id === currentUser?.id ? '(You)' : ''}
+                                    {user.name.split(' ')[0]} {user.id === user?.id ? '(You)' : ''}
                                   </span>
                                 </div>
                               </button>

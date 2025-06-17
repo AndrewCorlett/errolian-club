@@ -3,8 +3,8 @@ import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { useUserStore } from '@/store/userStore'
-import { getActiveUsers } from '@/data/mockUsers'
+import { useAuth } from '@/hooks/useAuth'
+import { userService } from '@/lib/database'
 import LocationPicker from '@/components/maps/LocationPicker'
 import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
 import ItineraryBuilder from './ItineraryBuilder'
@@ -24,7 +24,7 @@ export default function EnhancedEventCreateModal({
   selectedDate,
   onEventCreate
 }: EnhancedEventCreateModalProps) {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<TabMode>('event')
   
   // Event form data
@@ -45,9 +45,25 @@ export default function EnhancedEventCreateModal({
   // Itinerary state
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([])
 
-  const activeUsers = getActiveUsers()
+  const [users, setUsers] = useState<any[]>([])
 
-  if (!isOpen || !currentUser) return null
+  // Load users from database
+  useEffect(() => {
+    if (isOpen) {
+      const loadUsers = async () => {
+        try {
+          const usersData = await userService.getUsers()
+          setUsers(usersData)
+        } catch (error) {
+          console.error('Failed to load users:', error)
+          setUsers([])
+        }
+      }
+      loadUsers()
+    }
+  }, [isOpen])
+
+  if (!isOpen || !user) return null
 
   const handleEventSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -63,7 +79,7 @@ export default function EnhancedEventCreateModal({
       endDate: endDateTime,
       maxParticipants: eventData.invitees.length,
       currentParticipants: eventData.invitees,
-      createdBy: currentUser.id,
+      createdBy: user.id,
       estimatedCost: totalCost,
       itinerary: itineraryItems
     })

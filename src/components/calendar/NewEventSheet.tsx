@@ -3,8 +3,7 @@ import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
-import { useUserStore } from '@/store/userStore'
-import { getActiveUsers } from '@/data/mockUsers'
+import { useAuth } from '@/hooks/useAuth'
 import ItineraryBuilder from './ItineraryBuilder'
 import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
 
@@ -31,7 +30,7 @@ export default function NewEventSheet({
   selectedDate,
   onEventCreate
 }: NewEventSheetProps) {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<ActiveTab>('event')
   const [isClosing, setIsClosing] = useState(false)
 
@@ -45,14 +44,12 @@ export default function NewEventSheet({
     endDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     endTime: '17:00',
     color: 'violet' as EventColor,
-    invitees: [] as string[],
     notes: ''
   })
 
   // Itinerary state
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([])
 
-  const activeUsers = getActiveUsers()
 
   useEffect(() => {
     if (isOpen && selectedDate) {
@@ -81,7 +78,6 @@ export default function NewEventSheet({
         endDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         endTime: '17:00',
         color: 'violet',
-        invitees: [],
         notes: ''
       })
       setItineraryItems([])
@@ -90,7 +86,7 @@ export default function NewEventSheet({
   }
 
   const handleEventSubmit = () => {
-    if (!eventData.title.trim() || !currentUser) return
+    if (!eventData.title.trim() || !user) return
 
     const startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}:00`)
     const endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}:00`)
@@ -104,13 +100,11 @@ export default function NewEventSheet({
       status: 'published' as EventStatus,
       startDate: startDateTime,
       endDate: endDateTime,
-      location: eventData.location,
-      isPublic: true,
-      maxParticipants: eventData.invitees.length,
-      currentParticipants: eventData.invitees,
-      createdBy: currentUser.id,
-      estimatedCost: totalCost,
-      itinerary: itineraryItems
+      location: eventData.location?.address || eventData.location?.name || null,
+      is_public: true,
+      max_participants: null,
+      created_by: user.id,
+      estimated_cost: totalCost > 0 ? totalCost : null
     })
 
     handleClose()
@@ -126,20 +120,12 @@ export default function NewEventSheet({
     console.log('Adding expense from itinerary:', expenseData)
   }
 
-  const toggleInvitee = (userId: string) => {
-    setEventData(prev => ({
-      ...prev,
-      invitees: prev.invitees.includes(userId)
-        ? prev.invitees.filter(id => id !== userId)
-        : [...prev.invitees, userId]
-    }))
-  }
 
   const isFormValid = eventData.title.trim().length > 0
 
   return (
     <div 
-      className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
         isClosing ? 'opacity-0' : 'opacity-100'
       }`}
       onClick={handleClose}
@@ -155,24 +141,24 @@ export default function NewEventSheet({
         
         {/* Handle bar */}
         <div className="flex justify-center py-3 cursor-pointer" onClick={handleClose}>
-          <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+          <div className="w-12 h-1 bg-primary-300 rounded-full"></div>
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pb-4">
           <button
             onClick={handleClose}
-            className="text-blue-600 font-medium"
+            className="text-royal-600 font-medium hover:text-royal-700"
           >
             Cancel
           </button>
           
-          <h2 className="text-lg font-semibold text-gray-900">New Event</h2>
+          <h2 className="text-lg font-semibold text-primary-900">New Event</h2>
           
           <button
             onClick={handleEventSubmit}
             disabled={!isFormValid}
-            className="text-blue-600 font-medium disabled:text-gray-400"
+            className="text-royal-600 font-medium disabled:text-primary-400 hover:text-royal-700 disabled:hover:text-primary-400"
           >
             Add
           </button>
@@ -180,13 +166,13 @@ export default function NewEventSheet({
 
         {/* Tab Navigation */}
         <div className="px-6 mb-6">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-primary-100 rounded-lg p-1">
             <button
               onClick={() => setActiveTab('event')}
               className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all duration-200 ${
                 activeTab === 'event'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white text-primary-900 shadow-sm'
+                  : 'text-primary-600 hover:text-primary-900'
               }`}
             >
               Event
@@ -195,8 +181,8 @@ export default function NewEventSheet({
               onClick={() => setActiveTab('itinerary')}
               className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-all duration-200 ${
                 activeTab === 'itinerary'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-white text-primary-900 shadow-sm'
+                  : 'text-primary-600 hover:text-primary-900'
               }`}
             >
               Itinerary
@@ -211,7 +197,7 @@ export default function NewEventSheet({
               {/* Basic Info */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary-700 mb-2">
                     Event Title *
                   </label>
                   <Input
@@ -225,12 +211,12 @@ export default function NewEventSheet({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-primary-700 mb-2">
                     Location
                   </label>
                   <input 
                     type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-primary-300 rounded-md focus:ring-2 focus:ring-royal-500 focus:border-royal-500 text-primary-900"
                     placeholder="Enter location"
                     onChange={(e) => setEventData(prev => ({ ...prev, location: { address: e.target.value, lat: 0, lng: 0 } }))}
                   />
@@ -241,11 +227,11 @@ export default function NewEventSheet({
               <Card>
                 <CardContent className="p-4 space-y-4">
                   <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">All-day</label>
+                    <label className="text-sm font-medium text-primary-700">All-day</label>
                     <button
                       onClick={() => setEventData(prev => ({ ...prev, allDay: !prev.allDay }))}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        eventData.allDay ? 'bg-blue-600' : 'bg-gray-200'
+                        eventData.allDay ? 'bg-royal-600' : 'bg-primary-200'
                       }`}
                     >
                       <span
@@ -258,7 +244,7 @@ export default function NewEventSheet({
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
                         Start Date
                       </label>
                       <Input
@@ -268,7 +254,7 @@ export default function NewEventSheet({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
                         End Date
                       </label>
                       <Input
@@ -282,7 +268,7 @@ export default function NewEventSheet({
                   {!eventData.allDay && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-primary-700 mb-1">
                           Start Time
                         </label>
                         <Input
@@ -292,7 +278,7 @@ export default function NewEventSheet({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-primary-700 mb-1">
                           End Time
                         </label>
                         <Input
@@ -308,7 +294,7 @@ export default function NewEventSheet({
 
               {/* Color Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
+                <label className="block text-sm font-medium text-primary-700 mb-3">
                   Color
                 </label>
                 <div className="flex gap-3">
@@ -318,8 +304,8 @@ export default function NewEventSheet({
                       onClick={() => setEventData(prev => ({ ...prev, color: option.value }))}
                       className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
                         eventData.color === option.value
-                          ? 'border-gray-900 scale-110'
-                          : 'border-gray-200 hover:border-gray-400'
+                          ? 'border-primary-900 scale-110'
+                          : 'border-primary-200 hover:border-primary-400'
                       }`}
                       style={{ backgroundColor: option.color }}
                       title={option.label}
@@ -328,51 +314,11 @@ export default function NewEventSheet({
                 </div>
               </div>
 
-              {/* Invitees */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Invitees
-                </label>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {activeUsers.map(user => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm font-semibold text-blue-600">
-                            {user.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{user.name}</p>
-                          <p className="text-sm text-gray-600">{user.email}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => toggleInvitee(user.id)}
-                        className={`w-6 h-6 rounded-full border-2 transition-all duration-200 ${
-                          eventData.invitees.includes(user.id)
-                            ? 'bg-blue-600 border-blue-600'
-                            : 'border-gray-300 hover:border-blue-600'
-                        }`}
-                      >
-                        {eventData.invitees.includes(user.id) && (
-                          <svg className="w-3 h-3 text-white mx-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Trip Details
+                <label className="block text-sm font-medium text-primary-700 mb-2">
+                  Event Details
                 </label>
                 <Textarea
                   value={eventData.notes}

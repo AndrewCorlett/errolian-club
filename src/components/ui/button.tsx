@@ -5,19 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-white transition-all-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95 ripple",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-white transition-all-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-royal-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95 ripple",
   {
     variants: {
       variant: {
-        default: "bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg hover:-translate-y-0.5",
+        default: "bg-royal-600 text-white hover:bg-royal-700 shadow-md hover:shadow-lg hover:-translate-y-0.5",
         destructive:
-          "bg-red-600 text-white hover:bg-red-700 shadow-md hover:shadow-lg hover:-translate-y-0.5",
+          "bg-burgundy-600 text-white hover:bg-burgundy-700 shadow-md hover:shadow-lg hover:-translate-y-0.5",
         outline:
-          "border border-gray-300 bg-white hover:bg-gray-50 hover:text-gray-900 hover:shadow-md hover:-translate-y-0.5",
+          "border border-primary-300 bg-white hover:bg-primary-50 hover:text-primary-900 hover:shadow-md hover:-translate-y-0.5",
         secondary:
-          "bg-gray-100 text-gray-900 hover:bg-gray-200 hover:shadow-md hover:-translate-y-0.5",
-        ghost: "hover:bg-gray-100 hover:text-gray-900",
-        link: "text-blue-600 underline-offset-4 hover:underline",
+          "bg-primary-100 text-primary-900 hover:bg-primary-200 hover:shadow-md hover:-translate-y-0.5",
+        ghost: "hover:bg-primary-100 hover:text-primary-900",
+        link: "text-royal-600 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-11 px-6 py-2.5",

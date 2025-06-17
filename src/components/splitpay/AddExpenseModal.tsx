@@ -1,18 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { getActiveUsers, getUserById } from '@/data/mockUsers'
-import { getUpcomingEvents, getUserEvents, getEventById } from '@/data/mockEvents'
-import { validateExpenseIntegrity } from '@/data/mockExpenses'
-import { useUserStore } from '@/store/userStore'
-import type { ExpenseCategory, Expense, ExpenseParticipant } from '@/types/expenses'
+import { useAuth } from '@/hooks/useAuth'
+import { userService, eventService } from '@/lib/database'
+import type { ExpenseCategory } from '@/types/supabase'
+import type { UserProfile, EventWithDetails } from '@/types/supabase'
 
 interface AddExpenseModalProps {
   isOpen: boolean
   onClose: () => void
-  onExpenseCreate: (expense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'>) => void
+  onExpenseCreate: (expense: any) => void
 }
 
 type SplitMethod = 'equal' | 'custom' | 'percentage'
@@ -26,34 +25,85 @@ interface ParticipantShare {
 }
 
 export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: AddExpenseModalProps) {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     amount: '',
     category: 'other' as ExpenseCategory,
-    eventId: '',
-    paidBy: currentUser?.id || ''
+    event_id: '',
+    paid_by: ''
   })
+
+  // Update paid_by when user is available
+  React.useEffect(() => {
+    if (user && !formData.paid_by) {
+      setFormData(prev => ({ ...prev, paid_by: user.id }))
+    }
+  }, [user, formData.paid_by])
   const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal')
   const [participants, setParticipants] = useState<ParticipantShare[]>([])
+  const [users, setUsers] = useState<UserProfile[]>([])
+  const [events, setEvents] = useState<EventWithDetails[]>([])
+  const [loading, setLoading] = useState(false)
 
-  if (!isOpen || !currentUser) return null
+  // Load users and events when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      const loadData = async () => {
+        try {
+          setLoading(true)
+          const [usersResponse, eventsResponse] = await Promise.all([
+            userService.getUsers(),
+            eventService.getEvents(1, 50)
+          ])
+          setUsers(usersResponse)
+          setEvents(eventsResponse.data)
+          
+          // Initialize participants with all users
+          const initialParticipants = usersResponse.map(user => ({
+            userId: user.id,
+            shareAmount: 0,
+            isSelected: false
+          }))
+          setParticipants(initialParticipants)
+        } catch (error) {
+          console.error('Failed to load data:', error)
+        } finally {
+          setLoading(false)
+        }
+      }
+      loadData()
+    }
+  }, [isOpen])
 
-  const activeUsers = getActiveUsers()
-  const userEvents = getUserEvents(currentUser.id)
-  const upcomingEvents = getUpcomingEvents()
-  const availableEvents = [...userEvents, ...upcomingEvents.filter(e => !userEvents.some(ue => ue.id === e.id))]
+  // Calculate equal split when amount changes and method is equal
+  React.useEffect(() => {
+    if (splitMethod === 'equal') {
+      const selectedParticipants = participants.filter(p => p.isSelected)
+      const totalAmount = parseFloat(formData.amount) || 0
+      const shareAmount = selectedParticipants.length > 0 ? totalAmount / selectedParticipants.length : 0
+      
+      setParticipants(prev => 
+        prev.map(p => ({ ...p, shareAmount: p.isSelected ? shareAmount : 0 }))
+      )
+    }
+  }, [splitMethod, formData.amount]) // Removed participants dependency to avoid circular updates
+
+  // Early return after all hooks are declared
+  if (!isOpen || !user) return null
+
+  // Use the loaded data instead of mock functions
 
   const handleEventChange = (eventId: string) => {
-    setFormData(prev => ({ ...prev, eventId }))
+    setFormData(prev => ({ ...prev, event_id: eventId }))
     
     if (eventId) {
-      const event = getEventById(eventId)
-      if (event) {
+      const event = events.find(e => e.id === eventId)
+      if (event && event.participants) {
         // Auto-select event participants
-        const eventParticipants = event.currentParticipants.map(userId => ({
-          userId,
+        const eventParticipants = event.participants.map(participant => ({
+          userId: participant.id,
           shareAmount: 0,
           isSelected: true,
           customAmount: 0,
@@ -62,8 +112,15 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
         setParticipants(eventParticipants)
       }
     } else {
-      // Reset participants
-      setParticipants([])
+      // Reset to all users
+      const allParticipants = users.map(user => ({
+        userId: user.id,
+        shareAmount: 0,
+        isSelected: false,
+        customAmount: 0,
+        percentage: 0
+      }))
+      setParticipants(allParticipants)
     }
   }
 
@@ -109,22 +166,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
     )
   }
 
-  const calculateEqualSplit = () => {
-    const totalAmount = parseFloat(formData.amount) || 0
-    const selectedParticipants = participants.filter(p => p.isSelected)
-    const shareAmount = selectedParticipants.length > 0 ? totalAmount / selectedParticipants.length : 0
-    
-    setParticipants(prev => 
-      prev.map(p => ({ ...p, shareAmount: p.isSelected ? shareAmount : 0 }))
-    )
-  }
-
-  // Calculate equal split when amount changes and method is equal
-  React.useEffect(() => {
-    if (splitMethod === 'equal') {
-      calculateEqualSplit()
-    }
-  }, [formData.amount, splitMethod, participants.length])
 
   const selectedParticipants = participants.filter(p => p.isSelected)
   const totalShares = selectedParticipants.reduce((sum, p) => sum + p.shareAmount, 0)
@@ -144,31 +185,23 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       return
     }
 
-    const expenseParticipants: ExpenseParticipant[] = selectedParticipants.map(p => ({
-      userId: p.userId,
-      shareAmount: p.shareAmount,
-      isPaid: p.userId === formData.paidBy, // Mark as paid if they're the one who paid
-      paidAt: p.userId === formData.paidBy ? new Date() : undefined
+    const expenseParticipants = selectedParticipants.map(p => ({
+      user_id: p.userId,
+      share_amount: p.shareAmount,
+      is_paid: p.userId === formData.paid_by, // Mark as paid if they're the one who paid
+      paid_at: p.userId === formData.paid_by ? new Date().toISOString() : null
     }))
 
-    const newExpense: Omit<Expense, 'id' | 'createdAt' | 'updatedAt'> = {
+    const newExpense = {
       title: formData.title.trim(),
-      description: formData.description.trim() || undefined,
+      description: formData.description.trim() || null,
       amount: totalAmount,
-      currency: 'AUD',
+      currency: 'GBP',
       category: formData.category,
       status: 'pending',
-      eventId: formData.eventId || undefined,
-      paidBy: formData.paidBy,
-      participants: expenseParticipants,
-      settledAt: undefined
-    }
-
-    // Validate expense integrity before creating
-    const validation = validateExpenseIntegrity(newExpense as Expense)
-    if (!validation.isValid) {
-      alert(`Validation errors:\n${validation.errors.join('\n')}`)
-      return
+      event_id: formData.event_id || null,
+      paid_by: formData.paid_by,
+      participants: expenseParticipants
     }
 
     onExpenseCreate(newExpense)
@@ -179,24 +212,24 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       description: '',
       amount: '',
       category: 'other',
-      eventId: '',
-      paidBy: currentUser.id
+      event_id: '',
+      paid_by: user.id
     })
     setParticipants([])
     setSplitMethod('equal')
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-primary-200 shadow-xl">
         <form onSubmit={handleSubmit}>
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Add New Expense</h2>
+          <div className="flex items-center justify-between p-6 border-b border-primary-200">
+            <h2 className="text-xl font-semibold text-primary-900">Add New Expense</h2>
             <button
               type="button"
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-primary-100 rounded-lg transition-colors text-primary-600 hover:text-primary-900"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -238,7 +271,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Amount (AUD) *
+                    Amount (GBP) *
                   </label>
                   <Input
                     type="number"
@@ -276,13 +309,13 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                     Paid by *
                   </label>
                   <Select
-                    value={formData.paidBy}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paidBy: e.target.value }))}
+                    value={formData.paid_by}
+                    onChange={(e) => setFormData(prev => ({ ...prev, paid_by: e.target.value }))}
                     required
                   >
-                    {activeUsers.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.name} {user.id === currentUser.id ? '(You)' : ''}
+                    {users.map(userOption => (
+                      <option key={userOption.id} value={userOption.id}>
+                        {userOption.name} {userOption.id === user.id ? '(You)' : ''}
                       </option>
                     ))}
                   </Select>
@@ -293,11 +326,11 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                     Event (Optional)
                   </label>
                   <Select
-                    value={formData.eventId}
+                    value={formData.event_id}
                     onChange={(e) => handleEventChange(e.target.value)}
                   >
                     <option value="">No event (standalone)</option>
-                    {availableEvents.map(event => (
+                    {events.map(event => (
                       <option key={event.id} value={event.id}>
                         {event.title}
                       </option>
@@ -312,34 +345,34 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
               <h3 className="text-lg font-medium text-gray-900">Split Between</h3>
               
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {activeUsers.map(user => {
-                  const participant = participants.find(p => p.userId === user.id)
+                {users.map(userOption => {
+                  const participant = participants.find(p => p.userId === userOption.id)
                   const isSelected = participant?.isSelected || false
                   
                   return (
                     <button
-                      key={user.id}
+                      key={userOption.id}
                       type="button"
-                      onClick={() => toggleParticipant(user.id)}
+                      onClick={() => toggleParticipant(userOption.id)}
                       className={`p-3 rounded-lg border-2 transition-colors text-left ${
                         isSelected 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-royal-500 bg-royal-50' 
+                          : 'border-primary-200 hover:border-primary-300'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
+                        <div className="w-8 h-8 bg-royal-100 rounded-full flex items-center justify-center">
+                          {userOption.avatar_url ? (
+                            <img src={userOption.avatar_url} alt={userOption.name} className="w-8 h-8 rounded-full" />
                           ) : (
-                            <span className="text-sm font-medium text-blue-600">
-                              {user.name.split(' ').map(n => n[0]).join('')}
+                            <span className="text-sm font-medium text-royal-600">
+                              {userOption.name.split(' ').map(n => n[0]).join('')}
                             </span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">
-                            {user.name} {user.id === currentUser.id ? '(You)' : ''}
+                            {userOption.name} {userOption.id === user.id ? '(You)' : ''}
                           </p>
                         </div>
                       </div>
@@ -388,24 +421,24 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {selectedParticipants.map(participant => {
-                        const user = getUserById(participant.userId)
+                        const participantUser = users.find(u => u.id === participant.userId)
                         return (
                           <div key={participant.userId} className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-medium text-blue-600">
-                                  {user?.name.split(' ').map(n => n[0]).join('')}
+                              <div className="w-6 h-6 bg-royal-100 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-medium text-royal-600">
+                                  {participantUser?.name.split(' ').map(n => n[0]).join('')}
                                 </span>
                               </div>
                               <span className="text-sm font-medium">
-                                {user?.name} {user?.id === currentUser.id ? '(You)' : ''}
+                                {participantUser?.name} {participantUser?.id === user.id ? '(You)' : ''}
                               </span>
                             </div>
                             
                             <div className="flex items-center gap-2">
                               {splitMethod === 'equal' && (
                                 <span className="text-sm font-medium">
-                                  ${participant.shareAmount.toFixed(2)}
+                                  £{participant.shareAmount.toFixed(2)}
                                 </span>
                               )}
                               
@@ -435,7 +468,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                                   />
                                   <span className="text-sm">%</span>
                                   <span className="text-sm font-medium w-16 text-right">
-                                    ${participant.shareAmount.toFixed(2)}
+                                    £{participant.shareAmount.toFixed(2)}
                                   </span>
                                 </div>
                               )}
@@ -447,7 +480,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                       <div className="border-t pt-2 flex items-center justify-between font-medium">
                         <span>Total:</span>
                         <span className={isValidSplit ? 'text-green-600' : 'text-red-600'}>
-                          ${totalShares.toFixed(2)} / ${totalAmount.toFixed(2)}
+                          £{totalShares.toFixed(2)} / £{totalAmount.toFixed(2)}
                         </span>
                       </div>
                       

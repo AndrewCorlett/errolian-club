@@ -71,7 +71,7 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
   }
 
   return (
-    <div className="fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 modal-backdrop z-[9999] flex items-center justify-center p-4 animate-fade-in">
       <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-fade-in-scale">
         {/* Header */}
         <div className="border-b border-gray-200 px-6 py-4">

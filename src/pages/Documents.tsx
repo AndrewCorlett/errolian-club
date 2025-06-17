@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -7,87 +7,90 @@ import FolderCard from '@/components/documents/FolderCard'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
-import { 
-  mockDocuments, 
-  searchDocuments, 
-  getDocumentsByFolder, 
-  getFoldersByParent,
-  getRecentDocuments,
-  getPopularDocuments 
-} from '@/data/mockDocuments'
-import type { Document, DocumentFolder, DocumentStatus } from '@/types/documents'
-import { useUserStore } from '@/store/userStore'
-import { hasPermission } from '@/types/user'
+import { documentService } from '@/lib/database'
+import type { Document, DocumentFolder } from '@/types/supabase'
+import { useAuth } from '@/hooks/useAuth'
 
 type ViewMode = 'folders' | 'all' | 'recent' | 'popular'
 type SortOption = 'name' | 'date' | 'size' | 'downloads'
 
 export default function Documents() {
-  const { currentUser } = useUserStore()
+  const { user } = useAuth()
   const [viewMode, setViewMode] = useState<ViewMode>('folders')
   const [currentFolder, setCurrentFolder] = useState<DocumentFolder | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<DocumentStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [folderPath, setFolderPath] = useState<DocumentFolder[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [folders, setFolders] = useState<DocumentFolder[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const canUpload = currentUser && hasPermission(currentUser.role, 'canCreateEvents')
+  const canUpload = user && (user.role === 'super-admin' || user.role === 'commodore' || user.role === 'officer' || user.role === 'member')
+
+  // Load documents and folders
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        
+        const [documentsResponse, foldersResponse] = await Promise.all([
+          documentService.getDocuments(currentFolder?.id),
+          documentService.getFolders()
+        ])
+        
+        setDocuments(documentsResponse)
+        setFolders(foldersResponse)
+      } catch (err) {
+        console.error('Failed to load documents:', err)
+        setError('Failed to load documents')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [currentFolder])
 
   // Get current documents based on view mode and filters
   const getCurrentDocuments = () => {
-    let documents: Document[] = []
-
-    switch (viewMode) {
-      case 'folders':
-        documents = getDocumentsByFolder(currentFolder?.id)
-        break
-      case 'recent':
-        documents = getRecentDocuments()
-        break
-      case 'popular':
-        documents = getPopularDocuments()
-        break
-      case 'all':
-      default:
-        documents = mockDocuments
-        break
-    }
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      documents = searchDocuments(searchQuery.trim())
-    }
+    let filteredDocuments = documents
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      documents = documents.filter(doc => doc.status === statusFilter)
+      filteredDocuments = filteredDocuments.filter(doc => doc.status === statusFilter)
     }
 
-    // Apply sorting
+    // Apply search filter
+    if (searchQuery) {
+      filteredDocuments = filteredDocuments.filter(doc => 
+        doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    // Sort documents
     switch (sortBy) {
-      case 'date':
-        documents.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-        break
-      case 'size':
-        documents.sort((a, b) => b.size - a.size)
-        break
-      case 'downloads':
-        documents.sort((a, b) => b.downloadCount - a.downloadCount)
-        break
       case 'name':
+        return filteredDocuments.sort((a, b) => a.name.localeCompare(b.name))
+      case 'date':
+        return filteredDocuments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      case 'size':
+        return filteredDocuments.sort((a, b) => b.size_bytes - a.size_bytes)
+      case 'downloads':
+        return filteredDocuments.sort((a, b) => b.download_count - a.download_count)
       default:
-        documents.sort((a, b) => a.name.localeCompare(b.name))
-        break
+        return filteredDocuments
     }
-
-    return documents
   }
 
   const getCurrentFolders = () => {
-    return getFoldersByParent(currentFolder?.id)
+    return folders.filter(folder => folder.parent_id === (currentFolder?.id || null))
   }
 
   const handleFolderClick = (folder: DocumentFolder) => {
@@ -146,11 +149,27 @@ export default function Documents() {
     setShowDocumentViewer(false)
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading documents...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    )
+  }
+
   const currentDocuments = getCurrentDocuments()
   const currentFolders = getCurrentFolders()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50">
+    <div className="min-h-screen bg-gradient-to-br from-forest-50 via-primary-50 to-accent-50 pb-20">
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
@@ -253,7 +272,10 @@ export default function Documents() {
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            📈 Popular
+            <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+            Popular
           </button>
         </div>
 

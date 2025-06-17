@@ -4,7 +4,7 @@ const navItems = [
   { name: 'Home', href: '/', icon: 'home' },
   { name: 'Calendar', href: '/calendar', icon: 'calendar' },
   { name: 'Split-Pay', href: '/split-pay', icon: 'credit-card' },
-  { name: 'Docs', href: '/docs', icon: 'file-text' },
+  { name: 'Documents', href: '/docs', icon: 'file-text' },
   { name: 'Account', href: '/account', icon: 'user' },
 ]
 
@@ -54,7 +54,7 @@ export default function BottomNavigation() {
   const location = useLocation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200/50 z-50 safe-area-bottom">
+    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-primary-200/50 z-50 safe-area-bottom">
       <div className="flex justify-around px-2 py-1">
         {navItems.map((item, index) => {
           const isActive = location.pathname === item.href
@@ -64,18 +64,18 @@ export default function BottomNavigation() {
               to={item.href}
               className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all-smooth relative stagger-item hover-lift ${
                 isActive 
-                  ? 'text-blue-600' 
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-royal-600' 
+                  : 'text-primary-500 hover:text-primary-900'
               }`}
               style={{ animationDelay: `${index * 0.05}s` }}
             >
               {isActive && (
-                <div className="absolute inset-0 bg-blue-50 rounded-xl animate-scale-in" />
+                <div className="absolute inset-0 bg-royal-50 rounded-xl animate-scale-in" />
               )}
               <div className="relative z-10 flex flex-col items-center">
                 <IconComponent icon={item.icon} isActive={isActive} />
                 <span className={`text-xs font-medium mt-0.5 transition-colors-smooth ${
-                  isActive ? 'text-blue-600' : ''
+                  isActive ? 'text-royal-600' : ''
                 }`}>
                   {item.name}
                 </span>

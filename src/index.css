@@ -7,11 +7,11 @@
 /* Custom base styles */
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-primary-200;
   }
   
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    @apply bg-primary-50 text-primary-900 antialiased;
     font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -25,12 +25,12 @@
   
   /* Custom focus styles */
   *:focus {
-    @apply outline-none ring-2 ring-blue-500 ring-opacity-50;
+    @apply outline-none ring-2 ring-royal-500 ring-opacity-50;
   }
   
   /* Better button focus */
   button:focus {
-    @apply outline-none ring-2 ring-blue-500 ring-opacity-50 ring-offset-2;
+    @apply outline-none ring-2 ring-royal-500 ring-opacity-50 ring-offset-2;
   }
 }
 

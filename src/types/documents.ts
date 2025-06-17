@@ -52,13 +52,13 @@ export interface DocumentVersion {
 
 export function getDocumentTypeIcon(type: DocumentType): string {
   const icons: Record<DocumentType, string> = {
-    'pdf': '📄',
-    'image': '🖼️',
-    'video': '🎥',
-    'audio': '🎵',
-    'doc': '📝',
-    'spreadsheet': '📊',
-    'other': '📎'
+    'pdf': 'pdf',
+    'image': 'image',
+    'video': 'video',
+    'audio': 'audio',
+    'doc': 'document',
+    'spreadsheet': 'spreadsheet',
+    'other': 'file'
   }
   return icons[type]
 }

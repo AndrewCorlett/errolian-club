@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
-import type { Event, ItineraryItem } from '@/types/events'
-import { getPortugalTripEventsByDate, getPortugalTripColors } from '@/data/portugalGolfTrip'
+import type { EventWithDetails } from '@/types/supabase'
+import type { ItineraryItem } from '@/types/events'
 
 interface DayViewSheetProps {
   isOpen: boolean
   onClose: () => void
   selectedDate: Date
-  events: Event[]
-  onEventClick?: (event: Event) => void
+  events: EventWithDetails[]
+  onEventClick?: (event: EventWithDetails) => void
   onItineraryClick?: (item: ItineraryItem) => void
   onNewEvent?: (date: Date) => void
 }
@@ -21,7 +21,7 @@ interface TimelineItem {
   endTime: string
   color: string
   type: 'event' | 'itinerary'
-  data: Event | ItineraryItem
+  data: EventWithDetails | ItineraryItem
 }
 
 export default function DayViewSheet({
@@ -34,7 +34,16 @@ export default function DayViewSheet({
   onNewEvent
 }: DayViewSheetProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate)
-  const colors = getPortugalTripColors()
+  // Helper function to get color for event type
+  const getEventColor = (eventType: string) => {
+    switch (eventType) {
+      case 'adventure': return '#10b981'
+      case 'meeting': return '#3b82f6'
+      case 'social': return '#f59e0b'
+      case 'training': return '#8b5cf6'
+      default: return '#6b7280'
+    }
+  }
 
   useEffect(() => {
     if (isOpen) {
@@ -53,33 +62,22 @@ export default function DayViewSheet({
   const getTimelineItems = (): TimelineItem[] => {
     const items: TimelineItem[] = []
 
-    // Regular events
+    // Regular events from Supabase
     events.forEach(event => {
-      if (isSameDay(currentDate, event.startDate)) {
+      const eventStartDate = new Date(event.start_date)
+      const eventEndDate = new Date(event.end_date)
+      
+      if (isSameDay(currentDate, eventStartDate)) {
         items.push({
           id: event.id,
           title: event.title,
-          startTime: format(event.startDate, 'HH:mm'),
-          endTime: format(event.endDate, 'HH:mm'),
-          color: '#d7c6ff',
+          startTime: format(eventStartDate, 'HH:mm'),
+          endTime: format(eventEndDate, 'HH:mm'),
+          color: getEventColor(event.type),
           type: 'event',
           data: event
         })
       }
-    })
-
-    // Portugal trip itinerary items
-    const itineraryItems = getPortugalTripEventsByDate(currentDate)
-    itineraryItems.forEach(item => {
-      items.push({
-        id: item.id,
-        title: item.title,
-        startTime: item.startTime,
-        endTime: item.endTime,
-        color: colors[item.type] || '#d7c6ff',
-        type: 'itinerary',
-        data: item
-      })
     })
 
     // Sort by start time
@@ -98,7 +96,7 @@ export default function DayViewSheet({
 
   const handleItemClick = (item: TimelineItem) => {
     if (item.type === 'event' && onEventClick) {
-      onEventClick(item.data as Event)
+      onEventClick(item.data as EventWithDetails)
     } else if (item.type === 'itinerary' && onItineraryClick) {
       onItineraryClick(item.data as ItineraryItem)
     }
@@ -117,7 +115,7 @@ export default function DayViewSheet({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm"
       onClick={onClose}
       style={{ overscrollBehavior: 'contain' }}
     >
