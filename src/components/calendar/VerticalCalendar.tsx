@@ -99,10 +99,10 @@ export default function VerticalCalendar({
         pills.push({
           id: event.id,
           title: event.title,
-          color: event.type === 'adventure' ? '#10b981' : 
-                 event.type === 'meeting' ? '#3b82f6' :
-                 event.type === 'social' ? '#f59e0b' :
-                 event.type === 'training' ? '#8b5cf6' : '#6b7280',
+          color: event.type === 'adventure' ? '#d7c6ff' : 
+                 event.type === 'meeting' ? '#bae6fd' :
+                 event.type === 'social' ? '#fde68a' :
+                 event.type === 'training' ? '#fecaca' : '#e5e7eb',
           isItinerary: false
         })
       }
@@ -126,10 +126,10 @@ export default function VerticalCalendar({
         const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
         
         if (daysDiff > 1) { // Multi-day event
-          const eventColor = event.type === 'adventure' ? '#10b981' : 
-                            event.type === 'meeting' ? '#3b82f6' :
-                            event.type === 'social' ? '#f59e0b' :
-                            event.type === 'training' ? '#8b5cf6' : '#6b7280'
+          const eventColor = event.type === 'adventure' ? '#d7c6ff' : 
+                            event.type === 'meeting' ? '#bae6fd' :
+                            event.type === 'social' ? '#fde68a' :
+                            event.type === 'training' ? '#fecaca' : '#e5e7eb'
           
           if (isSameDay(date, startDate)) {
             multiDayEvents.push({
@@ -179,33 +179,33 @@ export default function VerticalCalendar({
 
   return (
     <div className="flex-1 overflow-hidden">
-      {/* Week headers - sticky below main header */}
-      <div className="sticky top-[80px] z-30 bg-white/95 backdrop-blur-sm border-b border-primary-200/50 shadow-sm">
-        <div className="grid grid-cols-7 py-3">
-          {weekDays.map(day => (
-            <div 
-              key={day} 
-              className="text-center text-xs font-semibold text-primary-700 py-1"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Scrollable months */}
       <div 
         ref={scrollRef}
-        className="overflow-y-auto"
-        style={{ height: 'calc(100vh - 140px)' }}
+        className="absolute inset-x-0 overflow-y-auto"
+        style={{ top: '120px', bottom: '70px' }}
       >
         {months.map((month) => (
           <div key={month.date.toISOString()} className="mb-6">
-            {/* Month title */}
-            <div className="sticky top-[130px] z-20 bg-white/95 backdrop-blur-sm py-2 px-4 border-b border-primary-100">
-              <h2 className="text-lg font-semibold text-primary-900">
-                {format(month.date, 'MMMM yyyy')}
-              </h2>
+            {/* Month title with day headers */}
+            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-primary-100">
+              <div className="py-2 px-4">
+                <h2 className="text-lg font-semibold text-royal-600">
+                  {format(month.date, 'MMMM yyyy')}
+                </h2>
+              </div>
+              {/* Day headers for this month */}
+              <div className="grid grid-cols-7 py-1 border-t border-primary-200/50">
+                {weekDays.map(day => (
+                  <div 
+                    key={day} 
+                    className="text-center text-xs font-semibold text-royal-600 py-1"
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Month grid */}
@@ -275,7 +275,7 @@ export default function VerticalCalendar({
                       <span
                         className={`inline-flex items-center justify-center w-7 h-7 text-sm rounded-full transition-all duration-200 ${
                           isCurrentDay
-                            ? 'bg-blue-600 text-white font-semibold'
+                            ? 'bg-royal-600 text-white font-semibold'
                             : isCurrentMonth
                             ? 'text-gray-900 font-medium hover:bg-gray-100'
                             : 'text-gray-400'

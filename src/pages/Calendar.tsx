@@ -10,13 +10,13 @@ import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import { eventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
-import type { Event, ItineraryItem } from '@/types/events'
+import type { ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
 
 export default function Calendar() {
   const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<EventWithDetails | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
   const [showNewEventSheet, setShowNewEventSheet] = useState(false)
   const [showDayViewSheet, setShowDayViewSheet] = useState(false)
@@ -98,7 +98,7 @@ export default function Calendar() {
     }
   }
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: EventWithDetails) => {
     setSelectedEvent(event)
     setShowEventDetail(true)
     setShowDayViewSheet(false)
