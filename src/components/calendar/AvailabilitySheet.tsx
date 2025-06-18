@@ -4,8 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { submitAvailability } from '@/lib/api/availability'
-import { type AvailabilityRecord } from '@/schemas/availability'
+import { availabilityService } from '@/lib/database'
 
 interface AvailabilitySheetProps {
   isOpen: boolean
@@ -15,15 +14,16 @@ interface AvailabilitySheetProps {
 }
 
 interface AvailabilityData {
-  date: string
-  status: 'available' | 'unavailable' | 'maybe'
+  startDate: string
+  endDate?: string
+  availability_type: 'available' | 'busy' | 'tentative'
   notes?: string
 }
 
 const statusOptions = [
-  { value: 'available', label: 'Available', color: 'bg-green-500 hover:bg-green-600' },
-  { value: 'unavailable', label: 'Unavailable', color: 'bg-red-500 hover:bg-red-600' },
-  { value: 'maybe', label: 'Maybe', color: 'bg-yellow-500 hover:bg-yellow-600' }
+  { value: 'available', label: 'Available', color: 'bg-forest-600 hover:bg-forest-700' },
+  { value: 'busy', label: 'Busy', color: 'bg-burgundy-600 hover:bg-burgundy-700' },
+  { value: 'tentative', label: 'Tentative', color: 'bg-accent-600 hover:bg-accent-700' }
 ]
 
 export default function AvailabilitySheet({ 
@@ -32,8 +32,10 @@ export default function AvailabilitySheet({
   selectedDate = new Date(),
   onAvailabilitySubmit 
 }: AvailabilitySheetProps) {
-  const [date, setDate] = useState(selectedDate.toISOString().split('T')[0])
-  const [status, setStatus] = useState<'available' | 'unavailable' | 'maybe'>('available')
+  const [startDate, setStartDate] = useState(selectedDate.toISOString().split('T')[0])
+  const [endDate, setEndDate] = useState('')
+  const [isDateRange, setIsDateRange] = useState(false)
+  const [status, setStatus] = useState<'available' | 'busy' | 'tentative'>('available')
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -42,34 +44,32 @@ export default function AvailabilitySheet({
     setIsSubmitting(true)
     
     try {
-      const availabilityRecord: Omit<AvailabilityRecord, 'user_id'> = {
-        date,
-        status,
-        notes: notes.trim()
+      const availabilityData = {
+        startDate,
+        endDate: isDateRange ? endDate : undefined,
+        availability_type: status,
+        notes: notes.trim() || undefined
+      }
+      
+      // Save to database
+      await availabilityService.createAvailability(availabilityData)
+      
+      // Also call the callback for any parent component handling
+      if (onAvailabilitySubmit) {
+        onAvailabilitySubmit(availabilityData)
       }
 
-      const result = await submitAvailability(availabilityRecord)
-
-      if (result.success) {
-        // Call parent callback if provided
-        if (onAvailabilitySubmit) {
-          onAvailabilitySubmit({
-            date,
-            status,
-            notes: notes.trim() || undefined
-          })
-        }
-
-        alert(`Availability marked as "${status}" for ${new Date(date).toLocaleDateString()}`)
-        
-        // Reset form and close
-        setNotes('')
-        setStatus('available')
-        onClose()
-      } else {
-        throw new Error(result.message || 'Failed to submit availability')
-      }
+      const dateRange = isDateRange && endDate ? `${startDate} to ${endDate}` : startDate
+      alert(`Availability marked as "${status}" for ${dateRange}`)
+      
+      // Reset form and close
+      setNotes('')
+      setStatus('available')
+      setIsDateRange(false)
+      setEndDate('')
+      onClose()
     } catch (error) {
+      console.error('Error submitting availability:', error)
       alert(`Error submitting availability: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsSubmitting(false)
@@ -79,6 +79,8 @@ export default function AvailabilitySheet({
   const handleClose = () => {
     setNotes('')
     setStatus('available')
+    setIsDateRange(false)
+    setEndDate('')
     onClose()
   }
 
@@ -91,17 +93,92 @@ export default function AvailabilitySheet({
 
         <form onSubmit={handleSubmit} className="flex flex-col h-full pt-6">
           <div className="flex-1 space-y-6">
-            {/* Date Picker */}
-            <div className="space-y-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full"
-                required
-              />
+            {/* Date Range Toggle */}
+            <div className="space-y-3">
+              <Label>Date Selection</Label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDateRange(false)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    !isDateRange 
+                      ? 'bg-royal-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Single Day
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDateRange(true)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isDateRange 
+                      ? 'bg-royal-600 text-white' 
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Date Range
+                </button>
+              </div>
+            </div>
+
+            {/* Date Picker(s) */}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">{isDateRange ? 'Start Date' : 'Date'}</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full"
+                  required
+                />
+              </div>
+              
+              {isDateRange && (
+                <div className="space-y-2">
+                  <Label htmlFor="endDate">End Date</Label>
+                  <Input
+                    id="endDate"
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    min={startDate}
+                    className="w-full"
+                    required
+                  />
+                </div>
+              )}
+              
+              {/* Quick Selection Buttons */}
+              {isDateRange && (
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const start = new Date(startDate)
+                      const end = new Date(start)
+                      end.setDate(start.getDate() + 6) // Add 6 days for a full week
+                      setEndDate(end.toISOString().split('T')[0])
+                    }}
+                    className="px-3 py-2 text-sm bg-accent-100 text-accent-700 rounded-lg hover:bg-accent-200 transition-colors"
+                  >
+                    Whole Week
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const start = new Date(startDate)
+                      const end = new Date(start.getFullYear(), start.getMonth() + 1, 0) // Last day of month
+                      setEndDate(end.toISOString().split('T')[0])
+                    }}
+                    className="px-3 py-2 text-sm bg-accent-100 text-accent-700 rounded-lg hover:bg-accent-200 transition-colors"
+                  >
+                    Whole Month
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Status Buttons */}
@@ -151,7 +228,7 @@ export default function AvailabilitySheet({
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+              className="flex-1 bg-royal-600 hover:bg-royal-700 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

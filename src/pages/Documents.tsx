@@ -9,7 +9,11 @@ import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
 import { documentService } from '@/lib/database'
 import type { Document, DocumentFolder } from '@/types/documents'
-import type { DocumentRow, DocumentFolderRow, DocumentStatus } from '@/types/supabase'
+import type { 
+  Document as DocumentRow, 
+  DocumentFolder as DocumentFolderRow, 
+  DocumentStatus 
+} from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
 type ViewMode = 'folders' | 'all' | 'recent' | 'popular'

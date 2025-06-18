@@ -14,7 +14,7 @@ interface AddExpenseModalProps {
   onExpenseCreate: (expense: any) => void
 }
 
-type SplitMethod = 'equal' | 'custom' | 'percentage'
+type SplitMethod = 'equal' | 'custom' | 'percentage' | null
 
 interface ParticipantShare {
   userId: string
@@ -41,7 +41,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       setFormData(prev => ({ ...prev, paid_by: user.id }))
     }
   }, [user, formData.paid_by])
-  const [splitMethod, setSplitMethod] = useState<SplitMethod>('equal')
+  const [splitMethod, setSplitMethod] = useState<SplitMethod>(null)
   const [participants, setParticipants] = useState<ParticipantShare[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [events, setEvents] = useState<EventWithDetails[]>([])
@@ -180,6 +180,12 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       return
     }
 
+    // Check if participants are selected but no split method is chosen
+    if (selectedParticipants.length > 0 && !splitMethod) {
+      alert('Please select a split method: Equal Split, Custom Amounts, or Percentage')
+      return
+    }
+
     if (!isValidSplit) {
       alert('Participant shares must equal the total amount')
       return
@@ -216,7 +222,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       paid_by: user.id
     })
     setParticipants([])
-    setSplitMethod('equal')
+    setSplitMethod(null)
   }
 
   return (

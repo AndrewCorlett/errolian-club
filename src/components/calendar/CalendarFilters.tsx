@@ -38,23 +38,23 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
         
         {/* Handle bar */}
         <div className="flex justify-center py-3 cursor-pointer" onClick={onClose}>
-          <div className="w-12 h-1 bg-gray-300 rounded-full"></div>
+          <div className="w-12 h-1 bg-primary-300 rounded-full"></div>
         </div>
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pb-4">
           <button
             onClick={onClose}
-            className="text-blue-600 font-medium"
+            className="text-royal-600 font-medium"
           >
             Done
           </button>
           
-          <h2 className="text-lg font-semibold text-gray-900">Filters</h2>
+          <h2 className="text-lg font-semibold text-primary-900">Filters</h2>
           
           <button
             onClick={resetFilters}
-            className="text-blue-600 font-medium"
+            className="text-royal-600 font-medium"
           >
             Reset
           </button>
@@ -63,10 +63,10 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
         {/* Filter Options */}
         <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-4">
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-700">Show in Calendar</h3>
+            <h3 className="text-sm font-medium text-royal-700">Show in Calendar</h3>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-primary-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full bg-blue-500"></div>
                   <div>
@@ -77,7 +77,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
                 <button
                   onClick={() => toggleFilter('events')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    activeFilters.events ? 'bg-blue-600' : 'bg-gray-200'
+                    activeFilters.events ? 'bg-royal-600' : 'bg-primary-200'
                   }`}
                 >
                   <span
@@ -88,7 +88,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-primary-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full bg-green-500"></div>
                   <div>
@@ -99,7 +99,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
                 <button
                   onClick={() => toggleFilter('availability')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    activeFilters.availability ? 'bg-blue-600' : 'bg-gray-200'
+                    activeFilters.availability ? 'bg-royal-600' : 'bg-primary-200'
                   }`}
                 >
                   <span
@@ -110,7 +110,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-primary-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-4 h-4 rounded-full bg-purple-500"></div>
                   <div>
@@ -121,7 +121,7 @@ export default function CalendarFilters({ isOpen, onClose, activeFilters, onFilt
                 <button
                   onClick={() => toggleFilter('officers')}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    activeFilters.officers ? 'bg-blue-600' : 'bg-gray-200'
+                    activeFilters.officers ? 'bg-royal-600' : 'bg-primary-200'
                   }`}
                 >
                   <span

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
 import { Card, CardContent } from '@/components/ui/card'
+import AvailabilitySheet from './AvailabilitySheet'
 import type { EventWithDetails } from '@/types/supabase'
 import type { ItineraryItem } from '@/types/events'
 
@@ -34,9 +35,16 @@ export default function DayViewSheet({
   onNewEvent
 }: DayViewSheetProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate)
-  // Helper function to get color for event type
-  const getEventColor = (eventType: string) => {
-    switch (eventType) {
+  const [isAvailabilitySheetOpen, setIsAvailabilitySheetOpen] = useState(false)
+  // Helper function to get color for event
+  const getEventColor = (event: EventWithDetails): string => {
+    // Use event's color field if available, otherwise fall back to type-based colors
+    if (event.color) {
+      return event.color
+    }
+    
+    // Fallback to type-based colors for compatibility
+    switch (event.type) {
       case 'adventure': return '#10b981'
       case 'meeting': return '#3b82f6'
       case 'social': return '#f59e0b'
@@ -58,6 +66,17 @@ export default function DayViewSheet({
     format(new Date().setHours(i, 0, 0, 0), 'HH:mm')
   )
 
+  // Get itinerary item color based on type
+  const getItineraryItemColor = (type: string): string => {
+    switch (type) {
+      case 'travel': return '#10b981' // Green for flights
+      case 'accommodation': return '#3b82f6' // Light blue for accommodation
+      case 'activity': return '#8b5cf6' // Purple for activities
+      case 'other': return '#f59e0b' // Yellow for other
+      default: return '#6b7280'
+    }
+  }
+
   // Get all items for the current date
   const getTimelineItems = (): TimelineItem[] => {
     const items: TimelineItem[] = []
@@ -67,16 +86,82 @@ export default function DayViewSheet({
       const eventStartDate = new Date(event.start_date)
       const eventEndDate = new Date(event.end_date)
       
-      if (isSameDay(currentDate, eventStartDate)) {
+      // Check if the event occurs on the current date (including multi-day events)
+      const currentDateStart = new Date(currentDate)
+      currentDateStart.setHours(0, 0, 0, 0)
+      const currentDateEnd = new Date(currentDate)
+      currentDateEnd.setHours(23, 59, 59, 999)
+      
+      // Event occurs on this date if:
+      // 1. It starts on this date, OR
+      // 2. It ends on this date, OR  
+      // 3. It spans across this date (starts before and ends after)
+      if (eventStartDate <= currentDateEnd && eventEndDate >= currentDateStart) {
+        // Calculate the display times for this specific day
+        let displayStartTime: string
+        let displayEndTime: string
+        
+        if (isSameDay(currentDate, eventStartDate)) {
+          // Event starts on this day - use actual start time
+          displayStartTime = format(eventStartDate, 'HH:mm')
+        } else {
+          // Event started on a previous day - show from 00:00
+          displayStartTime = '00:00'
+        }
+        
+        if (isSameDay(currentDate, eventEndDate)) {
+          // Event ends on this day - use actual end time
+          displayEndTime = format(eventEndDate, 'HH:mm')
+        } else {
+          // Event continues to next day - show until 23:59
+          displayEndTime = '23:59'
+        }
+        
         items.push({
           id: event.id,
           title: event.title,
-          startTime: format(eventStartDate, 'HH:mm'),
-          endTime: format(eventEndDate, 'HH:mm'),
-          color: getEventColor(event.type),
+          startTime: displayStartTime,
+          endTime: displayEndTime,
+          color: getEventColor(event),
           type: 'event',
           data: event
         })
+
+        // Add itinerary items for this event on this day
+        if (event.itinerary_items && event.itinerary_items.length > 0) {
+          event.itinerary_items.forEach(itineraryItem => {
+            // Only show itinerary items that have times and are for this day
+            if (itineraryItem.start_time && itineraryItem.end_time) {
+              // For now, assume itinerary items are on the same day as the event start
+              // In a full implementation, you'd check the actual date of each itinerary item
+              if (isSameDay(currentDate, eventStartDate)) {
+                items.push({
+                  id: `itinerary_${itineraryItem.id}`,
+                  title: itineraryItem.title,
+                  startTime: itineraryItem.start_time,
+                  endTime: itineraryItem.end_time,
+                  color: getItineraryItemColor(itineraryItem.type),
+                  type: 'itinerary',
+                  data: {
+                    id: itineraryItem.id,
+                    eventId: event.id,
+                    type: itineraryItem.type,
+                    title: itineraryItem.title,
+                    description: itineraryItem.description || '',
+                    startTime: itineraryItem.start_time,
+                    endTime: itineraryItem.end_time,
+                    location: itineraryItem.location || '',
+                    cost: itineraryItem.cost || 0,
+                    notes: itineraryItem.notes || '',
+                    order: itineraryItem.order_index || 0,
+                    createdAt: new Date(itineraryItem.created_at),
+                    updatedAt: new Date(itineraryItem.updated_at)
+                  } as ItineraryItem
+                })
+              }
+            }
+          })
+        }
       }
     })
 
@@ -142,16 +227,29 @@ export default function DayViewSheet({
               </svg>
             </button>
             
-            <h2 className="text-lg font-semibold text-gray-900">Day View</h2>
+            <h2 className="text-lg font-semibold text-primary-900">Day View</h2>
             
-            <button
-              onClick={() => onNewEvent?.(currentDate)}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 hover:bg-blue-700 transition-colors"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsAvailabilitySheetOpen(true)}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-forest-600 hover:bg-forest-700 transition-colors"
+                title="Mark Availability"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              
+              <button
+                onClick={() => onNewEvent?.(currentDate)}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-royal-600 hover:bg-royal-700 transition-colors"
+                title="Create Event"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Date Scroller */}
@@ -159,7 +257,7 @@ export default function DayViewSheet({
             <div className="flex items-center justify-between">
               <button
                 onClick={handlePreviousDay}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary-100 hover:bg-primary-200 transition-colors"
               >
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -167,17 +265,17 @@ export default function DayViewSheet({
               </button>
 
               <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-primary-900">
                   {format(currentDate, 'EEEE')}
                 </h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-royal-600">
                   {format(currentDate, 'MMMM d, yyyy')}
                 </p>
               </div>
 
               <button
                 onClick={handleNextDay}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-primary-100 hover:bg-primary-200 transition-colors"
               >
                 <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -192,8 +290,8 @@ export default function DayViewSheet({
           {/* Always show 24-hour timeline view */}
           <div className="relative">
             {/* Time labels */}
-            <div className="sticky top-0 bg-white z-10 border-b border-gray-100">
-              <div className="flex items-center text-xs text-gray-500 p-4">
+            <div className="sticky top-0 bg-white z-10 border-b border-primary-200">
+              <div className="flex items-center text-xs text-royal-600 p-4">
                 <div className="w-12">Time</div>
                 <div className="flex-1">Events</div>
               </div>
@@ -211,23 +309,23 @@ export default function DayViewSheet({
                 return (
                   <div
                     key={time}
-                    className="absolute inset-x-0 border-t border-gray-100"
+                    className="absolute inset-x-0 border-t border-primary-100"
                     style={{ 
                       top: `${(index / 24) * 100}%`,
                       height: `${100 / 24}%`
                     }}
                   >
                     <div className="flex items-start px-4 pt-1 h-full">
-                      <div className="w-12 text-xs text-gray-500 flex-shrink-0">{time}</div>
+                      <div className="w-12 text-xs text-royal-500 flex-shrink-0">{time}</div>
                       {!hourHasEvents && (
                         <div className="ml-2 flex-1 h-full">
                           <div 
-                            className="h-full rounded-lg bg-gray-50/50 hover:bg-gray-100/50 transition-colors cursor-pointer border border-gray-100/50"
+                            className="h-full rounded-lg bg-primary-50/50 hover:bg-primary-100/50 transition-colors cursor-pointer border border-primary-100/50"
                             onClick={() => onNewEvent?.(new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), index))}
                             title={`Add event at ${time}`}
                           >
                             <div className="flex items-center justify-center h-full">
-                              <span className="text-xs text-gray-400 opacity-0 hover:opacity-100 transition-opacity">
+                              <span className="text-xs text-royal-400 opacity-0 hover:opacity-100 transition-opacity">
                                 + Add event
                               </span>
                             </div>
@@ -243,13 +341,13 @@ export default function DayViewSheet({
               {timelineItems.map((item) => (
                 <div
                   key={item.id}
-                  className="absolute inset-x-0 px-4 z-20"
+                  className="absolute inset-x-0 px-4 z-30"
                   style={{
                     top: `${getTimePosition(item.startTime)}%`,
                     height: `${getItemHeight(item.startTime, item.endTime)}%`
                   }}
                 >
-                  <div className="ml-12 mr-2 h-full">
+                  <div className={`${item.type === 'itinerary' ? 'ml-16' : 'ml-12'} mr-2 h-full`}>
                     <Card
                       className="h-full cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 shadow-sm"
                       style={{ 
@@ -258,22 +356,30 @@ export default function DayViewSheet({
                       }}
                       onClick={() => handleItemClick(item)}
                     >
-                      <CardContent className="p-3 h-full flex flex-col justify-center">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-medium text-gray-900 text-sm line-clamp-1">
-                            {item.title}
+                      <CardContent className="p-3 h-full flex flex-col justify-start">
+                        <div className="flex items-start justify-between mb-1">
+                          <h4 className={`font-medium text-primary-900 text-sm line-clamp-1 flex-1 ${
+                            item.type === 'itinerary' ? 'text-xs' : ''
+                          }`}>
+                            {item.type === 'itinerary' && '┗ '}{item.title}
                           </h4>
-                          <span className="text-xs text-gray-600 ml-2 whitespace-nowrap">
+                          <span className="text-xs text-royal-600 ml-2 whitespace-nowrap">
                             {item.startTime} - {item.endTime}
                           </span>
                         </div>
                         {item.type === 'itinerary' && (
-                          <p className="text-xs text-gray-600 line-clamp-1">
+                          <p className="text-xs text-royal-600 line-clamp-1 mb-1">
                             {(item.data as ItineraryItem).description}
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs px-2 py-0.5 bg-white/80 rounded-full text-gray-700 capitalize">
+                        <div className="flex items-center gap-2 mt-auto">
+                          <span 
+                            className="text-xs px-2 py-0.5 rounded-full text-primary-700 capitalize"
+                            style={{ 
+                              backgroundColor: item.type === 'itinerary' ? item.color : 'rgba(255,255,255,0.8)',
+                              color: item.type === 'itinerary' ? 'white' : undefined
+                            }}
+                          >
                             {item.type === 'itinerary' ? (item.data as ItineraryItem).type : 'event'}
                           </span>
                           {item.type === 'itinerary' && (item.data as ItineraryItem).cost > 0 && (
@@ -292,7 +398,7 @@ export default function DayViewSheet({
               {timelineItems.length === 0 && (
                 <div className="absolute inset-x-0 top-1/2 transform -translate-y-1/2 px-4 pointer-events-none">
                   <div className="ml-12 mr-2">
-                    <div className="text-center py-8 text-gray-400">
+                    <div className="text-center py-8 text-royal-400">
                       <svg className="w-8 h-8 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                       </svg>
@@ -305,6 +411,17 @@ export default function DayViewSheet({
           </div>
         </div>
       </div>
+
+      {/* Availability Sheet */}
+      <AvailabilitySheet
+        isOpen={isAvailabilitySheetOpen}
+        onClose={() => setIsAvailabilitySheetOpen(false)}
+        selectedDate={currentDate}
+        onAvailabilitySubmit={(availability) => {
+          console.log('Availability submitted:', availability)
+          // TODO: Handle availability submission to backend
+        }}
+      />
     </div>
   )
 }

@@ -36,11 +36,11 @@ export default function CalendarHeader({
           <button
             onClick={handlePreviousMonth}
             disabled={isAnimating}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 transition-all duration-200 disabled:opacity-50"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all duration-200 disabled:opacity-50"
             aria-label="Previous month"
           >
             <svg 
-              className="w-5 h-5 text-gray-600" 
+              className="w-5 h-5 text-primary-600" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -65,11 +65,11 @@ export default function CalendarHeader({
           <button
             onClick={handleNextMonth}
             disabled={isAnimating}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 hover:bg-gray-200 active:bg-gray-300 transition-all duration-200 disabled:opacity-50"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-primary-100 hover:bg-primary-200 active:bg-primary-300 transition-all duration-200 disabled:opacity-50"
             aria-label="Next month"
           >
             <svg 
-              className="w-5 h-5 text-gray-600" 
+              className="w-5 h-5 text-primary-600" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -99,11 +99,11 @@ export default function CalendarHeader({
           {/* Filter Button */}
           <button
             onClick={onFilterToggle}
-            className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-50 hover:bg-blue-100 active:bg-blue-200 transition-all duration-200"
+            className="flex items-center justify-center w-9 h-9 rounded-full bg-royal-50 hover:bg-royal-100 active:bg-royal-200 transition-all duration-200"
             aria-label="Open filters"
           >
             <svg 
-              className="w-5 h-5 text-blue-600" 
+              className="w-5 h-5 text-royal-600" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"

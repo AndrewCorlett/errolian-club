@@ -6,29 +6,36 @@ import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import ItineraryBuilder from './ItineraryBuilder'
 import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
+import type { EventWithDetails } from '@/types/supabase'
 
 interface NewEventSheetProps {
   isOpen: boolean
   onClose: () => void
   selectedDate?: Date
   onEventCreate: (eventData: any) => void
+  editEvent?: EventWithDetails | null
+  onEventUpdate?: (eventData: any) => void
 }
 
 type ActiveTab = 'event' | 'itinerary'
-type EventColor = 'violet' | 'sky' | 'amber' | 'rose'
+type EventColor = 'violet' | 'sky' | 'amber' | 'rose' | 'emerald' | 'indigo'
 
 const colorOptions: { value: EventColor; label: string; color: string }[] = [
-  { value: 'violet', label: 'Purple', color: '#d7c6ff' },
-  { value: 'sky', label: 'Blue', color: '#bae6fd' },
-  { value: 'amber', label: 'Yellow', color: '#fde68a' },
-  { value: 'rose', label: 'Pink', color: '#fecaca' }
+  { value: 'violet', label: 'Royal Purple', color: '#8b5cf6' },
+  { value: 'sky', label: 'Sky Blue', color: '#3b82f6' },
+  { value: 'emerald', label: 'Forest Green', color: '#10b981' },
+  { value: 'indigo', label: 'Deep Purple', color: '#6366f1' },
+  { value: 'amber', label: 'Coral', color: '#f97316' },
+  { value: 'rose', label: 'Pink', color: '#ec4899' }
 ]
 
 export default function NewEventSheet({
   isOpen,
   onClose,
   selectedDate,
-  onEventCreate
+  onEventCreate,
+  editEvent,
+  onEventUpdate
 }: NewEventSheetProps) {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<ActiveTab>('event')
@@ -52,14 +59,68 @@ export default function NewEventSheet({
 
 
   useEffect(() => {
-    if (isOpen && selectedDate) {
-      setEventData(prev => ({
-        ...prev,
-        startDate: format(selectedDate, 'yyyy-MM-dd'),
-        endDate: format(selectedDate, 'yyyy-MM-dd')
-      }))
+    if (isOpen) {
+      if (editEvent) {
+        // Populate form with existing event data
+        const startDate = new Date(editEvent.start_date)
+        const endDate = new Date(editEvent.end_date)
+        const colorValue = colorOptions.find(opt => opt.color === editEvent.color)?.value || 'violet'
+        
+        // Detect if this is an all-day event
+        const isAllDay = (
+          format(startDate, 'HH:mm') === '00:00' && 
+          (format(endDate, 'HH:mm') === '23:59' || format(endDate, 'HH:mm') === '00:00')
+        )
+        
+        setEventData({
+          title: editEvent.title,
+          location: editEvent.location ? { address: editEvent.location, lat: 0, lng: 0 } : null,
+          allDay: isAllDay,
+          startDate: format(startDate, 'yyyy-MM-dd'),
+          startTime: format(startDate, 'HH:mm'),
+          endDate: format(endDate, 'yyyy-MM-dd'),
+          endTime: format(endDate, 'HH:mm'),
+          color: colorValue,
+          notes: editEvent.description || ''
+        })
+        
+        // Set itinerary items if they exist
+        if (editEvent.itinerary_items) {
+          // Map database fields to component fields
+          const mappedItems = editEvent.itinerary_items.map(item => ({
+            id: item.id,
+            eventId: item.event_id,
+            type: item.type,
+            title: item.title,
+            description: item.description || '',
+            startTime: item.start_time || '',
+            endTime: item.end_time || '',
+            location: item.location || '',
+            cost: item.cost || 0,
+            notes: item.notes || '',
+            order: item.order_index || 0,
+            createdAt: new Date(item.created_at),
+            updatedAt: new Date(item.updated_at)
+          }))
+          setItineraryItems(mappedItems)
+        }
+      } else if (selectedDate) {
+        // Reset form for new event
+        setEventData({
+          title: '',
+          location: null,
+          allDay: false,
+          startDate: format(selectedDate, 'yyyy-MM-dd'),
+          startTime: '09:00',
+          endDate: format(selectedDate, 'yyyy-MM-dd'),
+          endTime: '17:00',
+          color: 'violet',
+          notes: ''
+        })
+        setItineraryItems([])
+      }
     }
-  }, [isOpen, selectedDate])
+  }, [isOpen, selectedDate, editEvent])
 
   if (!isOpen && !isClosing) return null
 
@@ -88,24 +149,53 @@ export default function NewEventSheet({
   const handleEventSubmit = () => {
     if (!eventData.title.trim() || !user) return
 
-    const startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}:00`)
-    const endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}:00`)
+    // Handle all-day events differently
+    let startDateTime: Date
+    let endDateTime: Date
+    
+    if (eventData.allDay) {
+      // All-day events: start at 00:00 and end at 23:59
+      startDateTime = new Date(`${eventData.startDate}T00:00:00`)
+      endDateTime = new Date(`${eventData.endDate}T23:59:59`)
+    } else {
+      // Regular events: use selected times
+      startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}:00`)
+      endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}:00`)
+    }
 
     const totalCost = itineraryItems.reduce((sum: number, item: any) => sum + (item.cost || 0), 0)
 
-    onEventCreate({
+    const eventPayload = {
       title: eventData.title,
       description: eventData.notes,
       type: 'adventure' as EventType,
       status: 'published' as EventStatus,
+      start_date: startDateTime.toISOString(),
+      end_date: endDateTime.toISOString(),
       startDate: startDateTime,
       endDate: endDateTime,
       location: eventData.location?.address || null,
       is_public: true,
       max_participants: null,
       created_by: user.id,
-      estimated_cost: totalCost > 0 ? totalCost : null
-    })
+      estimated_cost: totalCost > 0 ? totalCost : null,
+      color: colorOptions.find(opt => opt.value === eventData.color)?.color || '#8b5cf6'
+    }
+
+    if (editEvent && onEventUpdate) {
+      // Update existing event
+      onEventUpdate({
+        ...eventPayload,
+        id: editEvent.id,
+        itineraryItems: itineraryItems
+      })
+    } else {
+      // Create new event
+      onEventCreate({
+        ...eventPayload,
+        itineraryItems: itineraryItems
+      })
+    }
 
     handleClose()
   }
@@ -125,7 +215,7 @@ export default function NewEventSheet({
 
   return (
     <div 
-      className={`fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+      className={`fixed inset-0 z-[99999] bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
         isClosing ? 'opacity-0' : 'opacity-100'
       }`}
       onClick={handleClose}
@@ -153,14 +243,16 @@ export default function NewEventSheet({
             Cancel
           </button>
           
-          <h2 className="text-lg font-semibold text-primary-900">New Event</h2>
+          <h2 className="text-lg font-semibold text-primary-900">
+            {editEvent ? 'Edit Event' : 'New Event'}
+          </h2>
           
           <button
             onClick={handleEventSubmit}
             disabled={!isFormValid}
             className="text-royal-600 font-medium disabled:text-primary-400 hover:text-royal-700 disabled:hover:text-primary-400"
           >
-            Add
+            {editEvent ? 'Update' : 'Add'}
           </button>
         </div>
 

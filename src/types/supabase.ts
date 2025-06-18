@@ -20,6 +20,7 @@ export type ExpenseCategory = 'accommodation' | 'food' | 'transport' | 'activiti
 export type ExpenseStatus = 'draft' | 'pending' | 'approved' | 'settled'
 export type DocumentType = 'pdf' | 'image' | 'video' | 'audio' | 'doc' | 'spreadsheet' | 'other'
 export type DocumentStatus = 'pending' | 'approved' | 'rejected'
+export type AvailabilityType = 'available' | 'busy' | 'tentative'
 
 // Database interfaces
 export interface Database {
@@ -60,6 +61,38 @@ export interface Database {
           updated_at?: string
         }
       }
+      user_availability: {
+        Row: {
+          id: string
+          user_id: string
+          start_date: string
+          end_date: string
+          availability_type: AvailabilityType
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          start_date: string
+          end_date: string
+          availability_type?: AvailabilityType
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          start_date?: string
+          end_date?: string
+          availability_type?: AvailabilityType
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       events: {
         Row: {
           id: string
@@ -74,6 +107,7 @@ export interface Database {
           created_by: string
           estimated_cost: number | null
           is_public: boolean
+          color: string
           created_at: string
           updated_at: string
         }
@@ -90,6 +124,7 @@ export interface Database {
           created_by: string
           estimated_cost?: number | null
           is_public?: boolean
+          color?: string
           created_at?: string
           updated_at?: string
         }
@@ -106,6 +141,7 @@ export interface Database {
           created_by?: string
           estimated_cost?: number | null
           is_public?: boolean
+          color?: string
           created_at?: string
           updated_at?: string
         }
@@ -400,6 +436,7 @@ export interface Database {
     }
     Enums: {
       user_role_enum: UserRole
+      availability_type_enum: AvailabilityType
       event_type_enum: EventType
       event_status_enum: EventStatus
       itinerary_type_enum: ItineraryType
@@ -421,6 +458,7 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> = Databas
 
 // Convenience type exports
 export type UserProfile = Tables<'user_profiles'>
+export type UserAvailability = Tables<'user_availability'>
 export type Event = Tables<'events'>
 export type EventParticipant = Tables<'event_participants'>
 export type ItineraryItem = Tables<'itinerary_items'>
@@ -432,6 +470,7 @@ export type Document = Tables<'documents'>
 
 // Insert types
 export type UserProfileInsert = TablesInsert<'user_profiles'>
+export type UserAvailabilityInsert = TablesInsert<'user_availability'>
 export type EventInsert = TablesInsert<'events'>
 export type EventParticipantInsert = TablesInsert<'event_participants'>
 export type ItineraryItemInsert = TablesInsert<'itinerary_items'>
@@ -443,6 +482,7 @@ export type DocumentInsert = TablesInsert<'documents'>
 
 // Update types
 export type UserProfileUpdate = TablesUpdate<'user_profiles'>
+export type UserAvailabilityUpdate = TablesUpdate<'user_availability'>
 export type EventUpdate = TablesUpdate<'events'>
 export type EventParticipantUpdate = TablesUpdate<'event_participants'>
 export type ItineraryItemUpdate = TablesUpdate<'itinerary_items'>

@@ -1,7 +1,9 @@
+import { useState, useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import BottomNavigation from './components/layout/BottomNavigation'
+import MainLayout from './components/layout/MainLayout'
+import SplashScreen from './components/ui/SplashScreen'
 
 // Public pages
 import Login from './pages/Login'
@@ -16,6 +18,25 @@ import Documents from './pages/Documents'
 import Account from './pages/Account'
 
 function App() {
+  const [showSplashScreen, setShowSplashScreen] = useState(() => {
+    // Show splash screen if this is a PWA install or first load
+    return window.matchMedia('(display-mode: standalone)').matches || 
+           !sessionStorage.getItem('app-loaded')
+  })
+
+  useEffect(() => {
+    // Mark app as loaded in session storage
+    sessionStorage.setItem('app-loaded', 'true')
+  }, [])
+
+  const handleSplashComplete = () => {
+    setShowSplashScreen(false)
+  }
+
+  if (showSplashScreen) {
+    return <SplashScreen onComplete={handleSplashComplete} />
+  }
+
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
@@ -28,89 +49,65 @@ function App() {
             {/* Protected routes */}
             <Route path="/" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <Home />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <Home />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <Home />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <Home />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/calendar" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <Calendar />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <Calendar />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/split-pay" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <SplitPay />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <SplitPay />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/split-pay/new-expense" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <SplitPay />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <SplitPay />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/split-pay/event/:eventId" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <SplitPayEventDetails />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <SplitPayEventDetails />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/docs" element={
               <ProtectedRoute requirePermission="canUploadDocuments">
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <Documents />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <Documents />
+                </MainLayout>
               </ProtectedRoute>
             } />
             
             <Route path="/account" element={
               <ProtectedRoute>
-                <div>
-                  <main className="pb-20 safe-area-bottom">
-                    <Account />
-                  </main>
-                  <BottomNavigation />
-                </div>
+                <MainLayout>
+                  <Account />
+                </MainLayout>
               </ProtectedRoute>
             } />
 

@@ -7,6 +7,7 @@ interface IOSHeaderProps {
   rightActions?: React.ReactNode[]
   onScroll?: (scrolled: boolean) => void
   className?: string
+  titleClassName?: string
 }
 
 interface IOSActionButtonProps {
@@ -48,6 +49,7 @@ export default function IOSHeader({
   leftActions = [], 
   rightActions = [],
   onScroll,
+  titleClassName,
   className = ''
 }: IOSHeaderProps) {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -95,7 +97,7 @@ export default function IOSHeader({
 
         {/* Title Section */}
         <div className="mb-1">
-          <h1 className="text-xl font-bold text-primary-900 leading-tight tracking-tight">
+          <h1 className={`text-xl font-bold leading-tight tracking-tight ${titleClassName || 'text-primary-900'}`}>
             {title}
           </h1>
           {subtitle && (

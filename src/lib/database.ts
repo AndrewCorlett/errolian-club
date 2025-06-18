@@ -101,11 +101,17 @@ export const eventService = {
   },
 
   async deleteEvent(id: string): Promise<void> {
-    const { error } = await supabase
+    console.log('Attempting to delete event:', id)
+    const { data: { user } } = await supabase.auth.getUser()
+    console.log('Current user:', user?.id)
+    
+    const { data, error } = await supabase
       .from('events')
       .delete()
       .eq('id', id)
+      .select()
 
+    console.log('Delete result:', { data, error })
     if (error) throw error
   },
 
@@ -144,12 +150,17 @@ export const itineraryService = {
   },
 
   async createItineraryItem(item: ItineraryItemInsert): Promise<ItineraryItem> {
+    console.log('Attempting to create itinerary item:', item)
+    const { data: { user } } = await supabase.auth.getUser()
+    console.log('Current user for itinerary creation:', user?.id)
+    
     const { data, error } = await supabase
       .from('itinerary_items')
       .insert(item)
       .select()
       .single()
 
+    console.log('Itinerary creation result:', { data, error })
     if (error) throw error
     return data
   },
@@ -336,22 +347,39 @@ export const expenseService = {
   },
 
   async getUserBalance(userId: string): Promise<{ owed: number; owing: number }> {
-    const { data: owed, error: owedError } = await supabase
-      .from('expense_participants')
-      .select('share_amount')
-      .eq('user_id', userId)
-      .eq('is_paid', false)
-
-    const { data: owing, error: owingError } = await supabase
+    // Get all unsettled expenses where user is involved
+    const { data: expenses, error } = await supabase
       .from('expenses')
-      .select('amount')
-      .eq('paid_by', userId)
-      .eq('status', 'pending')
+      .select(`
+        *,
+        participants:expense_participants(
+          user_id,
+          share_amount,
+          is_paid
+        )
+      `)
+      .neq('status', 'settled')
 
-    if (owedError || owingError) throw owedError || owingError
+    if (error) throw error
 
-    const totalOwed = owed?.reduce((sum: number, item: any) => sum + item.share_amount, 0) || 0
-    const totalOwing = owing?.reduce((sum: number, item: any) => sum + item.amount, 0) || 0
+    let totalOwed = 0 // What user owes to others
+    let totalOwing = 0 // What others owe to user
+
+    expenses?.forEach((expense: any) => {
+      const userParticipant = expense.participants?.find((p: any) => p.user_id === userId)
+      
+      if (expense.paid_by === userId) {
+        // User paid for this expense - others owe them
+        expense.participants?.forEach((participant: any) => {
+          if (participant.user_id !== userId && !participant.is_paid) {
+            totalOwing += Number(participant.share_amount)
+          }
+        })
+      } else if (userParticipant && !userParticipant.is_paid) {
+        // User owes money for this expense
+        totalOwed += Number(userParticipant.share_amount)
+      }
+    })
 
     return { owed: totalOwed, owing: totalOwing }
   }
@@ -589,5 +617,97 @@ export const storageService = {
       .getPublicUrl(path)
 
     return data.publicUrl
+  }
+}
+
+export const availabilityService = {
+  async createAvailability(availability: {
+    startDate: string
+    endDate?: string
+    availability_type: 'available' | 'busy' | 'tentative'
+    notes?: string
+  }): Promise<any> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      throw new Error('User not authenticated')
+    }
+
+    // Convert single date to date range if endDate not provided
+    const startDateTime = new Date(availability.startDate + 'T00:00:00.000Z')
+    const endDateTime = availability.endDate 
+      ? new Date(availability.endDate + 'T23:59:59.999Z')
+      : new Date(availability.startDate + 'T23:59:59.999Z')
+
+    const { data, error } = await supabase
+      .from('user_availability')
+      .insert({
+        user_id: user.id,
+        start_date: startDateTime.toISOString(),
+        end_date: endDateTime.toISOString(),
+        availability_type: availability.availability_type,
+        notes: availability.notes || null
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async getAvailability(userId?: string, startDate?: string, endDate?: string): Promise<any[]> {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user && !userId) {
+      throw new Error('User not authenticated and no user ID provided')
+    }
+
+    let query = supabase
+      .from('user_availability')
+      .select('*')
+
+    // Filter by user
+    if (userId) {
+      query = query.eq('user_id', userId)
+    } else if (user) {
+      query = query.eq('user_id', user.id)
+    }
+
+    // Filter by date range if provided
+    if (startDate) {
+      query = query.gte('start_date', startDate)
+    }
+    if (endDate) {
+      query = query.lte('end_date', endDate)
+    }
+
+    const { data, error } = await query.order('start_date', { ascending: true })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async updateAvailability(id: string, updates: {
+    availability_type?: 'available' | 'busy' | 'tentative'
+    notes?: string
+  }): Promise<any> {
+    const { data, error } = await supabase
+      .from('user_availability')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async deleteAvailability(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('user_availability')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
   }
 }

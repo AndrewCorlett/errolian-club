@@ -9,7 +9,9 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 import SettleUpModal from '@/components/splitpay/SettleUpModal'
-import type { ExpenseWithDetails } from '@/types/supabase'
+import EventDetailSheet from '@/components/splitpay/EventDetailSheet'
+import EditExpenseModal from '@/components/splitpay/EditExpenseModal'
+import type { ExpenseWithDetails, Event, ExpenseCategory } from '@/types/supabase'
 
 export default function SplitPay() {
   const { user } = useAuth()
@@ -17,6 +19,10 @@ export default function SplitPay() {
   const location = useLocation()
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
   const [showSettleUpModal, setShowSettleUpModal] = useState(false)
+  const [showEventDetailSheet, setShowEventDetailSheet] = useState(false)
+  const [showEditExpenseModal, setShowEditExpenseModal] = useState(false)
+  const [selectedEventGroup, setSelectedEventGroup] = useState<{groupKey: string, event: Event | null}>({groupKey: '', event: null})
+  const [selectedExpense, setSelectedExpense] = useState<ExpenseWithDetails | null>(null)
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,10 +90,11 @@ export default function SplitPay() {
     )
   }
   
-  // Calculate net balance
-  const netBalance = userBalance.owing - userBalance.owed
-  const owesAmount = netBalance > 0 ? netBalance : 0
-  const owedAmount = netBalance < 0 ? Math.abs(netBalance) : 0
+  // Calculate balance amounts
+  // userBalance.owed = what user owes to others
+  // userBalance.owing = what others owe to user  
+  const owesAmount = userBalance.owed // What user owes to others
+  const owedAmount = userBalance.owing // What others owe to user
 
   // Helper functions for styling
   const getExpenseStatusColor = (status: string) => {
@@ -137,11 +144,63 @@ export default function SplitPay() {
     setSearchParams(searchParams)
   }
 
+  const handleEventDetailClick = (groupKey: string, event: Event | null) => {
+    setSelectedEventGroup({ groupKey, event })
+    setShowEventDetailSheet(true)
+  }
+
+  const handleAddExpenseFromDetail = (_eventId?: string) => {
+    // Close the detail sheet and open add expense modal with event pre-selected
+    setShowEventDetailSheet(false)
+    setShowAddExpenseModal(true)
+    // TODO: Pass eventId to AddExpenseModal to pre-select the event
+  }
+
+  const handleEditExpense = (expense: ExpenseWithDetails) => {
+    setSelectedExpense(expense)
+    setShowEventDetailSheet(false)
+    setShowEditExpenseModal(true)
+  }
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!user) return
+
+    try {
+      await expenseService.deleteExpense(expenseId)
+      
+      // Reload expenses and balance
+      const [expensesResponse, balanceResponse] = await Promise.all([
+        expenseService.getExpenses(1, 100),
+        expenseService.getUserBalance(user.id)
+      ])
+      
+      setExpenses(expensesResponse.data)
+      setUserBalance(balanceResponse)
+      
+      alert('Expense deleted successfully!')
+    } catch (err) {
+      console.error('Failed to delete expense:', err)
+      alert('Failed to delete expense. Please try again.')
+    }
+  }
+
   const handleAddExpense = () => {
     setShowAddExpenseModal(true)
   }
 
-  const handleExpenseCreate = async (expenseData: any) => {
+  const handleExpenseCreate = async (expenseData: {
+    title: string
+    description?: string
+    amount: number
+    category: string
+    event_id?: string
+    participants: Array<{
+      user_id: string
+      share_amount: number
+      is_paid?: boolean
+      paid_at?: string | null
+    }>
+  }) => {
     try {
       // Extract participants before sending to service
       const { participants, ...expenseOnly } = expenseData
@@ -153,7 +212,7 @@ export default function SplitPay() {
       
       // Then add participants separately with all fields
       if (participants && participants.length > 0) {
-        const participantInserts = participants.map((p: any) => ({
+        const participantInserts = participants.map((p) => ({
           expense_id: newExpense.id,
           user_id: p.user_id,
           share_amount: p.share_amount,
@@ -189,15 +248,85 @@ export default function SplitPay() {
     setShowSettleUpModal(true)
   }
 
-  const handleSettlement = (settlementData: any) => {
+  const handleExpenseUpdate = async (expenseId: string, expenseData: {
+    title: string
+    description?: string
+    amount: number
+    category: string
+    event_id?: string
+    participants: Array<{
+      user_id: string
+      share_amount: number
+      is_paid?: boolean
+      paid_at?: string | null
+    }>
+  }) => {
+    if (!user) return
+
+    try {
+      // Update the expense
+      await expenseService.updateExpense(expenseId, {
+        title: expenseData.title,
+        description: expenseData.description || null,
+        amount: expenseData.amount,
+        category: expenseData.category as ExpenseCategory,
+        event_id: expenseData.event_id || null,
+      })
+
+      // Delete existing participants and add new ones
+      await supabase
+        .from('expense_participants')
+        .delete()
+        .eq('expense_id', expenseId)
+
+      if (expenseData.participants.length > 0) {
+        const participantInserts = expenseData.participants.map(p => ({
+          expense_id: expenseId,
+          user_id: p.user_id,
+          share_amount: p.share_amount,
+          is_paid: p.is_paid || false,
+          paid_at: p.paid_at || null
+        }))
+
+        const { error: participantsError } = await supabase
+          .from('expense_participants')
+          .insert(participantInserts)
+
+        if (participantsError) throw participantsError
+      }
+
+      // Reload expenses and balance
+      const [expensesResponse, balanceResponse] = await Promise.all([
+        expenseService.getExpenses(1, 100),
+        expenseService.getUserBalance(user.id)
+      ])
+      
+      setExpenses(expensesResponse.data)
+      setUserBalance(balanceResponse)
+      
+      alert(`Expense "${expenseData.title}" updated successfully!`)
+      setShowEditExpenseModal(false)
+    } catch (err) {
+      console.error('Failed to update expense:', err)
+      alert('Failed to update expense. Please try again.')
+    }
+  }
+
+  const handleSettlement = (settlementData: {
+    from_user_id: string
+    to_user_id: string
+    amount: number
+    expense_ids: string[]
+  }) => {
     console.log('Settlement recorded:', settlementData)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent-50 via-primary-50 to-forest-50">
-      {/* iOS Header */}
+      {/* iOS Header with Gold Accent */}
       <IOSHeader 
-        title="Split-Pay"
+        title="Split Pay"
+        className="[&_.ios-header-title]:text-accent-600 [&_.ios-header-title]:font-semibold"
         rightActions={[
           <IOSActionButton 
             key="add-expense"
@@ -212,38 +341,65 @@ export default function SplitPay() {
         ]}
       />
 
-      <div className="px-4 pt-32 pb-24 max-w-6xl mx-auto space-y-6">
-        {/* You Owe/You're Owed Banner */}
-        {netBalance !== 0 && (
+      {/* Main Content with More Breathing Room */}
+      <div className="px-4 pt-40 pb-24 max-w-6xl mx-auto space-y-8">
+        {/* Enhanced Balance Status Banner */}
+        {(owesAmount > 0 || owedAmount > 0) && (
           <div className={`
-            rounded-2xl p-6 shadow-lg
+            rounded-2xl p-6 shadow-lg border-2 transition-all duration-300
             ${owesAmount > 0 
-              ? 'bg-gradient-to-r from-red-50 to-red-100 border border-red-200' 
-              : 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200'
+              ? 'bg-gradient-to-r from-red-50 via-red-25 to-white border-red-200' 
+              : 'bg-gradient-to-r from-green-50 via-green-25 to-white border-green-200'
             }
           `}>
             <div className="flex items-center justify-between">
-              <div>
-                <h2 className={`text-xl font-bold ${owesAmount > 0 ? 'text-red-700' : 'text-green-700'}`}>
-                  {owesAmount > 0 ? `You owe £${owesAmount.toFixed(2)}` : `You're owed £${owedAmount.toFixed(2)}`}
-                </h2>
-                <p className={`text-sm ${owesAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {owesAmount > 0 ? 'Outstanding balance to settle' : 'Others owe you money'}
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-3 h-3 rounded-full ${owesAmount > 0 ? 'bg-red-500' : 'bg-green-500'}`} />
+                  <h2 className={`text-2xl font-bold ${owesAmount > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                    {owesAmount > 0 ? `You owe £${owesAmount.toFixed(2)}` : `You are owed £${owedAmount.toFixed(2)}`}
+                  </h2>
+                </div>
+                <p className={`text-base font-medium ${owesAmount > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {owesAmount > 0 ? 'Outstanding balance to settle with friends' : 'Friends owe you money - time to collect!'}
+                </p>
+                <p className={`text-sm mt-1 ${owesAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                  {owesAmount > 0 ? 'Tap "Settle Up" to resolve your debts' : 'Share your payment details to get paid'}
                 </p>
               </div>
-              {netBalance !== 0 && (
+              <div className="flex flex-col items-end gap-2">
                 <Button 
                   onClick={handleSettleUp}
+                  size="lg"
                   className={`
+                    font-semibold px-6 py-3 transition-all duration-300 shadow-lg
                     ${owesAmount > 0 
-                      ? 'bg-red-600 hover:bg-red-700 text-white' 
-                      : 'bg-green-600 hover:bg-green-700 text-white'
+                      ? 'bg-red-600 hover:bg-red-700 text-white hover:shadow-red-200' 
+                      : 'bg-green-600 hover:bg-green-700 text-white hover:shadow-green-200'
                     }
                   `}
                 >
-                  Settle Up
+                  {owesAmount > 0 ? 'Settle Up' : 'Request Payment'}
                 </Button>
-              )}
+                <span className={`text-xs font-medium ${owesAmount > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                  {owesAmount > 0 ? 'Pay now' : 'Get paid'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Balanced State Banner */}
+        {owesAmount === 0 && owedAmount === 0 && userExpenses.length > 0 && (
+          <div className="rounded-2xl p-6 shadow-lg border-2 border-accent-200 bg-gradient-to-r from-accent-50 via-accent-25 to-white">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-accent-500" />
+              <div>
+                <h2 className="text-2xl font-bold text-accent-700">All settled up!</h2>
+                <p className="text-base font-medium text-accent-600 mt-1">
+                  No outstanding balances - you're all even with your friends
+                </p>
+              </div>
             </div>
           </div>
         )}
@@ -258,32 +414,47 @@ export default function SplitPay() {
             
             return (
               <Card key={groupKey} className="rounded-2xl shadow-lg overflow-hidden">
-                <CardHeader 
-                  className="cursor-pointer p-4 md:p-6 hover:bg-gray-50 transition-colors"
-                  onClick={() => toggleCard(groupKey)}
-                >
+                <CardHeader className="p-4 md:p-6">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg font-semibold">{groupTitle}</CardTitle>
                       <p className="text-sm text-gray-600 mt-1">
                         {expenses.length} expense{expenses.length !== 1 ? 's' : ''} • £{totalAmount.toFixed(2)} total
                       </p>
+                      {event && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {format(new Date(event.start_date), 'MMM d, yyyy')}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-lg font-semibold">£{totalAmount.toFixed(2)}</div>
-                        <div className="text-xs text-gray-500">
-                          {event ? format(new Date(event.start_date), 'MMM d') : 'Various dates'}
-                        </div>
-                      </div>
-                      <svg 
-                        className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEventDetailClick(groupKey, event)}
+                        className="text-accent-600 border-accent-200 hover:bg-accent-50"
                       >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                        View Details
+                      </Button>
+                      <button
+                        onClick={() => toggleCard(groupKey)}
+                        className="flex items-center gap-2 text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        <div className="text-right">
+                          <div className="text-lg font-semibold text-gray-900">£{totalAmount.toFixed(2)}</div>
+                          <div className="text-xs text-gray-500">
+                            {isOpen ? 'Hide' : 'Show'} expenses
+                          </div>
+                        </div>
+                        <svg 
+                          className={`w-5 h-5 transition-transform ${isOpen ? 'rotate-90' : ''}`} 
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   </div>
                 </CardHeader>
@@ -312,12 +483,45 @@ export default function SplitPay() {
                                 <p className="text-xs text-gray-500 mt-1">{expense.description}</p>
                               )}
                             </div>
-                            <div className="text-right ml-4">
-                              <div className="font-semibold text-lg">£{Number(expense.amount).toFixed(2)}</div>
-                              {userParticipant && (
-                                <div className={`text-sm font-medium ${userParticipant.is_paid ? 'text-green-600' : 'text-red-600'}`}>
-                                  Your share: £{Number(userParticipant.share_amount).toFixed(2)}
-                                  <span className="ml-1">{userParticipant.is_paid ? '✓' : '⏳'}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <div className="font-semibold text-lg">£{Number(expense.amount).toFixed(2)}</div>
+                                {userParticipant && (
+                                  <div className={`text-sm font-medium ${userParticipant.is_paid ? 'text-green-600' : 'text-red-600'}`}>
+                                    Your share: £{Number(userParticipant.share_amount).toFixed(2)}
+                                    <span className="ml-1">{userParticipant.is_paid ? '✓' : '⏳'}</span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Edit/Delete buttons - only show if user created the expense */}
+                              {expense.paid_by === user?.id && (
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditExpense(expense)}
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-accent-600"
+                                    title="Edit expense"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (window.confirm(`Are you sure you want to delete "${expense.title}"? This action cannot be undone.`)) {
+                                        handleDeleteExpense(expense.id)
+                                      }
+                                    }}
+                                    className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                                    title="Delete expense"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </Button>
                                 </div>
                               )}
                             </div>
@@ -359,6 +563,23 @@ export default function SplitPay() {
         isOpen={showSettleUpModal}
         onClose={() => setShowSettleUpModal(false)}
         onSettlement={handleSettlement}
+      />
+
+      <EventDetailSheet
+        isOpen={showEventDetailSheet}
+        onClose={() => setShowEventDetailSheet(false)}
+        event={selectedEventGroup.event}
+        groupKey={selectedEventGroup.groupKey}
+        onAddExpense={handleAddExpenseFromDetail}
+        onEditExpense={handleEditExpense}
+        onDeleteExpense={handleDeleteExpense}
+      />
+
+      <EditExpenseModal
+        isOpen={showEditExpenseModal}
+        onClose={() => setShowEditExpenseModal(false)}
+        expense={selectedExpense}
+        onExpenseUpdate={handleExpenseUpdate}
       />
     </div>
   )

@@ -89,20 +89,27 @@ export default function VerticalCalendar({
   const getEventPillsForDay = (date: Date): EventPill[] => {
     const pills: EventPill[] = []
     
-    // Regular events from Supabase
+    // Regular events from Supabase - exclude multi-day events
     events.forEach(event => {
       const startDate = parseEventDate(event.start_date)
       const endDate = parseEventDate(event.end_date)
       
-      if (isSameDay(date, startDate) || 
-          (endDate && date >= startDate && date <= endDate)) {
+      // Check if this is a multi-day event
+      const isMultiDay = endDate && startDate < endDate && 
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) > 1
+      
+      // Only include if it's on this date AND it's not a multi-day event
+      if (!isMultiDay && (isSameDay(date, startDate) || 
+          (endDate && date >= startDate && date <= endDate))) {
         pills.push({
           id: event.id,
           title: event.title,
-          color: event.type === 'adventure' ? '#d7c6ff' : 
-                 event.type === 'meeting' ? '#bae6fd' :
-                 event.type === 'social' ? '#fde68a' :
-                 event.type === 'training' ? '#fecaca' : '#e5e7eb',
+          color: event.color || (
+            event.type === 'adventure' ? '#d7c6ff' : 
+            event.type === 'meeting' ? '#bae6fd' :
+            event.type === 'social' ? '#fde68a' :
+            event.type === 'training' ? '#fecaca' : '#e5e7eb'
+          ),
           isItinerary: false
         })
       }
@@ -126,10 +133,12 @@ export default function VerticalCalendar({
         const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
         
         if (daysDiff > 1) { // Multi-day event
-          const eventColor = event.type === 'adventure' ? '#d7c6ff' : 
-                            event.type === 'meeting' ? '#bae6fd' :
-                            event.type === 'social' ? '#fde68a' :
-                            event.type === 'training' ? '#fecaca' : '#e5e7eb'
+          const eventColor = event.color || (
+            event.type === 'adventure' ? '#d7c6ff' : 
+            event.type === 'meeting' ? '#bae6fd' :
+            event.type === 'social' ? '#fde68a' :
+            event.type === 'training' ? '#fecaca' : '#e5e7eb'
+          )
           
           if (isSameDay(date, startDate)) {
             multiDayEvents.push({
@@ -161,8 +170,14 @@ export default function VerticalCalendar({
     const regularEvents = events.filter(event => {
       const startDate = parseEventDate(event.start_date)
       const endDate = parseEventDate(event.end_date)
-      return isSameDay(date, startDate) || 
-             (endDate && date >= startDate && date <= endDate)
+      
+      // Check if this is a multi-day event
+      const isMultiDay = endDate && startDate < endDate && 
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) > 1
+      
+      // Only count non-multi-day events
+      return !isMultiDay && (isSameDay(date, startDate) || 
+             (endDate && date >= startDate && date <= endDate))
     }).length
     return Math.max(0, regularEvents - 3)
   }
@@ -262,7 +277,7 @@ export default function VerticalCalendar({
                           }}
                         >
                           {multiEvent.position === 'start' && (
-                            <span className="text-[9px] font-medium text-gray-800 truncate">
+                            <span className="text-[9px] font-medium text-white truncate">
                               {multiEvent.event.title}
                             </span>
                           )}
@@ -293,7 +308,7 @@ export default function VerticalCalendar({
                       {eventPills.map((pill, pillIndex) => (
                         <div
                           key={`${pill.id}-${pillIndex}`}
-                          className="h-3 rounded-full text-[10px] font-medium text-gray-800 px-1.5 transition-all duration-200 shadow-sm overflow-hidden"
+                          className="h-3 rounded-full text-[10px] font-medium text-white px-1.5 transition-all duration-200 shadow-sm overflow-hidden"
                           style={{ backgroundColor: pill.color }}
                           title={pill.title}
                         >

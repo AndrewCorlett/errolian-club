@@ -50,11 +50,11 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-royal-50 to-primary-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo size="lg" className="mx-auto mb-4" />
+          <Logo size="xl" className="mx-auto mb-4 !w-48 !h-48" />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
           <p className="text-gray-600">Sign in to your Errolian Club account</p>
         </div>
@@ -104,7 +104,7 @@ export default function Login() {
               <div className="flex items-center justify-between">
                 <Link 
                   to="/auth/forgot-password" 
-                  className="text-sm text-blue-600 hover:text-blue-500"
+                  className="text-sm text-royal-600 hover:text-royal-500"
                 >
                   Forgot password?
                 </Link>
@@ -161,7 +161,7 @@ export default function Login() {
                 Don't have an account?{' '}
                 <Link 
                   to="/auth/register" 
-                  className="text-blue-600 hover:text-blue-500 font-medium"
+                  className="text-royal-600 hover:text-royal-500 font-medium"
                 >
                   Sign up
                 </Link>

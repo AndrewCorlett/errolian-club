@@ -7,6 +7,11 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'desktop': '1024px',
+        'lg-desktop': '1280px',
+        'xl-desktop': '1536px',
+      },
       colors: {
         // Regal color palette for British gentlemen's club
         primary: {

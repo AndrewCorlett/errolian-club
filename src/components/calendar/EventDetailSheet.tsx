@@ -240,7 +240,13 @@ export default function EventDetailSheet({
                   {event.itinerary_items.map((item: any) => (
                     <div key={item.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="flex-shrink-0 w-12 text-sm text-gray-500 font-medium">
-                        {format(item.startTime, 'HH:mm')}
+                        {item.start_time && item.start_time.trim() ? 
+                          (item.start_time.includes('T') ? 
+                            format(new Date(item.start_time), 'HH:mm') : 
+                            item.start_time
+                          ) : 
+                          'TBD'
+                        }
                       </div>
                       <div className="flex-1">
                         <h4 className="font-medium text-sm">{item.title}</h4>

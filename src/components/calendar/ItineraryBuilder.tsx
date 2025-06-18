@@ -25,39 +25,39 @@ interface ItineraryBuilderProps {
 
 type ItineraryFormData = Partial<ItineraryItem> & {
   type: ItineraryType
-  // Payment details
-  createExpense?: boolean
-  paidBy?: string
-  splitMethod?: 'equal' | 'custom'
-  participants?: string[]
+  // Travel specific
+  transportType?: string
+  flightNumber?: string
+  departureAirport?: string
+  departureDate?: string
+  departureTime?: string
+  arrivalAirport?: string
+  arrivalDate?: string
+  arrivalTime?: string
+  bookingMethod?: 'together' | 'individual'
+  totalCost?: number
+  individualCost?: number
+  bookingLink?: string
+  whoPaid?: string
+  splitAmong?: string[]
+  // Accommodation specific
+  accommodationType?: string
+  checkInDate?: string
+  checkInTime?: string
+  checkOutDate?: string
+  checkOutTime?: string
+  // Activity specific
+  startDate?: string
+  endDate?: string
+  // Other specific
+  additionalNotes?: string
 }
 
-const ITINERARY_TYPES: { value: ItineraryType; label: string; icon: React.ReactNode }[] = [
-  { 
-    value: 'travel', 
-    label: 'Travel', 
-    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-  },
-  { 
-    value: 'accommodation', 
-    label: 'Stay', 
-    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-  },
-  { 
-    value: 'activity', 
-    label: 'Activity', 
-    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-  },
-  { 
-    value: 'meal', 
-    label: 'Meal', 
-    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v4a2 2 0 01-2 2H9a2 2 0 01-2-2v-4m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01" /></svg>
-  },
-  { 
-    value: 'other', 
-    label: 'Other', 
-    icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-  }
+const ITINERARY_TYPES: { value: ItineraryType; label: string; color: string }[] = [
+  { value: 'travel', label: 'Travel', color: 'bg-blue-100 text-blue-800' },
+  { value: 'accommodation', label: 'Accommodation', color: 'bg-green-100 text-green-800' },
+  { value: 'activity', label: 'Activity', color: 'bg-purple-100 text-purple-800' },
+  { value: 'other', label: 'Other', color: 'bg-gray-100 text-gray-800' }
 ]
 
 
@@ -73,7 +73,7 @@ export default function ItineraryBuilder({
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [users, setUsers] = useState<any[]>([])
   const [formData, setFormData] = useState<ItineraryFormData>({
-    type: 'activity',
+    type: 'travel',
     title: '',
     description: '',
     startTime: '',
@@ -81,13 +81,25 @@ export default function ItineraryBuilder({
     location: '',
     cost: 0,
     notes: '',
-    createExpense: false,
-    paidBy: user?.id || '',
-    splitMethod: 'equal',
-    participants: []
+    // Travel defaults
+    transportType: '',
+    flightNumber: '',
+    departureAirport: '',
+    departureDate: '',
+    departureTime: '',
+    arrivalAirport: '',
+    arrivalDate: '',
+    arrivalTime: '',
+    bookingMethod: 'together',
+    totalCost: 0,
+    individualCost: 0,
+    bookingLink: '',
+    whoPaid: user?.id || '',
+    splitAmong: []
   })
 
   // Load users from database
+  // TODO: In the future, this should only show users invited to the event
   useEffect(() => {
     const loadUsers = async () => {
       try {
@@ -104,7 +116,7 @@ export default function ItineraryBuilder({
   const handleAddItem = () => {
     setIsAddingItem(true)
     setFormData({
-      type: 'activity',
+      type: 'travel',
       title: '',
       description: '',
       startTime: '',
@@ -112,10 +124,21 @@ export default function ItineraryBuilder({
       location: '',
       cost: 0,
       notes: '',
-      createExpense: false,
-      paidBy: user?.id || '',
-      splitMethod: 'equal',
-      participants: []
+      // Travel defaults
+      transportType: '',
+      flightNumber: '',
+      departureAirport: '',
+      departureDate: '',
+      departureTime: '',
+      arrivalAirport: '',
+      arrivalDate: '',
+      arrivalTime: '',
+      bookingMethod: 'together',
+      totalCost: 0,
+      individualCost: 0,
+      bookingLink: '',
+      whoPaid: user?.id || '',
+      splitAmong: []
     })
   }
 
@@ -123,25 +146,68 @@ export default function ItineraryBuilder({
     setEditingItemId(item.id)
     setFormData({
       ...item,
-      createExpense: false,
-      paidBy: user?.id || '',
-      splitMethod: 'equal',
-      participants: []
+      // Set booking method defaults based on item type
+      bookingMethod: 'together',
+      totalCost: item.cost || 0,
+      individualCost: 0,
+      whoPaid: user?.id || '',
+      splitAmong: []
     })
     setIsAddingItem(true)
   }
 
   const handleSaveItem = () => {
-    if (!formData.title?.trim()) return
+    // Validate based on type
+    if (formData.type === 'travel' && !formData.transportType?.trim()) {
+      alert('Please select a transport type')
+      return
+    }
+    if ((formData.type === 'activity' || formData.type === 'other') && !formData.title?.trim()) {
+      alert('Please enter a title')
+      return
+    }
+    if (formData.type === 'accommodation' && !formData.accommodationType?.trim()) {
+      alert('Please select an accommodation type')
+      return
+    }
+
+    // Generate title based on type
+    let title = formData.title || ''
+    if (formData.type === 'travel') {
+      title = `${formData.transportType || 'Travel'} from ${formData.departureAirport || 'TBD'} to ${formData.arrivalAirport || 'TBD'}`
+    } else if (formData.type === 'accommodation') {
+      title = `${formData.accommodationType || 'Accommodation'} at ${formData.location || 'TBD'}`
+    }
+
+    // Map time fields based on itinerary type
+    let startTime = ''
+    let endTime = ''
+    
+    switch (formData.type) {
+      case 'travel':
+        startTime = formData.departureTime || ''
+        endTime = formData.arrivalTime || ''
+        break
+      case 'accommodation':
+        startTime = formData.checkInTime || ''
+        endTime = formData.checkOutTime || ''
+        break
+      case 'activity':
+      case 'other':
+      default:
+        startTime = formData.startTime || ''
+        endTime = formData.endTime || ''
+        break
+    }
 
     const newItem: ItineraryItem = {
       id: editingItemId || `itinerary_${Date.now()}`,
       eventId,
       type: formData.type,
-      title: formData.title,
+      title: title,
       description: formData.description || '',
-      startTime: formData.startTime || '',
-      endTime: formData.endTime || '',
+      startTime: startTime,
+      endTime: endTime,
       location: formData.location || '',
       cost: formData.cost || 0,
       notes: formData.notes || '',
@@ -152,10 +218,10 @@ export default function ItineraryBuilder({
       updatedAt: new Date(),
       // Type-specific fields
       ...(formData.type === 'travel' && {
-        travelMethod: formData.travelMethod,
-        departureLocation: formData.departureLocation,
-        arrivalLocation: formData.arrivalLocation,
-        confirmation: formData.confirmation
+        travelMethod: formData.transportType,
+        departureLocation: formData.departureAirport,
+        arrivalLocation: formData.arrivalAirport,
+        confirmation: formData.flightNumber
       }),
       ...(formData.type === 'accommodation' && {
         accommodationType: formData.accommodationType,
@@ -189,18 +255,18 @@ export default function ItineraryBuilder({
     setItems(updatedItems)
     onItemsChange(updatedItems)
     
-    // Create expense if requested and cost > 0
-    if (formData.createExpense && newItem.cost > 0 && onAddExpense) {
+    // Create expense if cost > 0 and split among people for "together" booking
+    if (formData.bookingMethod === 'together' && formData.totalCost && formData.totalCost > 0 && formData.splitAmong && formData.splitAmong.length > 0 && onAddExpense) {
       onAddExpense({
         title: `${newItem.title} - ${ITINERARY_TYPES.find(t => t.value === newItem.type)?.label}`,
-        amount: newItem.cost,
+        amount: formData.totalCost,
         category: newItem.type === 'accommodation' ? 'accommodation' : 
                  newItem.type === 'travel' ? 'transport' :
-                 newItem.type === 'meal' ? 'food' : 'activities',
+                 newItem.type === 'activity' ? 'activities' : 'other',
         description: newItem.description || `${newItem.type} expense from itinerary`,
-        participants: formData.participants,
-        paidBy: formData.paidBy,
-        splitMethod: formData.splitMethod
+        participants: formData.splitAmong,
+        paidBy: formData.whoPaid,
+        splitMethod: 'equal'
       })
     }
 
@@ -211,7 +277,7 @@ export default function ItineraryBuilder({
     setIsAddingItem(false)
     setEditingItemId(null)
     setFormData({
-      type: 'activity',
+      type: 'travel',
       title: '',
       description: '',
       startTime: '',
@@ -219,10 +285,21 @@ export default function ItineraryBuilder({
       location: '',
       cost: 0,
       notes: '',
-      createExpense: false,
-      paidBy: user?.id || '',
-      splitMethod: 'equal',
-      participants: []
+      // Travel defaults
+      transportType: '',
+      flightNumber: '',
+      departureAirport: '',
+      departureDate: '',
+      departureTime: '',
+      arrivalAirport: '',
+      arrivalDate: '',
+      arrivalTime: '',
+      bookingMethod: 'together',
+      totalCost: 0,
+      individualCost: 0,
+      bookingLink: '',
+      whoPaid: user?.id || '',
+      splitAmong: []
     })
   }
 
@@ -254,13 +331,6 @@ export default function ItineraryBuilder({
     onItemsChange(updatedItems)
   }
 
-  const getTypeIcon = (type: ItineraryType) => {
-    return ITINERARY_TYPES.find(t => t.value === type)?.icon || (
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    )
-  }
 
   const renderTypeSpecificFields = () => {
     switch (formData.type) {
@@ -268,58 +338,228 @@ export default function ItineraryBuilder({
         return (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Travel Method
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Transport Type
               </label>
               <MobileSelect
-                value={formData.travelMethod || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, travelMethod: value }))}
+                value={formData.transportType || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, transportType: value }))}
                 options={[
-                  { value: '', label: 'Select method' },
-                  { value: 'Flight', label: 'Flight' },
-                  { value: 'Train', label: 'Train' },
-                  { value: 'Bus', label: 'Bus' },
-                  { value: 'Car', label: 'Car' },
-                  { value: 'Ferry', label: 'Ferry' },
-                  { value: 'Taxi', label: 'Taxi' },
-                  { value: 'Walking', label: 'Walking' },
-                  { value: 'Other', label: 'Other' }
+                  { value: '', label: 'Select transport type' },
+                  { value: 'flight', label: 'Flight' },
+                  { value: 'train', label: 'Train' },
+                  { value: 'car', label: 'Car' },
+                  { value: 'public_transport', label: 'Public Transport' },
+                  { value: 'taxi', label: 'Taxi' }
                 ]}
-                placeholder="Select travel method"
+                placeholder="Select transport type"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                From
-              </label>
-              <Input
-                type="text"
-                value={formData.departureLocation || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, departureLocation: e.target.value }))}
-                placeholder="Departure location"
-              />
+
+            {formData.transportType === 'flight' && (
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Flight Number
+                </label>
+                <Input
+                  type="text"
+                  value={formData.flightNumber || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, flightNumber: e.target.value }))}
+                  placeholder="e.g. BA123"
+                />
+              </div>
+            )}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Departure Airport
+                </label>
+                <Input
+                  type="text"
+                  value={formData.departureAirport || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, departureAirport: e.target.value }))}
+                  placeholder="Departure airport"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Arrival Airport
+                </label>
+                <Input
+                  type="text"
+                  value={formData.arrivalAirport || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, arrivalAirport: e.target.value }))}
+                  placeholder="Arrival airport"
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                To
-              </label>
-              <Input
-                type="text"
-                value={formData.arrivalLocation || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, arrivalLocation: e.target.value }))}
-                placeholder="Arrival location"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Departure Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.departureDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, departureDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Departure Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.departureTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, departureTime: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmation Number
-              </label>
-              <Input
-                type="text"
-                value={formData.confirmation || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmation: e.target.value }))}
-                placeholder="Booking confirmation"
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Arrival Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.arrivalDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, arrivalDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Arrival Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.arrivalTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, arrivalTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Booking Method Toggle */}
+            <div className="p-4 bg-primary-50 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-sm font-medium text-primary-700">
+                  Booking Method
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ 
+                    ...prev, 
+                    bookingMethod: prev.bookingMethod === 'together' ? 'individual' : 'together' 
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    formData.bookingMethod === 'together' ? 'bg-royal-600' : 'bg-primary-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.bookingMethod === 'together' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              <div className="text-sm text-primary-600 mb-3">
+                {formData.bookingMethod === 'together' ? 'Book Together' : 'Book Individually'}
+              </div>
+
+              {formData.bookingMethod === 'together' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Total Cost ($)
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.totalCost || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, totalCost: parseFloat(e.target.value) || 0 }))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Who Paid?
+                      </label>
+                      <MobileSelect
+                        value={formData.whoPaid || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, whoPaid: value }))}
+                        options={users.map(user => ({
+                          value: user.id,
+                          label: user.id === user?.id ? `${user.name} (You)` : user.name
+                        }))}
+                        placeholder="Select who paid"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-primary-700 mb-2">
+                      Split Cost Between ({formData.splitAmong?.length || 0} selected)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {users.map(user => {
+                        const isSelected = formData.splitAmong?.includes(user.id) || false
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              const currentSplit = formData.splitAmong || []
+                              const newSplit = isSelected
+                                ? currentSplit.filter(id => id !== user.id)
+                                : [...currentSplit, user.id]
+                              setFormData(prev => ({ ...prev, splitAmong: newSplit }))
+                            }}
+                            className={`p-2 rounded-lg border-2 transition-colors text-left text-xs ${
+                              isSelected 
+                                ? 'border-royal-500 bg-royal-50' 
+                                : 'border-primary-200 hover:border-primary-400'
+                            }`}
+                          >
+                            {user.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">
+                      Individual Cost ($)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.individualCost || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, individualCost: parseFloat(e.target.value) || 0 }))}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-1">
+                      Booking Link
+                    </label>
+                    <Input
+                      type="url"
+                      value={formData.bookingLink || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bookingLink: e.target.value }))}
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )
@@ -328,7 +568,7 @@ export default function ItineraryBuilder({
         return (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-primary-700 mb-1">
                 Accommodation Type
               </label>
               <MobileSelect
@@ -336,58 +576,190 @@ export default function ItineraryBuilder({
                 onChange={(value) => setFormData(prev => ({ ...prev, accommodationType: value }))}
                 options={[
                   { value: '', label: 'Select type' },
-                  { value: 'Hotel', label: 'Hotel' },
-                  { value: 'Hostel', label: 'Hostel' },
-                  { value: 'Airbnb', label: 'Airbnb' },
-                  { value: 'Camping', label: 'Camping' },
-                  { value: 'Resort', label: 'Resort' },
-                  { value: 'Guesthouse', label: 'Guesthouse' },
-                  { value: 'Other', label: 'Other' }
+                  { value: 'hotel', label: 'Hotel' },
+                  { value: 'airbnb', label: 'Airbnb' },
+                  { value: 'other', label: 'Other' }
                 ]}
                 placeholder="Select accommodation type"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Location
               </label>
               <Input
                 type="text"
-                value={formData.address || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                placeholder="Full address"
+                value={formData.location || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Enter location"
               />
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Check-in Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.checkInDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, checkInDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Check-in Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.checkInTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, checkInTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Check-out Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.checkOutDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, checkOutDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Check-out Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.checkOutTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, checkOutTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Check-in Date
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Booking Link
               </label>
               <Input
-                type="date"
-                value={formData.checkIn || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, checkIn: e.target.value }))}
+                type="url"
+                value={formData.bookingLink || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, bookingLink: e.target.value }))}
+                placeholder="https://..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Check-out Date
-              </label>
-              <Input
-                type="date"
-                value={formData.checkOut || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, checkOut: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmation Number
-              </label>
-              <Input
-                type="text"
-                value={formData.confirmation || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, confirmation: e.target.value }))}
-                placeholder="Booking confirmation"
-              />
+
+            {/* Same cost sharing logic as travel */}
+            <div className="p-4 bg-primary-50 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-sm font-medium text-primary-700">
+                  Booking Method
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ 
+                    ...prev, 
+                    bookingMethod: prev.bookingMethod === 'together' ? 'individual' : 'together' 
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    formData.bookingMethod === 'together' ? 'bg-royal-600' : 'bg-primary-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.bookingMethod === 'together' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              <div className="text-sm text-primary-600 mb-3">
+                {formData.bookingMethod === 'together' ? 'Book Together' : 'Book Individually'}
+              </div>
+
+              {formData.bookingMethod === 'together' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Total Cost ($)
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.totalCost || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, totalCost: parseFloat(e.target.value) || 0 }))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Who Paid?
+                      </label>
+                      <MobileSelect
+                        value={formData.whoPaid || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, whoPaid: value }))}
+                        options={users.map(user => ({
+                          value: user.id,
+                          label: user.id === user?.id ? `${user.name} (You)` : user.name
+                        }))}
+                        placeholder="Select who paid"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-primary-700 mb-2">
+                      Split Cost Between ({formData.splitAmong?.length || 0} selected)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {users.map(user => {
+                        const isSelected = formData.splitAmong?.includes(user.id) || false
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              const currentSplit = formData.splitAmong || []
+                              const newSplit = isSelected
+                                ? currentSplit.filter(id => id !== user.id)
+                                : [...currentSplit, user.id]
+                              setFormData(prev => ({ ...prev, splitAmong: newSplit }))
+                            }}
+                            className={`p-2 rounded-lg border-2 transition-colors text-left text-xs ${
+                              isSelected 
+                                ? 'border-royal-500 bg-royal-50' 
+                                : 'border-primary-200 hover:border-primary-400'
+                            }`}
+                          >
+                            {user.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-primary-700 mb-1">
+                    Individual Cost ($)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.individualCost || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, individualCost: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
             </div>
           </>
         )
@@ -396,110 +768,281 @@ export default function ItineraryBuilder({
         return (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Category
-              </label>
-              <MobileSelect
-                value={formData.category || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
-                options={[
-                  { value: '', label: 'Select category' },
-                  { value: 'Sightseeing', label: 'Sightseeing' },
-                  { value: 'Adventure', label: 'Adventure' },
-                  { value: 'Cultural', label: 'Cultural' },
-                  { value: 'Entertainment', label: 'Entertainment' },
-                  { value: 'Sports', label: 'Sports' },
-                  { value: 'Shopping', label: 'Shopping' },
-                  { value: 'Other', label: 'Other' }
-                ]}
-                placeholder="Select activity category"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Duration (hours)
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Title
               </label>
               <Input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.duration || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, duration: parseFloat(e.target.value) || 0 }))}
-                placeholder="2.5"
+                type="text"
+                value={formData.title || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Activity title"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Difficulty Level
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Location
               </label>
-              <MobileSelect
-                value={formData.difficulty || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, difficulty: value as any }))}
-                options={[
-                  { value: '', label: 'Select difficulty' },
-                  { value: 'easy', label: 'Easy' },
-                  { value: 'moderate', label: 'Moderate' },
-                  { value: 'challenging', label: 'Challenging' },
-                  { value: 'extreme', label: 'Extreme' }
-                ]}
-                placeholder="Select difficulty level"
+              <Input
+                type="text"
+                value={formData.location || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Activity location"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Requirements
-              </label>
-              <Textarea
-                value={formData.requirements || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, requirements: e.target.value }))}
-                placeholder="Equipment, fitness level, special requirements..."
-                rows={2}
-              />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.startDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Start Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.startTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.endDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  End Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.endTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Same cost sharing logic */}
+            <div className="p-4 bg-primary-50 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-sm font-medium text-primary-700">
+                  Booking Method
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ 
+                    ...prev, 
+                    bookingMethod: prev.bookingMethod === 'together' ? 'individual' : 'together' 
+                  }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    formData.bookingMethod === 'together' ? 'bg-royal-600' : 'bg-primary-200'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.bookingMethod === 'together' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              
+              <div className="text-sm text-primary-600 mb-3">
+                {formData.bookingMethod === 'together' ? 'Book Together' : 'Book Individually'}
+              </div>
+
+              {formData.bookingMethod === 'together' ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Total Cost ($)
+                      </label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formData.totalCost || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, totalCost: parseFloat(e.target.value) || 0 }))}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-primary-700 mb-1">
+                        Who Paid?
+                      </label>
+                      <MobileSelect
+                        value={formData.whoPaid || ''}
+                        onChange={(value) => setFormData(prev => ({ ...prev, whoPaid: value }))}
+                        options={users.map(user => ({
+                          value: user.id,
+                          label: user.id === user?.id ? `${user.name} (You)` : user.name
+                        }))}
+                        placeholder="Select who paid"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-primary-700 mb-2">
+                      Split Cost Between ({formData.splitAmong?.length || 0} selected)
+                    </label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {users.map(user => {
+                        const isSelected = formData.splitAmong?.includes(user.id) || false
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            onClick={() => {
+                              const currentSplit = formData.splitAmong || []
+                              const newSplit = isSelected
+                                ? currentSplit.filter(id => id !== user.id)
+                                : [...currentSplit, user.id]
+                              setFormData(prev => ({ ...prev, splitAmong: newSplit }))
+                            }}
+                            className={`p-2 rounded-lg border-2 transition-colors text-left text-xs ${
+                              isSelected 
+                                ? 'border-royal-500 bg-royal-50' 
+                                : 'border-primary-200 hover:border-primary-400'
+                            }`}
+                          >
+                            {user.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-primary-700 mb-1">
+                    Individual Cost ($)
+                  </label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.individualCost || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, individualCost: parseFloat(e.target.value) || 0 }))}
+                    placeholder="0.00"
+                  />
+                </div>
+              )}
             </div>
           </>
         )
 
-      case 'meal':
+      case 'other':
         return (
           <>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Meal Type
-              </label>
-              <MobileSelect
-                value={formData.mealType || ''}
-                onChange={(value) => setFormData(prev => ({ ...prev, mealType: value }))}
-                options={[
-                  { value: '', label: 'Select type' },
-                  { value: 'breakfast', label: 'Breakfast' },
-                  { value: 'lunch', label: 'Lunch' },
-                  { value: 'dinner', label: 'Dinner' },
-                  { value: 'snack', label: 'Snack' },
-                  { value: 'drinks', label: 'Drinks' }
-                ]}
-                placeholder="Select meal type"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cuisine Type
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Title
               </label>
               <Input
                 type="text"
-                value={formData.cuisine || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, cuisine: e.target.value }))}
-                placeholder="Italian, Japanese, Local..."
+                value={formData.title || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Item title"
               />
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Reservation Details
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Location
               </label>
               <Input
                 type="text"
-                value={formData.reservation || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, reservation: e.target.value }))}
-                placeholder="Reservation name/number"
+                value={formData.location || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Location"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Start Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.startDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  Start Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.startTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  End Date
+                </label>
+                <Input
+                  type="date"
+                  value={formData.endDate || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">
+                  End Time
+                </label>
+                <Input
+                  type="time"
+                  value={formData.endTime || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Cost ($)
+              </label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.cost || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-1">
+                Additional Notes
+              </label>
+              <Textarea
+                value={formData.additionalNotes || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, additionalNotes: e.target.value }))}
+                placeholder="Additional notes..."
+                rows={3}
               />
             </div>
           </>
@@ -533,8 +1076,10 @@ export default function ItineraryBuilder({
             <CardContent className="p-4">
               <div className="flex items-start gap-4">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-lg">{getTypeIcon(item.type)}</span>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                    ITINERARY_TYPES.find(t => t.value === item.type)?.color || 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {item.type.charAt(0).toUpperCase()}
                   </div>
                 </div>
 
@@ -661,225 +1206,50 @@ export default function ItineraryBuilder({
             <div className="space-y-4">
               {/* Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-primary-700 mb-2">
                   Item Type
                 </label>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                  {ITINERARY_TYPES.map(type => (
-                    <button
-                      key={type.value}
-                      onClick={() => setFormData(prev => ({ ...prev, type: type.value }))}
-                      className={`p-3 rounded-lg border-2 text-center transition-colors ${
-                        formData.type === type.value
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="mb-1 flex justify-center text-blue-600">{type.icon}</div>
-                      <div className="text-xs font-medium">{type.label}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Basic Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Title *
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.title || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                    placeholder="Enter item title"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.location || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="Enter location"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <Textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Enter description"
-                  rows={2}
+                <MobileSelect
+                  value={formData.type}
+                  onChange={(value) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      type: value as ItineraryType,
+                      // Reset form when type changes
+                      title: '',
+                      location: '',
+                      startTime: '',
+                      endTime: '',
+                      cost: 0
+                    }))
+                  }}
+                  options={ITINERARY_TYPES.map(type => ({
+                    value: type.value,
+                    label: type.label
+                  }))}
+                  placeholder="Select itinerary type"
                 />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={formData.startTime || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Time
-                  </label>
-                  <Input
-                    type="time"
-                    value={formData.endTime || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Cost ($)
-                  </label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formData.cost || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-                    placeholder="0.00"
-                  />
-                </div>
               </div>
 
               {/* Type-specific Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 {renderTypeSpecificFields()}
               </div>
 
-              {/* Payment Details */}
-              {formData.cost && formData.cost > 0 && (
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg border">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">
-                      Create expense for Split-Pay
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, createExpense: !prev.createExpense }))}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        formData.createExpense ? 'bg-blue-600' : 'bg-gray-200'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          formData.createExpense ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  {formData.createExpense && (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Paid by
-                          </label>
-                          <MobileSelect
-                            value={formData.paidBy || ''}
-                            onChange={(value) => setFormData(prev => ({ ...prev, paidBy: value }))}
-                            options={users.map(user => ({
-                              value: user.id,
-                              label: `${user.name}${user.id === user?.id ? ' (You)' : ''}`
-                            }))}
-                            placeholder="Who paid for this?"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Split method
-                          </label>
-                          <MobileSelect
-                            value={formData.splitMethod || 'equal'}
-                            onChange={(value) => setFormData(prev => ({ ...prev, splitMethod: value as 'equal' | 'custom' }))}
-                            options={[
-                              { value: 'equal', label: 'Equal split' },
-                              { value: 'custom', label: 'Custom amounts' }
-                            ]}
-                            placeholder="How to split this cost?"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Split between ({formData.participants?.length || 0} selected)
-                        </label>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                          {users.map(user => {
-                            const isSelected = formData.participants?.includes(user.id) || false
-                            return (
-                              <button
-                                key={user.id}
-                                type="button"
-                                onClick={() => {
-                                  const currentParticipants = formData.participants || []
-                                  const newParticipants = isSelected
-                                    ? currentParticipants.filter(id => id !== user.id)
-                                    : [...currentParticipants, user.id]
-                                  setFormData(prev => ({ ...prev, participants: newParticipants }))
-                                }}
-                                className={`p-2 rounded-lg border-2 transition-colors text-left text-xs ${
-                                  isSelected 
-                                    ? 'border-blue-500 bg-blue-50' 
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1">
-                                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span className="text-xs font-medium text-blue-600">
-                                      {user.name.split(' ').map((n: string) => n[0]).join('')}
-                                    </span>
-                                  </div>
-                                  <span className="truncate">
-                                    {user.name.split(' ')[0]} {user.id === user?.id ? '(You)' : ''}
-                                  </span>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
-                </label>
-                <Textarea
-                  value={formData.notes || ''}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes..."
-                  rows={2}
-                />
-              </div>
 
               {/* Action Buttons */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t">
                 <Button variant="outline" onClick={handleCancelEdit}>
                   Cancel
                 </Button>
-                <Button onClick={handleSaveItem} disabled={!formData.title?.trim()}>
+                <Button 
+                  onClick={handleSaveItem} 
+                  disabled={
+                    (formData.type === 'travel' && !formData.transportType?.trim()) ||
+                    ((formData.type === 'activity' || formData.type === 'other') && !formData.title?.trim()) ||
+                    (formData.type === 'accommodation' && !formData.accommodationType?.trim())
+                  }
+                >
                   {editingItemId ? 'Update' : 'Add'} Item
                 </Button>
               </div>

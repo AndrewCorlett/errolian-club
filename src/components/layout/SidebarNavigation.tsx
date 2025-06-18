@@ -1,4 +1,5 @@
 import { useLocation, Link } from 'react-router-dom'
+import Logo from '@/components/ui/Logo'
 
 const navItems = [
   { name: 'Home', href: '/', icon: 'home' },
@@ -50,39 +51,63 @@ const IconComponent = ({ icon, isActive }: { icon: string; isActive: boolean }) 
   return icons[icon as keyof typeof icons] || icons.home
 }
 
-export default function BottomNavigation() {
+export default function SidebarNavigation() {
   const location = useLocation()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-primary-200/50 z-50 safe-area-bottom desktop:hidden">
-      <div className="flex justify-around px-2 py-1">
-        {navItems.map((item, index) => {
-          const isActive = location.pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all-smooth relative stagger-item hover-lift ${
-                isActive 
-                  ? 'text-royal-600' 
-                  : 'text-primary-500 hover:text-primary-900'
-              }`}
-              style={{ animationDelay: `${index * 0.05}s` }}
-            >
-              {isActive && (
-                <div className="absolute inset-0 bg-royal-50 rounded-xl animate-scale-in" />
-              )}
-              <div className="relative z-10 flex flex-col items-center">
+    <div className="hidden desktop:flex desktop:flex-col desktop:fixed desktop:left-0 desktop:top-0 desktop:h-full desktop:w-64 desktop:bg-white/95 desktop:backdrop-blur-xl desktop:border-r desktop:border-primary-200/50 desktop:z-40">
+      {/* Logo/Header */}
+      <div className="flex items-center gap-3 p-6 border-b border-primary-200/50">
+        <Logo size="md" />
+        <div className="flex flex-col">
+          <h1 className="text-lg font-bold text-primary-900 leading-tight">
+            Errolian Club
+          </h1>
+          <p className="text-xs text-royal-600 leading-tight">
+            Members Portal
+          </p>
+        </div>
+      </div>
+
+      {/* Navigation Items */}
+      <nav className="flex-1 px-4 py-6">
+        <div className="space-y-2">
+          {navItems.map((item, index) => {
+            const isActive = location.pathname === item.href
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all-smooth hover-lift stagger-item ${
+                  isActive 
+                    ? 'bg-royal-50 text-royal-600 border border-royal-200' 
+                    : 'text-primary-600 hover:text-primary-900 hover:bg-primary-50'
+                }`}
+                style={{ animationDelay: `${index * 0.05}s` }}
+              >
                 <IconComponent icon={item.icon} isActive={isActive} />
-                <span className={`text-xs font-medium mt-0.5 transition-colors-smooth ${
-                  isActive ? 'text-royal-600' : ''
-                }`}>
+                <span className="font-medium">
                   {item.name}
                 </span>
-              </div>
-            </Link>
-          )
-        })}
+                {isActive && (
+                  <div className="ml-auto w-2 h-2 bg-royal-600 rounded-full animate-scale-in" />
+                )}
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Footer/User Info */}
+      <div className="p-4 border-t border-primary-200/50">
+        <div className="text-center">
+          <p className="text-xs text-primary-500">
+            © 2024 Errolian Club
+          </p>
+          <p className="text-xs text-primary-400">
+            All rights reserved
+          </p>
+        </div>
       </div>
     </div>
   )
