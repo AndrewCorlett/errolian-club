@@ -1,12 +1,12 @@
-# Errolian Club - Claude Code Configuration
+# Errolian Club - Project Configuration
 
 ## Project Overview
-This is the Errolian Club platform - a React-based club management application with comprehensive features for calendar management, split-pay expenses, document library, and member authentication.
+React-based club management application with calendar management, split-pay expenses, document library, and member authentication.
 
-## Auto-Setup Instructions
-When starting work on this project, always:
+## Project Setup Instructions
+When starting work on this project:
 
-1. **Read the latest progress file** from `Progress So Far/` directory to understand the current state
+1. **Read the latest progress file** from `Progress So Far/` directory to understand current state
 2. **Check the TASKS.md file** in `Reading Files/` for current priorities
 3. **Review the project structure** to understand the codebase organization
 
