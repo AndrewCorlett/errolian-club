@@ -45,6 +45,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
   const [participants, setParticipants] = useState<ParticipantShare[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
   const [events, setEvents] = useState<EventWithDetails[]>([])
+  const [, setLoading] = useState(false)
 
   // Load users and events when modal opens
   useEffect(() => {

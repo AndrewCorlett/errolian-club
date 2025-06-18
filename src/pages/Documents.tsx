@@ -8,11 +8,50 @@ import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
 import { documentService } from '@/lib/database'
-import type { Document, DocumentFolder, DocumentStatus } from '@/types/supabase'
+import type { Document, DocumentFolder } from '@/types/documents'
+import type { DocumentRow, DocumentFolderRow, DocumentStatus } from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
 
 type ViewMode = 'folders' | 'all' | 'recent' | 'popular'
 type SortOption = 'name' | 'date' | 'size' | 'downloads'
+
+// Helper functions to convert database types to frontend types
+const convertDocumentRowToDocument = (row: DocumentRow): Document => ({
+  id: row.id,
+  name: row.name,
+  type: row.type,
+  size: row.size_bytes,
+  mimeType: row.mime_type,
+  url: row.storage_path, // This might need to be converted to a full URL
+  thumbnailUrl: row.thumbnail_path || undefined,
+  folderId: row.folder_id || undefined,
+  uploadedBy: row.uploaded_by,
+  uploadedAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
+  status: row.status,
+  approvedBy: row.approved_by || undefined,
+  approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
+  rejectedReason: row.rejected_reason || undefined,
+  description: row.description || undefined,
+  tags: row.tags,
+  isPublic: row.is_public,
+  downloadCount: row.download_count,
+  version: row.version,
+  parentDocumentId: row.parent_document_id || undefined,
+})
+
+const convertDocumentFolderRowToFolder = (row: DocumentFolderRow): DocumentFolder => ({
+  id: row.id,
+  name: row.name,
+  description: row.description || undefined,
+  parentId: row.parent_id || undefined,
+  createdBy: row.created_by,
+  createdAt: new Date(row.created_at),
+  updatedAt: new Date(row.updated_at),
+  isPublic: row.is_public,
+  color: row.color || undefined,
+  icon: row.icon || undefined,
+})
 
 export default function Documents() {
   const { user } = useAuth()
@@ -44,8 +83,8 @@ export default function Documents() {
           documentService.getFolders()
         ])
         
-        setDocuments(documentsResponse)
-        setFolders(foldersResponse)
+        setDocuments(documentsResponse.map(convertDocumentRowToDocument))
+        setFolders(foldersResponse.map(convertDocumentFolderRowToFolder))
       } catch (err) {
         console.error('Failed to load documents:', err)
         setError('Failed to load documents')
@@ -79,18 +118,18 @@ export default function Documents() {
       case 'name':
         return filteredDocuments.sort((a, b) => a.name.localeCompare(b.name))
       case 'date':
-        return filteredDocuments.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        return filteredDocuments.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
       case 'size':
-        return filteredDocuments.sort((a, b) => b.size_bytes - a.size_bytes)
+        return filteredDocuments.sort((a, b) => b.size - a.size)
       case 'downloads':
-        return filteredDocuments.sort((a, b) => b.download_count - a.download_count)
+        return filteredDocuments.sort((a, b) => b.downloadCount - a.downloadCount)
       default:
         return filteredDocuments
     }
   }
 
   const getCurrentFolders = () => {
-    return folders.filter(folder => folder.parent_id === (currentFolder?.id || null))
+    return folders.filter(folder => folder.parentId === (currentFolder?.id || null))
   }
 
   const handleFolderClick = (folder: DocumentFolder) => {
@@ -123,13 +162,13 @@ export default function Documents() {
     alert(`Downloaded: ${document.name}`)
   }
 
-  const handleDocumentUpload = (documentData: Omit<Document, 'id' | 'created_at' | 'updated_at' | 'download_count' | 'version'>) => {
+  const handleDocumentUpload = (documentData: Omit<Document, 'id' | 'updatedAt' | 'uploadedAt' | 'downloadCount' | 'version'>) => {
     const newDocument: Document = {
       id: `doc_${Date.now()}`,
       ...documentData,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      download_count: 0,
+      uploadedAt: new Date(),
+      updatedAt: new Date(),
+      downloadCount: 0,
       version: 1
     }
     

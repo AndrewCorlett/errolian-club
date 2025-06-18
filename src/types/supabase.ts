@@ -523,3 +523,7 @@ export interface RealtimePayload<T> {
   schema: string
   table: string
 }
+
+// Database row type aliases (for compatibility with frontend interfaces)
+export type DocumentRow = Database['public']['Tables']['documents']['Row']
+export type DocumentFolderRow = Database['public']['Tables']['document_folders']['Row']
