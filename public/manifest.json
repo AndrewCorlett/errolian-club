@@ -4,8 +4,8 @@
   "description": "Your adventure planning hub",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#f8fafc",
+  "background_color": "rgb(225, 220, 200)",
+  "theme_color": "rgb(225, 220, 200)",
   "orientation": "portrait-primary",
   "icons": [
     {

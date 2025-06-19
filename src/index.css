@@ -14,14 +14,15 @@
   html {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
-    @apply bg-primary-50;
+    background-color: rgb(225, 220, 200);
     /* Ensure the background extends beyond the viewport on iOS */
     min-height: 100vh;
     min-height: -webkit-fill-available;
   }
   
   body {
-    @apply bg-primary-50 text-primary-900 antialiased;
+    background-color: rgb(225, 220, 200);
+    @apply text-primary-900 antialiased;
     font-feature-settings: 'cv01', 'cv02', 'cv03', 'cv04';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -37,7 +38,7 @@
   #root {
     min-height: 100vh;
     min-height: -webkit-fill-available;
-    @apply bg-primary-50;
+    background-color: rgb(225, 220, 200);
   }
   
   /* Custom focus styles */
@@ -87,7 +88,7 @@
   
   /* Specific iPhone models with notch/dynamic island */
   html, body, #root {
-    background-color: #f8fafc !important;
+    background-color: rgb(225, 220, 200) !important;
   }
   
   /* Prevent the bounce effect from showing blue background */

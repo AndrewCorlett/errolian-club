@@ -40,7 +40,7 @@ function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen bg-primary-50 safe-area-full">
+        <div className="min-h-screen safe-area-full" style={{ backgroundColor: 'rgb(225, 220, 200)' }}>
           <Routes>
             {/* Public routes */}
             <Route path="/auth/login" element={<Login />} />
