@@ -8,7 +8,7 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-200">
+    <div className="min-h-screen bg-primary-50">
       {/* Desktop Sidebar */}
       <SidebarNavigation />
       
