@@ -1,34 +1,24 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import FolderCard from '@/components/documents/FolderCard'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
-import DocumentVersionHistory from '@/components/documents/DocumentVersionHistory'
-import DocumentVersionComparison from '@/components/documents/DocumentVersionComparison'
-import DocumentMetadataModal from '@/components/documents/DocumentMetadataModal'
-import UploaderDetailsModal from '@/components/documents/UploaderDetailsModal'
-import FolderManagementModal, { type FolderFormData } from '@/components/documents/FolderManagementModal'
+import FolderMoveModal from '@/components/documents/FolderMoveModal'
 import { useDragAndDrop } from '@/hooks/useDragAndDrop'
 import { roleBasedUI, filterByPermissions } from '@/utils/roleBasedUI'
 import { documentService } from '@/lib/database'
 import type { Document, DocumentFolder } from '@/types/documents'
 import type { 
   Document as DocumentRow, 
-  DocumentFolder as DocumentFolderRow, 
-  DocumentStatus 
+  DocumentFolder as DocumentFolderRow
 } from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { lockDocument, unlockDocument, validateLockForOperation } from '@/utils/documentLocking'
 import { documentLockNotifications, documentGeneralNotifications } from '@/utils/notifications'
 import { useDocumentRealTime } from '@/hooks/useDocumentRealTime'
 import RealTimeStatusIndicator from '@/components/documents/RealTimeStatusIndicator'
-
-type ViewMode = 'folders' | 'all' | 'recent' | 'popular'
-type SortOption = 'name' | 'date' | 'size' | 'downloads'
 
 // Helper functions to convert database types to frontend types
 const convertDocumentRowToDocument = (row: DocumentRow): Document => ({
@@ -78,30 +68,21 @@ const convertDocumentFolderRowToFolder = (row: DocumentFolderRow): DocumentFolde
 
 export default function Documents() {
   const { profile } = useAuth()
-  const [viewMode, setViewMode] = useState<ViewMode>('folders')
   const [currentFolder, setCurrentFolder] = useState<DocumentFolder | null>(null)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [sortBy, setSortBy] = useState<SortOption>('name')
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showVersionHistory, setShowVersionHistory] = useState(false)
-  const [showVersionComparison, setShowVersionComparison] = useState(false)
-  const [showMetadataModal, setShowMetadataModal] = useState(false)
-  const [showUploaderDetails, setShowUploaderDetails] = useState(false)
-  const [comparisonVersions, setComparisonVersions] = useState<{ version1Id?: string, version2Id?: string }>({})
   const [folderPath, setFolderPath] = useState<DocumentFolder[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<DocumentFolder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [renamingFolder, setRenamingFolder] = useState<string | null>(null)
+  const [newFolderName, setNewFolderName] = useState('')
   
   // Folder management state
-  const [showFolderModal, setShowFolderModal] = useState(false)
-  const [folderModalMode, setFolderModalMode] = useState<'create' | 'rename' | 'move'>('create')
+  const [showMoveModal, setShowMoveModal] = useState(false)
   const [selectedFolder, setSelectedFolder] = useState<DocumentFolder | null>(null)
-  const [parentFolder, setParentFolder] = useState<DocumentFolder | null>(null)
 
   // Role-based permissions
   const canUpload = profile && roleBasedUI.canShowUploadButton(profile.role)
@@ -175,7 +156,38 @@ export default function Documents() {
         ])
         
         setDocuments(documentsResponse.map(convertDocumentRowToDocument))
-        setFolders(foldersResponse.map(convertDocumentFolderRowToFolder))
+        
+        let allFolders = foldersResponse.map(convertDocumentFolderRowToFolder)
+        
+        // Check if we need to seed default folders (only in root and if no folders exist)
+        if (!currentFolder && allFolders.filter(f => !f.parentId).length === 0 && profile) {
+          // Create default folders
+          const defaultFolders = [
+            { name: 'Board of Command', icon: '👑' },
+            { name: 'Administrative Officer', icon: '📋' },
+            { name: 'Miscellaneous', icon: '📦' }
+          ]
+          
+          for (const folderData of defaultFolders) {
+            try {
+              await documentService.createFolder({
+                name: folderData.name,
+                icon: folderData.icon,
+                parent_id: null,
+                is_public: true,
+                created_by: profile.id
+              })
+            } catch (err) {
+              console.error('Failed to create default folder:', err)
+            }
+          }
+          
+          // Reload folders
+          const updatedFolders = await documentService.getFolders()
+          allFolders = updatedFolders.map(convertDocumentFolderRowToFolder)
+        }
+        
+        setFolders(allFolders)
       } catch (err) {
         console.error('Failed to load documents:', err)
         setError('Failed to load documents')
@@ -185,9 +197,9 @@ export default function Documents() {
     }
 
     loadData()
-  }, [currentFolder])
+  }, [currentFolder, profile])
 
-  // Get current documents based on view mode and filters
+  // Get current documents
   const getCurrentDocuments = () => {
     let filteredDocuments = documents
 
@@ -196,32 +208,7 @@ export default function Documents() {
       filteredDocuments = filterByPermissions(filteredDocuments, profile.role, profile.id, 'document')
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filteredDocuments = filteredDocuments.filter(doc => doc.status === statusFilter)
-    }
-
-    // Apply search filter
-    if (searchQuery) {
-      filteredDocuments = filteredDocuments.filter(doc => 
-        doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    }
-
-    // Sort documents
-    switch (sortBy) {
-      case 'name':
-        return filteredDocuments.sort((a, b) => a.name.localeCompare(b.name))
-      case 'date':
-        return filteredDocuments.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-      case 'size':
-        return filteredDocuments.sort((a, b) => b.size - a.size)
-      case 'downloads':
-        return filteredDocuments.sort((a, b) => b.downloadCount - a.downloadCount)
-      default:
-        return filteredDocuments
-    }
+    return filteredDocuments.sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const getCurrentFolders = () => {
@@ -232,13 +219,13 @@ export default function Documents() {
       filteredFolders = filterByPermissions(filteredFolders, profile.role, profile.id, 'folder')
     }
     
-    return filteredFolders
+    return filteredFolders.sort((a, b) => a.name.localeCompare(b.name))
   }
 
   const handleFolderClick = (folder: DocumentFolder) => {
+    if (renamingFolder === folder.id) return // Don't navigate if renaming
     setCurrentFolder(folder)
     setFolderPath(prev => [...prev, folder])
-    setViewMode('folders')
   }
 
   const handleFolderNavigation = (index: number) => {
@@ -274,6 +261,16 @@ export default function Documents() {
       
       // Add to local state to update UI immediately
       setDocuments(prev => [documentData, ...prev])
+      
+      // Reload documents to ensure we see the newly uploaded file
+      try {
+        const documentsResponse = await documentService.getDocuments(currentFolder?.id)
+        const convertedDocs = documentsResponse.map(convertDocumentRowToDocument)
+        setDocuments(convertedDocs)
+        console.log('Documents reloaded after upload:', convertedDocs.length)
+      } catch (reloadError) {
+        console.error('Failed to reload documents after upload:', reloadError)
+      }
       
       // Send notification
       if (profile) {
@@ -382,18 +379,15 @@ export default function Documents() {
 
   // Context menu handlers
   const handleViewVersionHistory = (document: Document) => {
-    setSelectedDocument(document)
-    setShowVersionHistory(true)
+    console.log('View version history:', document.name)
   }
 
   const handleViewMetadata = (document: Document) => {
-    setSelectedDocument(document)
-    setShowMetadataModal(true)
+    console.log('View metadata:', document.name)
   }
 
   const handleViewUploaderDetails = (document: Document) => {
-    setSelectedDocument(document)
-    setShowUploaderDetails(true)
+    console.log('View uploader details:', document.name)
   }
 
   const handleCopyLink = (document: Document) => {
@@ -407,76 +401,106 @@ export default function Documents() {
   }
 
   const handleMoveToFolder = (document: Document) => {
-    // This would open a folder selection modal
     console.log('Move document to folder:', document.name)
     alert(`Move "${document.name}" to folder - this would open a folder selection modal`)
   }
 
-  const handleVersionRestore = (versionId: string) => {
-    console.log('Restore version:', versionId)
-    alert(`Restoring version ${versionId} - this would create a new version based on the selected one`)
+
+  const handleCreateFolder = async () => {
+    if (!profile || !canCreateFolder) return
+    
+    try {
+      const newFolder = await documentService.createFolder({
+        name: 'New folder',
+        parent_id: currentFolder?.id || null,
+        is_public: true,
+        created_by: profile.id,
+        icon: '📁'
+      })
+      
+      // Add to local state and start rename
+      const folder = convertDocumentFolderRowToFolder(newFolder)
+      setFolders(prev => [...prev, folder])
+      setRenamingFolder(folder.id)
+      setNewFolderName('New folder')
+    } catch (err) {
+      console.error('Failed to create folder:', err)
+      alert('Failed to create folder')
+    }
   }
 
-  const handleVersionDownload = (versionId: string) => {
-    console.log('Download version:', versionId)
-    alert(`Downloading version ${versionId}`)
+  const handleRenameFolder = async (folder: DocumentFolder) => {
+    if (!newFolderName.trim() || newFolderName === folder.name) {
+      setRenamingFolder(null)
+      return
+    }
+    
+    try {
+      await documentService.updateFolder(folder.id, { name: newFolderName.trim() })
+      setFolders(prev => prev.map(f => 
+        f.id === folder.id ? { ...f, name: newFolderName.trim() } : f
+      ))
+      setRenamingFolder(null)
+      setNewFolderName('')
+    } catch (err) {
+      console.error('Failed to rename folder:', err)
+      alert('Failed to rename folder')
+    }
   }
 
-  const handleVersionCompare = (version1Id: string, version2Id: string) => {
-    setComparisonVersions({ version1Id, version2Id })
-    setShowVersionComparison(true)
+  const handleDeleteFolder = async (folder: DocumentFolder) => {
+    if (!window.confirm(`Are you sure you want to delete folder "${folder.name}" and all its contents? This action cannot be undone.`)) {
+      return
+    }
+    
+    try {
+      await documentService.deleteFolder(folder.id)
+      setFolders(prev => prev.filter(f => f.id !== folder.id))
+      // If we deleted the current folder, go back to parent
+      if (currentFolder?.id === folder.id) {
+        const parentIndex = folderPath.findIndex(f => f.id === folder.id) - 1
+        handleFolderNavigation(parentIndex)
+      }
+    } catch (err) {
+      console.error('Failed to delete folder:', err)
+      alert('Failed to delete folder')
+    }
   }
-
 
   const handleFolderContextMenuAction = (action: string, folder: DocumentFolder) => {
     switch (action) {
-      case 'create-subfolder':
-        setParentFolder(folder)
-        setFolderModalMode('create')
-        setShowFolderModal(true)
-        break
       case 'rename':
-        setSelectedFolder(folder)
-        setFolderModalMode('rename')
-        setShowFolderModal(true)
+        setRenamingFolder(folder.id)
+        setNewFolderName(folder.name)
         break
       case 'move':
         setSelectedFolder(folder)
-        setFolderModalMode('move')
-        setShowFolderModal(true)
+        setShowMoveModal(true)
         break
       case 'delete':
-        if (window.confirm(`Are you sure you want to delete folder "${folder.name}"? This action cannot be undone.`)) {
-          console.log('Deleting folder:', folder.name)
-          // TODO: Implement actual folder deletion
-          alert(`Folder "${folder.name}" deleted`)
-        }
-        break
-      case 'view-details':
-        console.log('Viewing folder details:', folder.name)
-        alert(`Viewing details for folder "${folder.name}"`)
+        handleDeleteFolder(folder)
         break
     }
   }
 
-  const handleFolderManagement = async (data: FolderFormData) => {
+  const handleMoveFolder = async (targetFolderId: string | null) => {
+    if (!selectedFolder) return
+    
     try {
-      if (folderModalMode === 'create') {
-        console.log('Creating folder:', data)
-        // TODO: Implement actual folder creation
-        alert(`Folder "${data.name}" created successfully!`)
-      } else if (folderModalMode === 'rename' && selectedFolder) {
-        console.log('Renaming folder:', selectedFolder.name, 'to', data.name)
-        // TODO: Implement actual folder renaming
-        alert(`Folder renamed to "${data.name}"`)
-      } else if (folderModalMode === 'move' && selectedFolder) {
-        console.log('Moving folder:', selectedFolder.name, 'to parent', data.parentId)
-        // TODO: Implement actual folder moving
-        alert(`Folder moved successfully`)
-      }
-    } catch (error) {
-      console.error('Folder operation failed:', error)
-      alert('Operation failed. Please try again.')
+      await documentService.updateFolder(selectedFolder.id, { 
+        parent_id: targetFolderId 
+      })
+      
+      // Update local state
+      setFolders(prev => prev.map(f => 
+        f.id === selectedFolder.id ? { ...f, parentId: targetFolderId || undefined } : f
+      ))
+      
+      setShowMoveModal(false)
+      setSelectedFolder(null)
+    } catch (err) {
+      console.error('Failed to move folder:', err)
+      alert('Failed to move folder')
     }
   }
 
@@ -505,7 +529,7 @@ export default function Documents() {
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Documents</h1>
                 <p className="text-sm text-gray-600">Club files and resources</p>
@@ -525,141 +549,60 @@ export default function Documents() {
                       </svg>
                       Upload
                     </Button>
-                    {viewMode === 'folders' && canCreateFolder && (
+                    {canCreateFolder && (
                       <Button 
-                        onClick={() => {
-                          setParentFolder(currentFolder)
-                          setFolderModalMode('create')
-                          setShowFolderModal(true)
-                        }} 
+                        onClick={handleCreateFolder}
                         variant="outline" 
                         size="sm"
                       >
                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                         </svg>
-                        New Folder
+                        Create Folder
                       </Button>
                     )}
                   </>
                 )}
               </div>
             </div>
-
-            {/* Search and Filters */}
-            <div className="flex flex-wrap gap-3">
-              <div className="flex-1 min-w-64">
-                <Input
-                  type="text"
-                  placeholder="Search documents..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as DocumentStatus | 'all')}
-                className="w-32"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </Select>
-
-              <Select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="w-32"
-              >
-                <option value="name">Name</option>
-                <option value="date">Date</option>
-                <option value="size">Size</option>
-                <option value="downloads">Downloads</option>
-              </Select>
-            </div>
           </div>
         </div>
       </div>
 
       <div className="px-4 py-6 max-w-6xl mx-auto">
-        {/* View Mode Tabs */}
-        <div className="flex items-center gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit">
-          <button
-            onClick={() => {
-              setViewMode('folders')
-              setCurrentFolder(null)
-              setFolderPath([])
-            }}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'folders' 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            📁 Folders
-          </button>
-          <button
-            onClick={() => setViewMode('all')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'all' 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            📄 All Files
-          </button>
-          <button
-            onClick={() => setViewMode('recent')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'recent' 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            🕒 Recent
-          </button>
-          <button
-            onClick={() => setViewMode('popular')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              viewMode === 'popular' 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-            Popular
-          </button>
-        </div>
-
         {/* Breadcrumb */}
-        {viewMode === 'folders' && (
-          <div className="flex items-center gap-2 mb-6 text-sm">
+        <div className="flex items-center gap-2 mb-6 text-sm">
+          {currentFolder && (
             <button
-              onClick={() => handleFolderNavigation(-1)}
-              className="text-blue-600 hover:text-blue-800 transition-colors"
+              onClick={() => handleFolderNavigation(folderPath.length - 2)}
+              className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
             >
-              📁 Root
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
             </button>
-            {folderPath.map((folder, index) => (
-              <React.Fragment key={folder.id}>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-                <button
-                  onClick={() => handleFolderNavigation(index)}
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  {folder.icon} {folder.name}
-                </button>
-              </React.Fragment>
-            ))}
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => handleFolderNavigation(-1)}
+            className="text-blue-600 hover:text-blue-800 transition-colors"
+          >
+            📁 Root
+          </button>
+          {folderPath.map((folder, index) => (
+            <React.Fragment key={folder.id}>
+              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              <button
+                onClick={() => handleFolderNavigation(index)}
+                className="text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                {folder.icon} {folder.name}
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
 
         {/* Content - Root Drop Zone */}
         <div 
@@ -668,74 +611,117 @@ export default function Documents() {
             isDraggedOver(currentFolder?.id || null) ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
           }`}
         >
-          {/* Folders (only in folder view) */}
-          {viewMode === 'folders' && currentFolders.length > 0 && (
+          {/* Show only folders on root level, folders and documents on other levels */}
+          {currentFolder === null ? (
+            // Root level - only show folders
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Folders</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {currentFolders.map(folder => (
-                  <FolderCard
-                    key={folder.id}
-                    folder={folder}
-                    onClick={handleFolderClick}
-                    onContextMenuAction={handleFolderContextMenuAction}
-                    dragProps={getDragProps('folder', folder.id, folder)}
-                    dropProps={getDropProps(folder.id)}
-                    isDraggedOver={isDraggedOver(folder.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Documents */}
-          {currentDocuments.length > 0 ? (
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Documents ({currentDocuments.length})
-              </h2>
-              <div className="grid grid-cols-1 gap-4">
-                {currentDocuments.map(document => (
-                  <DocumentCard
-                    key={document.id}
-                    document={document}
-                    onClick={handleDocumentClick}
-                    showFolder={viewMode !== 'folders'}
-                    onViewVersionHistory={handleViewVersionHistory}
-                    onViewMetadata={handleViewMetadata}
-                    onViewUploaderDetails={handleViewUploaderDetails}
-                    onCopyLink={handleCopyLink}
-                    onMoveToFolder={handleMoveToFolder}
-                    onDelete={handleDocumentDeleteWithValidation}
-                    onEdit={handleDocumentEditWithValidation}
-                    onDownload={handleDocumentDownload}
-                    dragProps={getDragProps('document', document.id, document)}
-                  />
-                ))}
-              </div>
+              {currentFolders.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {currentFolders.map(folder => (
+                    <FolderCard
+                      key={folder.id}
+                      folder={folder}
+                      onClick={handleFolderClick}
+                      onContextMenuAction={handleFolderContextMenuAction}
+                      onRename={renamingFolder === folder.id ? handleRenameFolder : undefined}
+                      isRenaming={renamingFolder === folder.id}
+                      renamingValue={renamingFolder === folder.id ? newFolderName : undefined}
+                      onRenamingChange={setNewFolderName}
+                      dragProps={getDragProps('folder', folder.id, folder)}
+                      dropProps={getDropProps(folder.id)}
+                      isDraggedOver={isDraggedOver(folder.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No folders yet</h3>
+                    <p className="text-gray-600 mb-4">Create your first folder to organize documents</p>
+                    {canCreateFolder && (
+                      <Button onClick={handleCreateFolder}>
+                        Create Folder
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </div>
           ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {searchQuery ? 'No documents found' : 'No documents yet'}
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  {searchQuery 
-                    ? `No documents match "${searchQuery}"`
-                    : 'Start by uploading your first document'
-                  }
-                </p>
-                {canUpload && !searchQuery && (
-                  <Button onClick={() => setShowUploadModal(true)}>
-                    Upload Document
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+            // Inside a folder - show both folders and documents
+            <>
+              {/* Sub-folders */}
+              {currentFolders.length > 0 && (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Folders</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {currentFolders.map(folder => (
+                      <FolderCard
+                        key={folder.id}
+                        folder={folder}
+                        onClick={handleFolderClick}
+                        onContextMenuAction={handleFolderContextMenuAction}
+                        onRename={renamingFolder === folder.id ? handleRenameFolder : undefined}
+                        isRenaming={renamingFolder === folder.id}
+                        renamingValue={renamingFolder === folder.id ? newFolderName : undefined}
+                        onRenamingChange={setNewFolderName}
+                        dragProps={getDragProps('folder', folder.id, folder)}
+                        dropProps={getDropProps(folder.id)}
+                        isDraggedOver={isDraggedOver(folder.id)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Documents */}
+              {currentDocuments.length > 0 ? (
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                    Documents ({currentDocuments.length})
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4">
+                    {currentDocuments.map(document => (
+                      <DocumentCard
+                        key={document.id}
+                        document={document}
+                        onClick={handleDocumentClick}
+                        showFolder={false}
+                        onViewVersionHistory={handleViewVersionHistory}
+                        onViewMetadata={handleViewMetadata}
+                        onViewUploaderDetails={handleViewUploaderDetails}
+                        onCopyLink={handleCopyLink}
+                        onMoveToFolder={handleMoveToFolder}
+                        onDelete={handleDocumentDeleteWithValidation}
+                        onEdit={handleDocumentEditWithValidation}
+                        onDownload={handleDocumentDownload}
+                        dragProps={getDragProps('document', document.id, document)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                currentFolders.length === 0 && (
+                  <Card>
+                    <CardContent className="text-center py-12">
+                      <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Empty folder</h3>
+                      <p className="text-gray-600 mb-4">This folder is empty. Upload a document to get started.</p>
+                      {canUpload && (
+                        <Button onClick={() => setShowUploadModal(true)}>
+                          Upload Document
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                )
+              )}
+            </>
           )}
         </div>
 
@@ -759,56 +745,22 @@ export default function Documents() {
           onClose={() => setShowUploadModal(false)}
           onUpload={handleDocumentUpload}
           initialFolderId={currentFolder?.id}
-        />
-
-        {/* Version History Modal */}
-        <DocumentVersionHistory
-          document={selectedDocument!}
-          isOpen={showVersionHistory}
-          onClose={() => setShowVersionHistory(false)}
-          onRestoreVersion={handleVersionRestore}
-          onDownloadVersion={handleVersionDownload}
-          onCompareVersions={handleVersionCompare}
-        />
-
-        {/* Version Comparison Modal */}
-        <DocumentVersionComparison
-          documentId={selectedDocument?.id || ''}
-          version1Id={comparisonVersions.version1Id}
-          version2Id={comparisonVersions.version2Id}
-          isOpen={showVersionComparison}
-          onClose={() => setShowVersionComparison(false)}
-          onDownloadVersion={handleVersionDownload}
-        />
-
-        {/* Document Metadata Modal */}
-        <DocumentMetadataModal
-          document={selectedDocument}
-          isOpen={showMetadataModal}
-          onClose={() => setShowMetadataModal(false)}
-        />
-
-        {/* Uploader Details Modal */}
-        <UploaderDetailsModal
-          document={selectedDocument}
-          isOpen={showUploaderDetails}
-          onClose={() => setShowUploaderDetails(false)}
-        />
-
-        {/* Folder Management Modal */}
-        <FolderManagementModal
-          isOpen={showFolderModal}
-          mode={folderModalMode}
-          folder={selectedFolder || undefined}
-          parentFolder={parentFolder || undefined}
           availableFolders={folders}
-          onClose={() => {
-            setShowFolderModal(false)
-            setSelectedFolder(null)
-            setParentFolder(null)
-          }}
-          onConfirm={handleFolderManagement}
         />
+
+        {/* Folder Move Modal */}
+        {showMoveModal && selectedFolder && (
+          <FolderMoveModal
+            folder={selectedFolder}
+            currentParentId={selectedFolder.parentId}
+            availableFolders={folders.filter(f => f.id !== selectedFolder.id)}
+            onClose={() => {
+              setShowMoveModal(false)
+              setSelectedFolder(null)
+            }}
+            onMove={handleMoveFolder}
+          />
+        )}
       </div>
     </div>
   )

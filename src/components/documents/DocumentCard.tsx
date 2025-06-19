@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { format } from 'date-fns'
 import type { Document } from '@/types/documents'
-import { getDocumentTypeIcon, getDocumentStatusColor, getDocumentTypeColor, formatFileSize } from '@/types/documents'
+import { getDocumentStatusColor, getDocumentTypeColor, formatFileSize } from '@/types/documents'
 import { userService } from '@/lib/database'
 import DocumentContextMenu from './DocumentContextMenu'
 
@@ -19,6 +19,20 @@ interface DocumentCardProps {
   onDownload?: (document: Document) => void
   dragProps?: React.HTMLAttributes<HTMLDivElement>
   isDraggedOver?: boolean
+}
+
+// Helper function to get abbreviated file type
+function getAbbreviatedType(type: string): string {
+  const abbreviations: Record<string, string> = {
+    'pdf': 'doc',
+    'doc': 'doc',
+    'image': 'img',
+    'video': 'vid',
+    'audio': 'aud',
+    'spreadsheet': 'xls',
+    'other': 'file'
+  }
+  return abbreviations[type] || 'file'
 }
 
 export default function DocumentCard({ 
@@ -68,7 +82,7 @@ export default function DocumentCard({
             />
           ) : (
             <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${getDocumentTypeColor(document.type)} group-hover:scale-110 transition-transform duration-200`}>
-              <span className="text-lg">{getDocumentTypeIcon(document.type)}</span>
+              <span className="text-xs font-medium">{getAbbreviatedType(document.type)}</span>
             </div>
           )}
         </div>
@@ -76,7 +90,7 @@ export default function DocumentCard({
         <div className="flex-1 min-w-0">
           {/* Header */}
           <div className="flex items-start justify-between mb-2">
-            <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+            <h3 className="font-semibold text-gray-900 truncate group-hover:text-blue-600 transition-colors" title={document.name}>
               {document.name}
             </h3>
             <div className="flex items-center gap-2 ml-2">

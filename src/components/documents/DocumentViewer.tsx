@@ -41,6 +41,7 @@ export default function DocumentViewer({
   const [showVersions, setShowVersions] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
   const [showRejectModal, setShowRejectModal] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   if (!isOpen || !document) return null
 
@@ -83,6 +84,56 @@ export default function DocumentViewer({
     } else {
       onLock?.(document)
     }
+  }
+
+  // Fullscreen preview content
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 bg-black z-[100] overflow-auto">
+        {/* Floating Back Button */}
+        <button
+          onClick={() => setIsFullscreen(false)}
+          className="fixed top-4 left-4 z-[110] bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-lg hover:bg-white transition-all group"
+          aria-label="Exit fullscreen"
+        >
+          <svg className="w-6 h-6 text-gray-700 group-hover:text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </button>
+
+        {/* Fullscreen Content */}
+        <div className="min-h-screen flex items-center justify-center p-4">
+          {document.type === 'image' ? (
+            <img 
+              src={document.url} 
+              alt={document.name}
+              className="max-w-full max-h-full object-contain"
+            />
+          ) : document.type === 'pdf' ? (
+            <PDFViewer 
+              url={document.url} 
+              document={document}
+              showSignatures={document.requiresSignatures}
+              className="w-full h-screen" 
+            />
+          ) : (document.type === 'doc' && (document.name.endsWith('.doc') || document.name.endsWith('.docx'))) ? (
+            <WordViewer 
+              url={document.url} 
+              document={document}
+              showSignatures={document.requiresSignatures}
+              className="w-full h-screen bg-white" 
+            />
+          ) : (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <span className="text-6xl mb-4 block">{getDocumentTypeIcon(document.type)}</span>
+              <p className="text-xl text-gray-900 mb-2">{document.name}</p>
+              <p className="text-gray-600">Full screen preview not available for this file type</p>
+              <Button className="mt-4" onClick={() => setIsFullscreen(false)}>Back to Details</Button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -199,8 +250,21 @@ export default function DocumentViewer({
 
             {/* Document Preview */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-3">Preview</h3>
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-medium text-gray-900">Preview</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsFullscreen(true)}
+                  title="View fullscreen"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                  </svg>
+                  <span className="ml-2">Fullscreen</span>
+                </Button>
+              </div>
+              <div className="border border-gray-200 rounded-lg overflow-hidden cursor-pointer" onClick={() => setIsFullscreen(true)}>
                 {document.type === 'image' ? (
                   <img 
                     src={document.url} 
