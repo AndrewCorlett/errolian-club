@@ -1,11 +1,10 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import type { Document } from '@/types/documents'
+import type { Document, DocumentFolder } from '@/types/documents'
 import { getFileTypeFromMime, formatFileSize } from '@/types/documents'
-import { mockFolders } from '@/data/mockDocuments'
 import { useAuth } from '@/hooks/useAuth'
 
 interface DocumentUploadModalProps {
@@ -13,6 +12,7 @@ interface DocumentUploadModalProps {
   onClose: () => void
   onUpload: (documentData: Document) => void
   initialFolderId?: string
+  availableFolders?: DocumentFolder[]
 }
 
 interface FileWithPreview extends File {
@@ -23,7 +23,8 @@ export default function DocumentUploadModal({
   isOpen, 
   onClose, 
   onUpload, 
-  initialFolderId 
+  initialFolderId,
+  availableFolders = []
 }: DocumentUploadModalProps) {
   const { profile } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -36,6 +37,38 @@ export default function DocumentUploadModal({
   })
   const [dragActive, setDragActive] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [folders, setFolders] = useState<DocumentFolder[]>(availableFolders)
+
+  // Fetch folders if not provided as props
+  useEffect(() => {
+    if (availableFolders.length === 0 && isOpen) {
+      const loadFolders = async () => {
+        try {
+          const { documentService } = await import('../../lib/database')
+          const dbFolders = await documentService.getFolders()
+          // Convert database folder format to frontend format
+          const convertedFolders: DocumentFolder[] = dbFolders.map(f => ({
+            id: f.id,
+            name: f.name,
+            description: f.description || undefined,
+            parentId: f.parent_id || undefined,
+            createdBy: f.created_by,
+            createdAt: new Date(f.created_at),
+            updatedAt: new Date(f.updated_at),
+            isPublic: f.is_public,
+            color: f.color || undefined,
+            icon: f.icon || undefined,
+          }))
+          setFolders(convertedFolders)
+        } catch (error) {
+          console.error('Failed to load folders:', error)
+        }
+      }
+      loadFolders()
+    } else {
+      setFolders(availableFolders)
+    }
+  }, [isOpen, availableFolders])
 
   if (!isOpen || !profile) return null
 
@@ -88,6 +121,12 @@ export default function DocumentUploadModal({
     })
   }
 
+  // Helper function to validate UUID
+  const isValidUUID = (uuid: string): boolean => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    return uuidRegex.test(uuid)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -96,6 +135,15 @@ export default function DocumentUploadModal({
       return
     }
 
+    // Validate folder ID if provided
+    const folderId = formData.folderId || null
+    if (folderId && !isValidUUID(folderId)) {
+      console.error('Invalid folder ID detected:', folderId)
+      alert(`Invalid folder ID: "${folderId}". Please select a valid folder.`)
+      return
+    }
+
+    console.log('Upload starting with folder ID:', folderId)
     setIsUploading(true)
 
     try {
@@ -104,7 +152,7 @@ export default function DocumentUploadModal({
         const documentData = {
           name: file.name,
           type: getFileTypeFromMime(file.type),
-          folder_id: formData.folderId || null,
+          folder_id: folderId,
           uploaded_by: profile.id,
           status: 'pending' as const,
           description: formData.description || null,
@@ -300,7 +348,7 @@ export default function DocumentUploadModal({
                   onChange={(e) => setFormData(prev => ({ ...prev, folderId: e.target.value }))}
                 >
                   <option value="">No folder (root)</option>
-                  {mockFolders.map(folder => (
+                  {folders.map(folder => (
                     <option key={folder.id} value={folder.id}>
                       {folder.icon} {folder.name}
                     </option>

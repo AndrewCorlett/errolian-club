@@ -88,25 +88,11 @@ export class FileStorageService {
         .from(this.BUCKET_NAME)
         .getPublicUrl(filePath)
 
-      // Get signed URL for secure access (with retry for immediate availability)
-      let signedUrlData = null
-      try {
-        const { data, error } = await supabase.storage
-          .from(this.BUCKET_NAME)
-          .createSignedUrl(filePath, 3600) // 1 hour expiry
-        
-        if (error) {
-          console.log('Signed URL will be generated on-demand later:', error.message)
-        } else {
-          signedUrlData = data
-        }
-      } catch (error) {
-        console.log('Signed URL will be generated on-demand later')
-      }
-
+      // For immediate upload response, just return the public URL
+      // Signed URLs will be generated on-demand when needed for secure access
       return {
         path: data.path,
-        fullUrl: signedUrlData?.signedUrl || urlData.publicUrl,
+        fullUrl: urlData.publicUrl,
         publicUrl: options.isPublic ? urlData.publicUrl : undefined,
         size: file.size,
         mimeType: file.type
