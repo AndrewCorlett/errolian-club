@@ -377,6 +377,12 @@ export interface Database {
           download_count: number
           version: number
           parent_document_id: string | null
+          is_locked: boolean
+          locked_by: string | null
+          locked_at: string | null
+          requires_signatures: boolean
+          signatures: Json[]
+          signature_deadline: string | null
           created_at: string
           updated_at: string
         }
@@ -400,6 +406,12 @@ export interface Database {
           download_count?: number
           version?: number
           parent_document_id?: string | null
+          is_locked?: boolean
+          locked_by?: string | null
+          locked_at?: string | null
+          requires_signatures?: boolean
+          signatures?: Json[]
+          signature_deadline?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -423,6 +435,12 @@ export interface Database {
           download_count?: number
           version?: number
           parent_document_id?: string | null
+          is_locked?: boolean
+          locked_by?: string | null
+          locked_at?: string | null
+          requires_signatures?: boolean
+          signatures?: Json[]
+          signature_deadline?: string | null
           created_at?: string
           updated_at?: string
         }

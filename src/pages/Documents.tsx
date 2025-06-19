@@ -7,6 +7,13 @@ import FolderCard from '@/components/documents/FolderCard'
 import DocumentCard from '@/components/documents/DocumentCard'
 import DocumentViewer from '@/components/documents/DocumentViewer'
 import DocumentUploadModal from '@/components/documents/DocumentUploadModal'
+import DocumentVersionHistory from '@/components/documents/DocumentVersionHistory'
+import DocumentVersionComparison from '@/components/documents/DocumentVersionComparison'
+import DocumentMetadataModal from '@/components/documents/DocumentMetadataModal'
+import UploaderDetailsModal from '@/components/documents/UploaderDetailsModal'
+import FolderManagementModal, { type FolderFormData } from '@/components/documents/FolderManagementModal'
+import { useDragAndDrop } from '@/hooks/useDragAndDrop'
+import { roleBasedUI, filterByPermissions } from '@/utils/roleBasedUI'
 import { documentService } from '@/lib/database'
 import type { Document, DocumentFolder } from '@/types/documents'
 import type { 
@@ -15,6 +22,10 @@ import type {
   DocumentStatus 
 } from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { lockDocument, unlockDocument, validateLockForOperation } from '@/utils/documentLocking'
+import { documentLockNotifications, documentGeneralNotifications } from '@/utils/notifications'
+import { useDocumentRealTime } from '@/hooks/useDocumentRealTime'
+import RealTimeStatusIndicator from '@/components/documents/RealTimeStatusIndicator'
 
 type ViewMode = 'folders' | 'all' | 'recent' | 'popular'
 type SortOption = 'name' | 'date' | 'size' | 'downloads'
@@ -42,6 +53,14 @@ const convertDocumentRowToDocument = (row: DocumentRow): Document => ({
   downloadCount: row.download_count,
   version: row.version,
   parentDocumentId: row.parent_document_id || undefined,
+  // Document locking fields
+  isLocked: row.is_locked || false,
+  lockedBy: row.locked_by || undefined,
+  lockedAt: row.locked_at ? new Date(row.locked_at) : undefined,
+  // Document signature fields
+  requiresSignatures: row.requires_signatures || false,
+  signatures: (row.signatures as any) || [],
+  signatureDeadline: row.signature_deadline ? new Date(row.signature_deadline) : undefined,
 })
 
 const convertDocumentFolderRowToFolder = (row: DocumentFolderRow): DocumentFolder => ({
@@ -58,7 +77,7 @@ const convertDocumentFolderRowToFolder = (row: DocumentFolderRow): DocumentFolde
 })
 
 export default function Documents() {
-  const { user } = useAuth()
+  const { profile } = useAuth()
   const [viewMode, setViewMode] = useState<ViewMode>('folders')
   const [currentFolder, setCurrentFolder] = useState<DocumentFolder | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
@@ -67,13 +86,81 @@ export default function Documents() {
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null)
   const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [showVersionComparison, setShowVersionComparison] = useState(false)
+  const [showMetadataModal, setShowMetadataModal] = useState(false)
+  const [showUploaderDetails, setShowUploaderDetails] = useState(false)
+  const [comparisonVersions, setComparisonVersions] = useState<{ version1Id?: string, version2Id?: string }>({})
   const [folderPath, setFolderPath] = useState<DocumentFolder[]>([])
   const [documents, setDocuments] = useState<Document[]>([])
   const [folders, setFolders] = useState<DocumentFolder[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Folder management state
+  const [showFolderModal, setShowFolderModal] = useState(false)
+  const [folderModalMode, setFolderModalMode] = useState<'create' | 'rename' | 'move'>('create')
+  const [selectedFolder, setSelectedFolder] = useState<DocumentFolder | null>(null)
+  const [parentFolder, setParentFolder] = useState<DocumentFolder | null>(null)
 
-  const canUpload = user && (user.role === 'super-admin' || user.role === 'commodore' || user.role === 'officer' || user.role === 'member')
+  // Role-based permissions
+  const canUpload = profile && roleBasedUI.canShowUploadButton(profile.role)
+  const canCreateFolder = profile && roleBasedUI.canShowCreateFolderButton(profile.role)
+
+  // Enhanced folder navigation handlers (defined early for drag-drop hook)
+  const handleMoveDocumentToFolder = async (documentId: string, targetFolderId: string | null) => {
+    console.log('Moving document', documentId, 'to folder', targetFolderId)
+    // TODO: Implement actual document move logic
+    alert(`Moving document to ${targetFolderId ? 'folder' : 'root'}`)
+  }
+
+  const handleMoveFolderToFolder = async (folderId: string, targetFolderId: string | null) => {
+    console.log('Moving folder', folderId, 'to folder', targetFolderId)
+    // TODO: Implement actual folder move logic
+    alert(`Moving folder to ${targetFolderId ? 'folder' : 'root'}`)
+  }
+
+  // Drag and drop integration
+  const { getDragProps, getDropProps, isDraggedOver } = useDragAndDrop({
+    onMoveDocument: handleMoveDocumentToFolder,
+    onMoveFolder: handleMoveFolderToFolder
+  })
+
+  // Real-time updates integration
+  const { isConnected, connectionStatus, isRecovering, manualReconnect } = useDocumentRealTime({
+    onDocumentUpdate: (updatedDocument) => {
+      setDocuments(prev => 
+        prev.map(doc => doc.id === updatedDocument.id ? updatedDocument : doc)
+      )
+    },
+    onDocumentLock: (document) => {
+      // Update document lock status in state
+      setDocuments(prev => 
+        prev.map(doc => doc.id === document.id ? { ...doc, ...document } : doc)
+      )
+    },
+    onDocumentUnlock: (document) => {
+      // Update document unlock status in state
+      setDocuments(prev => 
+        prev.map(doc => doc.id === document.id ? { ...doc, ...document } : doc)
+      )
+    },
+    onSignatureUpdate: (signature) => {
+      // Update document signatures in state
+      setDocuments(prev => 
+        prev.map(doc => {
+          if (doc.id === signature.documentId) {
+            const updatedSignatures = [...(doc.signatures || []), signature]
+            return { ...doc, signatures: updatedSignatures }
+          }
+          return doc
+        })
+      )
+    },
+    onDocumentDelete: (documentId) => {
+      setDocuments(prev => prev.filter(doc => doc.id !== documentId))
+    }
+  })
 
   // Load documents and folders
   useEffect(() => {
@@ -104,6 +191,11 @@ export default function Documents() {
   const getCurrentDocuments = () => {
     let filteredDocuments = documents
 
+    // Apply role-based permission filtering
+    if (profile) {
+      filteredDocuments = filterByPermissions(filteredDocuments, profile.role, profile.id, 'document')
+    }
+
     // Apply status filter
     if (statusFilter !== 'all') {
       filteredDocuments = filteredDocuments.filter(doc => doc.status === statusFilter)
@@ -133,7 +225,14 @@ export default function Documents() {
   }
 
   const getCurrentFolders = () => {
-    return folders.filter(folder => folder.parentId === (currentFolder?.id || null))
+    let filteredFolders = folders.filter(folder => folder.parentId === (currentFolder?.id || null))
+    
+    // Apply role-based permission filtering
+    if (profile) {
+      filteredFolders = filterByPermissions(filteredFolders, profile.role, profile.id, 'folder')
+    }
+    
+    return filteredFolders
   }
 
   const handleFolderClick = (folder: DocumentFolder) => {
@@ -166,19 +265,28 @@ export default function Documents() {
     alert(`Downloaded: ${document.name}`)
   }
 
-  const handleDocumentUpload = (documentData: Omit<Document, 'id' | 'updatedAt' | 'uploadedAt' | 'downloadCount' | 'version'>) => {
-    const newDocument: Document = {
-      id: `doc_${Date.now()}`,
-      ...documentData,
-      uploadedAt: new Date(),
-      updatedAt: new Date(),
-      downloadCount: 0,
-      version: 1
+  const handleDocumentUpload = async (documentData: Document) => {
+    try {
+      // The document has already been created by DocumentUploadModal's createDocumentWithFile()
+      // We just need to add it to local state and handle UI updates
+      
+      console.log('Document uploaded:', documentData)
+      
+      // Add to local state to update UI immediately
+      setDocuments(prev => [documentData, ...prev])
+      
+      // Send notification
+      if (profile) {
+        documentGeneralNotifications.uploaded(documentData.name, profile.name, documentData.id)
+      }
+      
+      alert(`Document "${documentData.name}" uploaded successfully!`)
+    } catch (error) {
+      console.error('Failed to handle uploaded document:', error)
+      alert('Failed to handle uploaded document. Please try again.')
     }
-    
-    console.log('Document uploaded:', newDocument)
-    alert(`Document "${documentData.name}" uploaded successfully!`)
   }
+
 
   const handleDocumentApprove = (document: Document) => {
     console.log('Approving document:', document.name)
@@ -190,6 +298,186 @@ export default function Documents() {
     console.log('Rejecting document:', document.name, 'Reason:', reason)
     alert(`Document "${document.name}" rejected: ${reason}`)
     setShowDocumentViewer(false)
+  }
+
+  const handleDocumentLock = (document: Document) => {
+    if (!profile) return
+
+    const result = lockDocument(document, profile.id, profile.role)
+    
+    if (result.success && result.document) {
+      console.log('Document locked:', result.document)
+      
+      // Send notification
+      documentLockNotifications.locked(document.name, profile.name, document.id)
+      
+      // Update the document in the list
+      setDocuments(prev => prev.map(doc => 
+        doc.id === document.id ? result.document! : doc
+      ))
+    } else {
+      alert(result.error || 'Failed to lock document')
+    }
+  }
+
+  const handleDocumentUnlock = (document: Document) => {
+    if (!profile) return
+
+    const result = unlockDocument(document, profile.id, profile.role)
+    
+    if (result.success && result.document) {
+      console.log('Document unlocked:', result.document)
+      
+      // Send notification
+      documentLockNotifications.unlocked(document.name, profile.name, document.id)
+      
+      // Update the document in the list
+      setDocuments(prev => prev.map(doc => 
+        doc.id === document.id ? result.document! : doc
+      ))
+    } else {
+      alert(result.error || 'Failed to unlock document')
+    }
+  }
+
+  const handleDocumentEditWithValidation = (document: Document) => {
+    if (!profile) return
+
+    // Validate lock status before editing
+    const validation = validateLockForOperation(document, profile.id, 'edit')
+    
+    if (!validation.valid) {
+      // Send notification for blocked edit
+      documentLockNotifications.editBlocked(document.name, document.lockedBy || 'another user', document.id)
+      return
+    }
+
+    // Proceed with edit
+    console.log('Edit document:', document.name)
+    alert(`Editing "${document.name}" - this would open the edit modal`)
+  }
+
+  const handleDocumentDeleteWithValidation = (document: Document) => {
+    if (!profile) return
+
+    // Validate lock status before deleting
+    const validation = validateLockForOperation(document, profile.id, 'delete')
+    
+    if (!validation.valid) {
+      // Send notification for blocked delete
+      documentLockNotifications.editBlocked(document.name, document.lockedBy || 'another user', document.id)
+      return
+    }
+
+    // Confirm deletion
+    if (window.confirm(`Are you sure you want to delete "${document.name}"?`)) {
+      console.log('Delete document:', document.name)
+      alert(`Document "${document.name}" deleted!`)
+      
+      // Remove from list
+      setDocuments(prev => prev.filter(doc => doc.id !== document.id))
+      setShowDocumentViewer(false)
+    }
+  }
+
+  // Context menu handlers
+  const handleViewVersionHistory = (document: Document) => {
+    setSelectedDocument(document)
+    setShowVersionHistory(true)
+  }
+
+  const handleViewMetadata = (document: Document) => {
+    setSelectedDocument(document)
+    setShowMetadataModal(true)
+  }
+
+  const handleViewUploaderDetails = (document: Document) => {
+    setSelectedDocument(document)
+    setShowUploaderDetails(true)
+  }
+
+  const handleCopyLink = (document: Document) => {
+    const link = `${window.location.origin}/documents/${document.id}`
+    navigator.clipboard.writeText(link).then(() => {
+      alert(`Link copied to clipboard: ${link}`)
+    }).catch(err => {
+      console.error('Failed to copy link:', err)
+      alert('Failed to copy link to clipboard')
+    })
+  }
+
+  const handleMoveToFolder = (document: Document) => {
+    // This would open a folder selection modal
+    console.log('Move document to folder:', document.name)
+    alert(`Move "${document.name}" to folder - this would open a folder selection modal`)
+  }
+
+  const handleVersionRestore = (versionId: string) => {
+    console.log('Restore version:', versionId)
+    alert(`Restoring version ${versionId} - this would create a new version based on the selected one`)
+  }
+
+  const handleVersionDownload = (versionId: string) => {
+    console.log('Download version:', versionId)
+    alert(`Downloading version ${versionId}`)
+  }
+
+  const handleVersionCompare = (version1Id: string, version2Id: string) => {
+    setComparisonVersions({ version1Id, version2Id })
+    setShowVersionComparison(true)
+  }
+
+
+  const handleFolderContextMenuAction = (action: string, folder: DocumentFolder) => {
+    switch (action) {
+      case 'create-subfolder':
+        setParentFolder(folder)
+        setFolderModalMode('create')
+        setShowFolderModal(true)
+        break
+      case 'rename':
+        setSelectedFolder(folder)
+        setFolderModalMode('rename')
+        setShowFolderModal(true)
+        break
+      case 'move':
+        setSelectedFolder(folder)
+        setFolderModalMode('move')
+        setShowFolderModal(true)
+        break
+      case 'delete':
+        if (window.confirm(`Are you sure you want to delete folder "${folder.name}"? This action cannot be undone.`)) {
+          console.log('Deleting folder:', folder.name)
+          // TODO: Implement actual folder deletion
+          alert(`Folder "${folder.name}" deleted`)
+        }
+        break
+      case 'view-details':
+        console.log('Viewing folder details:', folder.name)
+        alert(`Viewing details for folder "${folder.name}"`)
+        break
+    }
+  }
+
+  const handleFolderManagement = async (data: FolderFormData) => {
+    try {
+      if (folderModalMode === 'create') {
+        console.log('Creating folder:', data)
+        // TODO: Implement actual folder creation
+        alert(`Folder "${data.name}" created successfully!`)
+      } else if (folderModalMode === 'rename' && selectedFolder) {
+        console.log('Renaming folder:', selectedFolder.name, 'to', data.name)
+        // TODO: Implement actual folder renaming
+        alert(`Folder renamed to "${data.name}"`)
+      } else if (folderModalMode === 'move' && selectedFolder) {
+        console.log('Moving folder:', selectedFolder.name, 'to parent', data.parentId)
+        // TODO: Implement actual folder moving
+        alert(`Folder moved successfully`)
+      }
+    } catch (error) {
+      console.error('Folder operation failed:', error)
+      alert('Operation failed. Please try again.')
+    }
   }
 
   if (loading) {
@@ -222,14 +510,40 @@ export default function Documents() {
                 <h1 className="text-xl font-bold text-gray-900">Documents</h1>
                 <p className="text-sm text-gray-600">Club files and resources</p>
               </div>
-              {canUpload && (
-                <Button onClick={() => setShowUploadModal(true)} size="sm">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  Upload
-                </Button>
-              )}
+              <div className="flex items-center gap-4">
+                <RealTimeStatusIndicator 
+                  isConnected={isConnected}
+                  connectionStatus={connectionStatus}
+                  isRecovering={isRecovering}
+                  onManualReconnect={manualReconnect}
+                />
+                {canUpload && (
+                  <>
+                    <Button onClick={() => setShowUploadModal(true)} size="sm">
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Upload
+                    </Button>
+                    {viewMode === 'folders' && canCreateFolder && (
+                      <Button 
+                        onClick={() => {
+                          setParentFolder(currentFolder)
+                          setFolderModalMode('create')
+                          setShowFolderModal(true)
+                        }} 
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        New Folder
+                      </Button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
 
             {/* Search and Filters */}
@@ -347,8 +661,13 @@ export default function Documents() {
           </div>
         )}
 
-        {/* Content */}
-        <div className="space-y-6">
+        {/* Content - Root Drop Zone */}
+        <div 
+          {...getDropProps(currentFolder?.id || null)}
+          className={`space-y-6 min-h-[400px] rounded-lg transition-colors ${
+            isDraggedOver(currentFolder?.id || null) ? 'bg-blue-50 border-2 border-dashed border-blue-300' : ''
+          }`}
+        >
           {/* Folders (only in folder view) */}
           {viewMode === 'folders' && currentFolders.length > 0 && (
             <div>
@@ -359,6 +678,10 @@ export default function Documents() {
                     key={folder.id}
                     folder={folder}
                     onClick={handleFolderClick}
+                    onContextMenuAction={handleFolderContextMenuAction}
+                    dragProps={getDragProps('folder', folder.id, folder)}
+                    dropProps={getDropProps(folder.id)}
+                    isDraggedOver={isDraggedOver(folder.id)}
                   />
                 ))}
               </div>
@@ -378,6 +701,15 @@ export default function Documents() {
                     document={document}
                     onClick={handleDocumentClick}
                     showFolder={viewMode !== 'folders'}
+                    onViewVersionHistory={handleViewVersionHistory}
+                    onViewMetadata={handleViewMetadata}
+                    onViewUploaderDetails={handleViewUploaderDetails}
+                    onCopyLink={handleCopyLink}
+                    onMoveToFolder={handleMoveToFolder}
+                    onDelete={handleDocumentDeleteWithValidation}
+                    onEdit={handleDocumentEditWithValidation}
+                    onDownload={handleDocumentDownload}
+                    dragProps={getDragProps('document', document.id, document)}
                   />
                 ))}
               </div>
@@ -413,8 +745,12 @@ export default function Documents() {
           isOpen={showDocumentViewer}
           onClose={() => setShowDocumentViewer(false)}
           onDownload={handleDocumentDownload}
+          onEdit={handleDocumentEditWithValidation}
+          onDelete={handleDocumentDeleteWithValidation}
           onApprove={handleDocumentApprove}
           onReject={handleDocumentReject}
+          onLock={handleDocumentLock}
+          onUnlock={handleDocumentUnlock}
         />
 
         {/* Upload Modal */}
@@ -423,6 +759,55 @@ export default function Documents() {
           onClose={() => setShowUploadModal(false)}
           onUpload={handleDocumentUpload}
           initialFolderId={currentFolder?.id}
+        />
+
+        {/* Version History Modal */}
+        <DocumentVersionHistory
+          document={selectedDocument!}
+          isOpen={showVersionHistory}
+          onClose={() => setShowVersionHistory(false)}
+          onRestoreVersion={handleVersionRestore}
+          onDownloadVersion={handleVersionDownload}
+          onCompareVersions={handleVersionCompare}
+        />
+
+        {/* Version Comparison Modal */}
+        <DocumentVersionComparison
+          documentId={selectedDocument?.id || ''}
+          version1Id={comparisonVersions.version1Id}
+          version2Id={comparisonVersions.version2Id}
+          isOpen={showVersionComparison}
+          onClose={() => setShowVersionComparison(false)}
+          onDownloadVersion={handleVersionDownload}
+        />
+
+        {/* Document Metadata Modal */}
+        <DocumentMetadataModal
+          document={selectedDocument}
+          isOpen={showMetadataModal}
+          onClose={() => setShowMetadataModal(false)}
+        />
+
+        {/* Uploader Details Modal */}
+        <UploaderDetailsModal
+          document={selectedDocument}
+          isOpen={showUploaderDetails}
+          onClose={() => setShowUploaderDetails(false)}
+        />
+
+        {/* Folder Management Modal */}
+        <FolderManagementModal
+          isOpen={showFolderModal}
+          mode={folderModalMode}
+          folder={selectedFolder || undefined}
+          parentFolder={parentFolder || undefined}
+          availableFolders={folders}
+          onClose={() => {
+            setShowFolderModal(false)
+            setSelectedFolder(null)
+            setParentFolder(null)
+          }}
+          onConfirm={handleFolderManagement}
         />
       </div>
     </div>

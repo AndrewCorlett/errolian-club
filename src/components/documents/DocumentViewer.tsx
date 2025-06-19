@@ -8,6 +8,9 @@ import { getUserById } from '@/data/mockUsers'
 import { getDocumentVersions } from '@/data/mockDocuments'
 import { useUserStore } from '@/store/userStore'
 import { hasPermission } from '@/types/user'
+import { canLockUnlock, canEdit as canEditDocument, canDelete as canDeleteDocument } from '@/utils/documentPermissions'
+import PDFViewer from './PDFViewer'
+import WordViewer from './WordViewer'
 
 interface DocumentViewerProps {
   document: Document | null
@@ -18,6 +21,8 @@ interface DocumentViewerProps {
   onDelete?: (document: Document) => void
   onApprove?: (document: Document) => void
   onReject?: (document: Document, reason: string) => void
+  onLock?: (document: Document) => void
+  onUnlock?: (document: Document) => void
 }
 
 export default function DocumentViewer({
@@ -28,7 +33,9 @@ export default function DocumentViewer({
   onEdit,
   onDelete,
   onApprove,
-  onReject
+  onReject,
+  onLock,
+  onUnlock
 }: DocumentViewerProps) {
   const { currentUser } = useUserStore()
   const [showVersions, setShowVersions] = useState(false)
@@ -39,10 +46,15 @@ export default function DocumentViewer({
 
   const uploader = getUserById(document.uploadedBy)
   const approver = document.approvedBy ? getUserById(document.approvedBy) : null
+  const locker = document.lockedBy ? getUserById(document.lockedBy) : null
   const versions = getDocumentVersions(document.id)
-  const canEdit = currentUser && (document.uploadedBy === currentUser.id || hasPermission(currentUser.role, 'canEditAllEvents'))
-  const canDelete = currentUser && (document.uploadedBy === currentUser.id || hasPermission(currentUser.role, 'canDeleteAllEvents'))
+  
+  // Permission checks using the new permission utilities
+  const canEdit = currentUser && canEditDocument(currentUser.role, document, currentUser.id)
+  const canDelete = currentUser && canDeleteDocument(currentUser.role, document, currentUser.id)
   const canApprove = currentUser && hasPermission(currentUser.role, 'canApproveEvents') && document.status === 'pending'
+  const canManageLock = currentUser && canLockUnlock(currentUser.role)
+  const isLockedByCurrentUser = document.isLocked && document.lockedBy === currentUser?.id
 
   const handleDownload = () => {
     onDownload?.(document)
@@ -62,6 +74,14 @@ export default function DocumentViewer({
       onReject?.(document, rejectReason.trim())
       setShowRejectModal(false)
       setRejectReason('')
+    }
+  }
+
+  const handleToggleLock = () => {
+    if (document.isLocked) {
+      onUnlock?.(document)
+    } else {
+      onLock?.(document)
     }
   }
 
@@ -95,6 +115,22 @@ export default function DocumentViewer({
                       Private
                     </span>
                   )}
+                  {document.isLocked && (
+                    <span className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-800 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      Locked
+                    </span>
+                  )}
+                  {document.requiresSignatures && (
+                    <span className="text-xs px-2 py-1 rounded-md bg-purple-100 text-purple-800 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                      Requires Signatures
+                    </span>
+                  )}
                   {document.tags.map(tag => (
                     <span key={tag} className="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-800">
                       {tag}
@@ -116,6 +152,43 @@ export default function DocumentViewer({
           </div>
 
           <div className="p-6 space-y-6">
+            {/* Lock Warning */}
+            {document.isLocked && !isLockedByCurrentUser && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <div>
+                    <h4 className="font-medium text-red-900">Document Locked</h4>
+                    <p className="text-red-700 text-sm mt-1">
+                      This document is currently locked by <strong>{locker?.name}</strong>
+                      {document.lockedAt && ` on ${format(document.lockedAt, 'MMM d, yyyy h:mm a')}`}.
+                      You cannot edit or delete this document until it is unlocked.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* User Locked Notice */}
+            {document.isLocked && isLockedByCurrentUser && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h4 className="font-medium text-blue-900">You have locked this document</h4>
+                    <p className="text-blue-700 text-sm mt-1">
+                      You locked this document {document.lockedAt && ` on ${format(document.lockedAt, 'MMM d, yyyy h:mm a')}`}.
+                      Other users cannot edit this document until you unlock it.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Description */}
             {document.description && (
               <div>
@@ -135,15 +208,19 @@ export default function DocumentViewer({
                     className="w-full h-64 object-cover"
                   />
                 ) : document.type === 'pdf' ? (
-                  <div className="h-64 bg-gray-50 flex items-center justify-center">
-                    <div className="text-center">
-                      <svg className="w-16 h-16 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="text-gray-600">PDF Preview</p>
-                      <p className="text-sm text-gray-500">Click download to view full document</p>
-                    </div>
-                  </div>
+                  <PDFViewer 
+                    url={document.url} 
+                    document={document}
+                    showSignatures={document.requiresSignatures}
+                    className="h-96" 
+                  />
+                ) : (document.type === 'doc' && (document.name.endsWith('.doc') || document.name.endsWith('.docx'))) ? (
+                  <WordViewer 
+                    url={document.url} 
+                    document={document}
+                    showSignatures={document.requiresSignatures}
+                    className="h-96" 
+                  />
                 ) : (
                   <div className="h-64 bg-gray-50 flex items-center justify-center">
                     <div className="text-center">
@@ -221,6 +298,34 @@ export default function DocumentViewer({
                     <p className="font-medium">{format(document.updatedAt, 'MMMM d, yyyy')}</p>
                     <p className="text-sm text-gray-500">{format(document.updatedAt, 'h:mm a')}</p>
                   </div>
+
+                  {document.isLocked && (
+                    <>
+                      <div>
+                        <div className="text-sm text-gray-600 mb-1">Locked by</div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
+                            {locker?.avatar ? (
+                              <img src={locker.avatar} alt={locker.name} className="w-6 h-6 rounded-full" />
+                            ) : (
+                              <span className="text-xs font-medium text-red-600">
+                                {locker?.name.split(' ').map((n: string) => n[0]).join('')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-medium">{locker?.name}</span>
+                        </div>
+                      </div>
+
+                      {document.lockedAt && (
+                        <div>
+                          <div className="text-sm text-gray-600 mb-1">Locked date</div>
+                          <p className="font-medium">{format(document.lockedAt, 'MMMM d, yyyy')}</p>
+                          <p className="text-sm text-gray-500">{format(document.lockedAt, 'h:mm a')}</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
 
                 {document.rejectedReason && (
@@ -282,6 +387,28 @@ export default function DocumentViewer({
                   Download
                 </Button>
                 
+                {canManageLock && (
+                  <Button 
+                    onClick={handleToggleLock}
+                    variant="outline" 
+                    className={
+                      document.isLocked 
+                        ? "text-orange-600 border-orange-200 hover:bg-orange-50" 
+                        : "text-blue-600 border-blue-200 hover:bg-blue-50"
+                    }
+                    title={document.isLocked ? `Unlock document (locked by ${locker?.name})` : 'Lock document'}
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {document.isLocked ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      )}
+                    </svg>
+                    {document.isLocked ? 'Unlock' : 'Lock'}
+                  </Button>
+                )}
+
                 {canApprove && (
                   <>
                     <Button onClick={handleApprove} variant="outline" className="text-green-600 border-green-200 hover:bg-green-50">
@@ -306,16 +433,36 @@ export default function DocumentViewer({
 
               <div className="flex items-center gap-3">
                 {canEdit && (
-                  <Button onClick={() => onEdit?.(document)} variant="outline" size="sm">
+                  <Button 
+                    onClick={() => {
+                      if (document.isLocked && !isLockedByCurrentUser) {
+                        alert(`Cannot edit: Document is locked by ${locker?.name}`)
+                        return
+                      }
+                      onEdit?.(document)
+                    }}
+                    variant="outline" 
+                    size="sm"
+                    disabled={document.isLocked && !isLockedByCurrentUser}
+                    title={document.isLocked && !isLockedByCurrentUser ? `Document is locked by ${locker?.name}` : 'Edit document'}
+                  >
                     Edit
                   </Button>
                 )}
                 {canDelete && (
                   <Button 
-                    onClick={() => onDelete?.(document)} 
+                    onClick={() => {
+                      if (document.isLocked && !isLockedByCurrentUser) {
+                        alert(`Cannot delete: Document is locked by ${locker?.name}`)
+                        return
+                      }
+                      onDelete?.(document)
+                    }}
                     variant="outline" 
                     size="sm"
-                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    disabled={document.isLocked && !isLockedByCurrentUser}
+                    className="text-red-600 border-red-200 hover:bg-red-50 disabled:text-gray-400 disabled:border-gray-200"
+                    title={document.isLocked && !isLockedByCurrentUser ? `Document is locked by ${locker?.name}` : 'Delete document'}
                   >
                     Delete
                   </Button>

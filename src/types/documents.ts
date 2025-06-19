@@ -1,6 +1,15 @@
 export type DocumentType = 'pdf' | 'image' | 'video' | 'audio' | 'doc' | 'spreadsheet' | 'other'
 export type DocumentStatus = 'pending' | 'approved' | 'rejected'
 
+export interface DocumentSignature {
+  id: string
+  documentId: string
+  userId: string
+  signedAt: Date
+  signatureData: string // base64 encoded signature
+  ipAddress?: string
+}
+
 export interface Document {
   id: string
   name: string
@@ -23,6 +32,14 @@ export interface Document {
   downloadCount: number
   version: number
   parentDocumentId?: string // For versioning
+  // Document locking fields
+  isLocked: boolean
+  lockedBy?: string
+  lockedAt?: Date
+  // Document signature fields
+  requiresSignatures: boolean
+  signatures: DocumentSignature[]
+  signatureDeadline?: Date
 }
 
 export interface DocumentFolder {

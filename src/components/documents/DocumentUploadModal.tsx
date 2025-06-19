@@ -6,12 +6,12 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import type { Document } from '@/types/documents'
 import { getFileTypeFromMime, formatFileSize } from '@/types/documents'
 import { mockFolders } from '@/data/mockDocuments'
-import { useUserStore } from '@/store/userStore'
+import { useAuth } from '@/hooks/useAuth'
 
 interface DocumentUploadModalProps {
   isOpen: boolean
   onClose: () => void
-  onUpload: (documentData: Omit<Document, 'id' | 'uploadedAt' | 'updatedAt' | 'downloadCount' | 'version'>) => void
+  onUpload: (documentData: Document) => void
   initialFolderId?: string
 }
 
@@ -25,7 +25,7 @@ export default function DocumentUploadModal({
   onUpload, 
   initialFolderId 
 }: DocumentUploadModalProps) {
-  const { currentUser } = useUserStore()
+  const { profile } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedFiles, setSelectedFiles] = useState<FileWithPreview[]>([])
   const [formData, setFormData] = useState({
@@ -35,8 +35,9 @@ export default function DocumentUploadModal({
     isPublic: true
   })
   const [dragActive, setDragActive] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
 
-  if (!isOpen || !currentUser) return null
+  if (!isOpen || !profile) return null
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return
@@ -87,7 +88,7 @@ export default function DocumentUploadModal({
     })
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
     if (selectedFiles.length === 0) {
@@ -95,37 +96,89 @@ export default function DocumentUploadModal({
       return
     }
 
-    const tags = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
+    setIsUploading(true)
 
-    selectedFiles.forEach((file) => {
-      const documentData: Omit<Document, 'id' | 'uploadedAt' | 'updatedAt' | 'downloadCount' | 'version'> = {
-        name: file.name,
-        type: getFileTypeFromMime(file.type),
-        size: file.size,
-        mimeType: file.type,
-        url: `/uploads/${file.name}`, // In real app, this would be set after upload
-        thumbnailUrl: file.preview,
-        folderId: formData.folderId || undefined,
-        uploadedBy: currentUser.id,
-        status: 'pending',
-        description: formData.description || undefined,
-        tags,
-        isPublic: formData.isPublic
-      }
+    try {
+      const tags = formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(Boolean) : []
+      const uploadPromises = selectedFiles.map(async (file) => {
+        const documentData = {
+          name: file.name,
+          type: getFileTypeFromMime(file.type),
+          folder_id: formData.folderId || null,
+          uploaded_by: profile.id,
+          status: 'pending' as const,
+          description: formData.description || null,
+          tags,
+          is_public: formData.isPublic,
+          is_locked: false,
+          requires_signatures: false,
+          version: 1
+          // Don't include created_at/updated_at - let database handle these
+        }
 
-      onUpload(documentData)
-    })
+        // Use the enhanced document service with file storage
+        const { documentService } = await import('../../lib/database')
+        const result = await documentService.createDocumentWithFile(file, documentData)
+        
+        return result.document
+      })
 
-    // Reset form
-    setSelectedFiles([])
-    setFormData({
-      folderId: initialFolderId || '',
-      description: '',
-      tags: '',
-      isPublic: true
-    })
-    
-    onClose()
+      const uploadedDocuments = await Promise.all(uploadPromises)
+      
+      // Call the upload handler for each document
+      uploadedDocuments.forEach(document => {
+        // Convert to frontend Document type
+        const frontendDocument: Document = {
+          id: document.id,
+          name: document.name,
+          type: document.type,
+          size: document.size_bytes,
+          mimeType: document.mime_type,
+          url: document.storage_path,
+          thumbnailUrl: undefined,
+          folderId: document.folder_id || undefined,
+          uploadedBy: document.uploaded_by,
+          uploadedAt: new Date(document.created_at),
+          updatedAt: new Date(document.updated_at),
+          status: document.status,
+          approvedBy: document.approved_by || undefined,
+          approvedAt: document.approved_at ? new Date(document.approved_at) : undefined,
+          rejectedReason: document.rejected_reason || undefined,
+          description: document.description || undefined,
+          tags: document.tags || [],
+          isPublic: document.is_public,
+          downloadCount: 0,
+          version: document.version || 1,
+          parentDocumentId: document.parent_document_id || undefined,
+          isLocked: document.is_locked || false,
+          lockedBy: document.locked_by || undefined,
+          lockedAt: document.locked_at ? new Date(document.locked_at) : undefined,
+          requiresSignatures: document.requires_signatures || false,
+          signatures: [],
+          signatureDeadline: document.signature_deadline ? new Date(document.signature_deadline) : undefined
+        }
+
+        onUpload(frontendDocument)
+      })
+
+      console.log(`Successfully uploaded ${uploadedDocuments.length} documents`)
+
+      // Reset form
+      setSelectedFiles([])
+      setFormData({
+        folderId: initialFolderId || '',
+        description: '',
+        tags: '',
+        isPublic: true
+      })
+      
+      onClose()
+    } catch (error) {
+      console.error('Upload failed:', error)
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsUploading(false)
+    }
   }
 
   const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0)
@@ -306,9 +359,9 @@ export default function DocumentUploadModal({
               </Button>
               <Button 
                 type="submit" 
-                disabled={selectedFiles.length === 0 || totalSize > maxSize}
+                disabled={selectedFiles.length === 0 || totalSize > maxSize || isUploading}
               >
-                Upload {selectedFiles.length > 0 ? `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''}` : 'Files'}
+                {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length > 0 ? `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''}` : 'Files'}`}
               </Button>
             </div>
           </div>

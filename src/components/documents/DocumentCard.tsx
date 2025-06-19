@@ -3,14 +3,38 @@ import { format } from 'date-fns'
 import type { Document } from '@/types/documents'
 import { getDocumentTypeIcon, getDocumentStatusColor, getDocumentTypeColor, formatFileSize } from '@/types/documents'
 import { userService } from '@/lib/database'
+import DocumentContextMenu from './DocumentContextMenu'
 
 interface DocumentCardProps {
   document: Document
   onClick: (document: Document) => void
   showFolder?: boolean
+  onViewVersionHistory?: (document: Document) => void
+  onViewMetadata?: (document: Document) => void
+  onViewUploaderDetails?: (document: Document) => void
+  onCopyLink?: (document: Document) => void
+  onMoveToFolder?: (document: Document) => void
+  onDelete?: (document: Document) => void
+  onEdit?: (document: Document) => void
+  onDownload?: (document: Document) => void
+  dragProps?: React.HTMLAttributes<HTMLDivElement>
+  isDraggedOver?: boolean
 }
 
-export default function DocumentCard({ document, onClick }: DocumentCardProps) {
+export default function DocumentCard({ 
+  document, 
+  onClick,
+  onViewVersionHistory,
+  onViewMetadata,
+  onViewUploaderDetails,
+  onCopyLink,
+  onMoveToFolder,
+  onDelete,
+  onEdit,
+  onDownload,
+  dragProps,
+  isDraggedOver
+}: DocumentCardProps) {
   const [uploader, setUploader] = useState<any>(null)
 
   useEffect(() => {
@@ -26,9 +50,12 @@ export default function DocumentCard({ document, onClick }: DocumentCardProps) {
   }, [document.uploadedBy])
 
   return (
-    <button
+    <div
+      {...dragProps}
       onClick={() => onClick(document)}
-      className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all-smooth text-left group hover-lift animate-fade-in-scale"
+      className={`w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-gray-300 hover:shadow-lg transition-all-smooth text-left group hover-lift animate-fade-in-scale cursor-pointer ${
+        isDraggedOver ? 'ring-2 ring-blue-500 ring-opacity-50 bg-blue-50' : ''
+      }`}
     >
       <div className="flex items-start gap-4">
         {/* File Icon/Thumbnail */}
@@ -56,10 +83,24 @@ export default function DocumentCard({ document, onClick }: DocumentCardProps) {
               <span className={`text-xs px-2 py-1 rounded-md ${getDocumentStatusColor(document.status)}`}>
                 {document.status}
               </span>
-              {!document.isPublic && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md">
-                  <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {document.isLocked && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-md" title="Document is locked">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                </div>
+              )}
+              {document.requiresSignatures && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-md" title="Requires signatures">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </div>
+              )}
+              {!document.isPublic && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-md" title="Private document">
+                  <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                   </svg>
                 </div>
               )}
@@ -115,10 +156,23 @@ export default function DocumentCard({ document, onClick }: DocumentCardProps) {
                 <span>{document.downloadCount}</span>
               </div>
               <span>{format(document.updatedAt, 'MMM d')}</span>
+              
+              {/* Context Menu */}
+              <DocumentContextMenu
+                document={document}
+                onViewVersionHistory={onViewVersionHistory}
+                onViewMetadata={onViewMetadata}
+                onViewUploaderDetails={onViewUploaderDetails}
+                onCopyLink={onCopyLink}
+                onMoveToFolder={onMoveToFolder}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                onDownload={onDownload}
+              />
             </div>
           </div>
         </div>
       </div>
-    </button>
+    </div>
   )
 }

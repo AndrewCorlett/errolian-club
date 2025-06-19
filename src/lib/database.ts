@@ -513,12 +513,123 @@ export const documentService = {
   },
 
   async deleteDocument(id: string): Promise<void> {
+    // First get the document to find its storage path
+    const document = await this.getDocument(id)
+    
     const { error } = await supabase
       .from('documents')
       .delete()
       .eq('id', id)
 
     if (error) throw error
+
+    // Clean up file storage if document has a storage path
+    if (document?.storage_path) {
+      try {
+        const { fileStorage } = await import('./fileStorage')
+        await fileStorage.deleteFile(document.storage_path)
+        // Also delete any versions
+        await fileStorage.deleteDocumentVersions(id)
+      } catch (storageError) {
+        console.warn('Failed to delete file from storage:', storageError)
+        // Don't throw here as the document record is already deleted
+      }
+    }
+  },
+
+  async createDocumentWithFile(
+    file: File,
+    documentData: Omit<DocumentInsert, 'storage_path' | 'size_bytes' | 'mime_type'>
+  ): Promise<{ document: Document; uploadResult: any }> {
+    const { fileStorage } = await import('./fileStorage')
+    
+    const maxRetries = 3
+    let lastError: any
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Upload file first (with retry-specific path generation)
+        const uploadResult = await fileStorage.uploadFile(file, {
+          folder: documentData.folder_id ? `folders/${documentData.folder_id}` : 'general',
+          isPublic: documentData.is_public || false,
+          // Add retry suffix to ensure unique paths on subsequent attempts
+          retryAttempt: attempt > 1 ? attempt : undefined
+        })
+
+        // Create document record with file information
+        const documentInsert: DocumentInsert = {
+          ...documentData,
+          storage_path: uploadResult.path,
+          size_bytes: uploadResult.size,
+          mime_type: uploadResult.mimeType
+        }
+
+        const document = await this.createDocument(documentInsert)
+
+        return { document, uploadResult }
+      } catch (error: any) {
+        lastError = error
+        
+        // Check if this is a storage path uniqueness constraint violation
+        if (error?.code === '23505' && error?.message?.includes('documents_storage_path_key')) {
+          console.log(`Storage path collision on attempt ${attempt}, retrying...`)
+          
+          if (attempt < maxRetries) {
+            // Wait a small random amount before retrying to reduce collision probability
+            await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50))
+            continue
+          }
+        }
+        
+        // For non-uniqueness errors or if we've exhausted retries, throw immediately
+        console.error('Failed to create document with file:', error)
+        throw error
+      }
+    }
+    
+    // This should never be reached, but just in case
+    throw lastError
+  },
+
+  async createDocumentVersion(
+    documentId: string,
+    file: File,
+    versionNumber: number,
+    _changelog?: string
+  ): Promise<{ document: Document; uploadResult: any }> {
+    const { fileStorage } = await import('./fileStorage')
+    
+    try {
+      // Upload new version
+      const uploadResult = await fileStorage.uploadVersion(file, documentId, versionNumber)
+
+      // Update document with new version info
+      const updates: DocumentUpdate = {
+        storage_path: uploadResult.path,
+        size_bytes: uploadResult.size,
+        mime_type: uploadResult.mimeType,
+        version: versionNumber,
+        updated_at: new Date().toISOString()
+      }
+
+      const document = await this.updateDocument(documentId, updates)
+
+      return { document, uploadResult }
+    } catch (error) {
+      console.error('Failed to create document version:', error)
+      throw error
+    }
+  },
+
+  async getSecureFileUrl(documentId: string, expiresIn: number = 3600): Promise<string> {
+    const document = await this.getDocument(documentId)
+    
+    if (!document?.storage_path) {
+      throw new Error('Document has no associated file')
+    }
+
+    const { fileStorage } = await import('./fileStorage')
+    return fileStorage.createSignedUrl(document.storage_path, expiresIn)
   },
 
   async approveDocument(id: string, approvedBy: string): Promise<void> {

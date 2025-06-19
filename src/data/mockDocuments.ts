@@ -79,7 +79,10 @@ export const mockDocuments: Document[] = [
     tags: ['risk-assessment', 'hiking', 'blue-mountains'],
     isPublic: true,
     downloadCount: 12,
-    version: 1
+    version: 1,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd2',
@@ -99,7 +102,10 @@ export const mockDocuments: Document[] = [
     tags: ['safety', 'climbing', 'guidelines'],
     isPublic: true,
     downloadCount: 28,
-    version: 2
+    version: 2,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd3',
@@ -119,7 +125,10 @@ export const mockDocuments: Document[] = [
     tags: ['constitution', 'bylaws', 'official'],
     isPublic: false,
     downloadCount: 45,
-    version: 3
+    version: 3,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd4',
@@ -139,7 +148,10 @@ export const mockDocuments: Document[] = [
     tags: ['equipment', 'checklist', 'maintenance'],
     isPublic: true,
     downloadCount: 34,
-    version: 4
+    version: 4,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd5',
@@ -158,7 +170,10 @@ export const mockDocuments: Document[] = [
     tags: ['photos', 'blue-mountains', 'trip'],
     isPublic: true,
     downloadCount: 0,
-    version: 1
+    version: 1,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd6',
@@ -178,7 +193,10 @@ export const mockDocuments: Document[] = [
     tags: ['kayak', 'maintenance', 'manual'],
     isPublic: true,
     downloadCount: 19,
-    version: 1
+    version: 1,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd7',
@@ -198,7 +216,10 @@ export const mockDocuments: Document[] = [
     tags: ['emergency', 'contacts', 'safety'],
     isPublic: false,
     downloadCount: 23,
-    version: 2
+    version: 2,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   },
   {
     id: 'd8',
@@ -218,7 +239,10 @@ export const mockDocuments: Document[] = [
     tags: ['template', 'event', 'proposal'],
     isPublic: true,
     downloadCount: 15,
-    version: 1
+    version: 1,
+    isLocked: false,
+    requiresSignatures: false,
+    signatures: []
   }
 ]
 
