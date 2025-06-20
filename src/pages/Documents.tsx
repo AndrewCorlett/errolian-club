@@ -88,6 +88,7 @@ export default function Documents() {
   const canUpload = profile && roleBasedUI.canShowUploadButton(profile.role)
   const canCreateFolder = profile && roleBasedUI.canShowCreateFolderButton(profile.role)
 
+
   // Enhanced folder navigation handlers (defined early for drag-drop hook)
   const handleMoveDocumentToFolder = async (documentId: string, targetFolderId: string | null) => {
     console.log('Moving document', documentId, 'to folder', targetFolderId)
@@ -155,7 +156,8 @@ export default function Documents() {
           documentService.getFolders()
         ])
         
-        setDocuments(documentsResponse.map(convertDocumentRowToDocument))
+        const convertedDocuments = documentsResponse.map(convertDocumentRowToDocument)
+        setDocuments(convertedDocuments)
         
         let allFolders = foldersResponse.map(convertDocumentFolderRowToFolder)
         
@@ -178,7 +180,7 @@ export default function Documents() {
                 created_by: profile.id
               })
             } catch (err) {
-              console.error('Failed to create default folder:', err)
+              console.error('Failed to create default folder:', folderData.name, err)
             }
           }
           
@@ -212,7 +214,9 @@ export default function Documents() {
   }
 
   const getCurrentFolders = () => {
-    let filteredFolders = folders.filter(folder => folder.parentId === (currentFolder?.id || null))
+    let filteredFolders = folders.filter(folder => 
+      folder.parentId === (currentFolder?.id || null)
+    )
     
     // Apply role-based permission filtering
     if (profile) {
@@ -255,21 +259,45 @@ export default function Documents() {
   const handleDocumentUpload = async (documentData: Document) => {
     try {
       // The document has already been created by DocumentUploadModal's createDocumentWithFile()
-      // We just need to add it to local state and handle UI updates
-      
       console.log('Document uploaded:', documentData)
       
-      // Add to local state to update UI immediately
-      setDocuments(prev => [documentData, ...prev])
+      // Check if uploaded document belongs to current folder context
+      const uploadedToCurrentFolder = (
+        (currentFolder?.id === documentData.folderId) || 
+        (!currentFolder && !documentData.folderId)
+      )
       
-      // Reload documents to ensure we see the newly uploaded file
-      try {
-        const documentsResponse = await documentService.getDocuments(currentFolder?.id)
-        const convertedDocs = documentsResponse.map(convertDocumentRowToDocument)
-        setDocuments(convertedDocs)
-        console.log('Documents reloaded after upload:', convertedDocs.length)
-      } catch (reloadError) {
-        console.error('Failed to reload documents after upload:', reloadError)
+      if (uploadedToCurrentFolder) {
+        // Document belongs to current context - add to local state
+        setDocuments(prev => [documentData, ...prev])
+        console.log('Document added to current folder view')
+      } else {
+        // Document uploaded to different folder - provide navigation option
+        const targetFolder = folders.find(f => f.id === documentData.folderId)
+        const folderName = targetFolder?.name || 'Root'
+        
+        const shouldNavigate = confirm(
+          `Document "${documentData.name}" was uploaded to "${folderName}" folder. ` +
+          `Would you like to navigate there to see it?`
+        )
+        
+        if (shouldNavigate) {
+          if (documentData.folderId) {
+            // Navigate to target folder
+            const targetFolderObj = folders.find(f => f.id === documentData.folderId)
+            if (targetFolderObj) {
+              handleFolderClick(targetFolderObj)
+            }
+          } else {
+            // Navigate to root
+            handleFolderNavigation(-1)
+          }
+        } else {
+          // Just reload current folder to maintain consistency
+          const documentsResponse = await documentService.getDocuments(currentFolder?.id)
+          const convertedDocs = documentsResponse.map(convertDocumentRowToDocument)
+          setDocuments(convertedDocs)
+        }
       }
       
       // Send notification
@@ -277,7 +305,6 @@ export default function Documents() {
         documentGeneralNotifications.uploaded(documentData.name, profile.name, documentData.id)
       }
       
-      alert(`Document "${documentData.name}" uploaded successfully!`)
     } catch (error) {
       console.error('Failed to handle uploaded document:', error)
       alert('Failed to handle uploaded document. Please try again.')
@@ -410,6 +437,7 @@ export default function Documents() {
     if (!profile || !canCreateFolder) return
     
     try {
+      console.log('Creating new folder for user:', profile.id, 'in folder:', currentFolder?.id || 'root')
       const newFolder = await documentService.createFolder({
         name: 'New folder',
         parent_id: currentFolder?.id || null,
@@ -417,6 +445,7 @@ export default function Documents() {
         created_by: profile.id,
         icon: '📁'
       })
+      console.log('Successfully created folder:', newFolder)
       
       // Add to local state and start rename
       const folder = convertDocumentFolderRowToFolder(newFolder)
@@ -425,7 +454,32 @@ export default function Documents() {
       setNewFolderName('New folder')
     } catch (err) {
       console.error('Failed to create folder:', err)
-      alert('Failed to create folder')
+      alert('Failed to create folder: ' + (err as Error).message)
+    }
+  }
+
+  // Debug function to force create a test folder
+  const handleCreateTestFolder = async () => {
+    if (!profile) return
+    
+    try {
+      console.log('Creating TEST folder for debugging')
+      const testFolder = await documentService.createFolder({
+        name: `TEST Folder ${Date.now()}`,
+        parent_id: null, // Always create at root for testing
+        is_public: true,
+        created_by: profile.id,
+        icon: '🧪'
+      })
+      console.log('TEST folder created:', testFolder)
+      
+      // Add to local state
+      const folder = convertDocumentFolderRowToFolder(testFolder)
+      setFolders(prev => [...prev, folder])
+      alert('Test folder created successfully!')
+    } catch (err) {
+      console.error('Failed to create test folder:', err)
+      alert('Failed to create test folder: ' + (err as Error).message)
     }
   }
 
@@ -523,6 +577,8 @@ export default function Documents() {
   const currentDocuments = getCurrentDocuments()
   const currentFolders = getCurrentFolders()
 
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-forest-50 via-primary-50 to-accent-50 pb-20">
       {/* Header */}
@@ -550,16 +606,54 @@ export default function Documents() {
                       Upload
                     </Button>
                     {canCreateFolder && (
-                      <Button 
-                        onClick={handleCreateFolder}
-                        variant="outline" 
-                        size="sm"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        Create Folder
-                      </Button>
+                      <>
+                        <Button 
+                          onClick={handleCreateFolder}
+                          variant="outline" 
+                          size="sm"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Create Folder
+                        </Button>
+                        <Button 
+                          onClick={handleCreateTestFolder}
+                          variant="outline" 
+                          size="sm"
+                          className="bg-yellow-100 text-yellow-800 border-yellow-300"
+                        >
+                          🧪 Test Folder
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            console.log('=== FOLDER DEBUG INFO ===')
+                            console.log('Total folders:', folders.length)
+                            console.log('Current folders:', currentFolders.length)
+                            console.log('Profile:', profile)
+                            console.log('Folders:', folders.map(f => ({
+                              name: f.name,
+                              id: f.id,
+                              isPublic: f.isPublic,
+                              createdBy: f.createdBy,
+                              parentId: f.parentId
+                            })))
+                            console.log('Current folders:', currentFolders.map(f => ({
+                              name: f.name,
+                              id: f.id,
+                              isPublic: f.isPublic,
+                              createdBy: f.createdBy,
+                              parentId: f.parentId
+                            })))
+                            console.log('=== END DEBUG ===')
+                          }}
+                          variant="outline" 
+                          size="sm"
+                          className="bg-blue-100 text-blue-800 border-blue-300"
+                        >
+                          🔍 Debug
+                        </Button>
+                      </>
                     )}
                   </>
                 )}
