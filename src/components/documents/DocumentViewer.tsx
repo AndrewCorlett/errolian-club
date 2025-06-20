@@ -11,6 +11,7 @@ import { hasPermission } from '@/types/user'
 import { canLockUnlock, canEdit as canEditDocument, canDelete as canDeleteDocument } from '@/utils/documentPermissions'
 import PDFViewer from './PDFViewer'
 import WordViewer from './WordViewer'
+import ErrorBoundary from '@/components/ui/ErrorBoundary'
 
 interface DocumentViewerProps {
   document: Document | null
@@ -110,12 +111,14 @@ export default function DocumentViewer({
               className="max-w-full max-h-full object-contain"
             />
           ) : document.type === 'pdf' ? (
-            <PDFViewer 
-              url={document.url} 
-              document={document}
-              showSignatures={document.requiresSignatures}
-              className="w-full h-screen" 
-            />
+            <ErrorBoundary>
+              <PDFViewer 
+                url={document.url} 
+                document={document}
+                showSignatures={document.requiresSignatures}
+                className="w-full h-screen" 
+              />
+            </ErrorBoundary>
           ) : (document.type === 'doc' && (document.name.endsWith('.doc') || document.name.endsWith('.docx'))) ? (
             <WordViewer 
               url={document.url} 
@@ -272,12 +275,14 @@ export default function DocumentViewer({
                     className="w-full h-64 object-cover"
                   />
                 ) : document.type === 'pdf' ? (
-                  <PDFViewer 
-                    url={document.url} 
-                    document={document}
-                    showSignatures={document.requiresSignatures}
-                    className="h-96" 
-                  />
+                  <ErrorBoundary>
+                    <PDFViewer 
+                      url={document.url} 
+                      document={document}
+                      showSignatures={document.requiresSignatures}
+                      className="h-96" 
+                    />
+                  </ErrorBoundary>
                 ) : (document.type === 'doc' && (document.name.endsWith('.doc') || document.name.endsWith('.docx'))) ? (
                   <WordViewer 
                     url={document.url} 

@@ -3,7 +3,7 @@
  * Handles file uploads, downloads, and storage management with Supabase Storage
  */
 
-import { supabase } from './supabase'
+import { getSupabaseAdmin } from './supabase'
 // File storage service for Supabase Storage integration
 
 export interface UploadProgress {
@@ -71,6 +71,7 @@ export class FileStorageService {
 
     try {
       // Upload file with progress tracking
+      const supabase = getSupabaseAdmin()
       const { data, error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .upload(filePath, file, {
@@ -127,6 +128,7 @@ export class FileStorageService {
    */
   async downloadFile(path: string): Promise<Blob> {
     try {
+      const supabase = getSupabaseAdmin()
       const { data, error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .download(path)
@@ -146,15 +148,48 @@ export class FileStorageService {
    * Create a signed URL for secure file access
    */
   async createSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {
+    console.log('🔐 FileStorage.createSignedUrl called with:', { 
+      path, 
+      expiresIn, 
+      bucket: this.BUCKET_NAME,
+      pathLength: path.length,
+      pathStartsWith: path.substring(0, 50) + (path.length > 50 ? '...' : '')
+    })
+    
+    // Additional path validation logging
+    if (path.includes('//')) {
+      console.warn('⚠️  Double slashes detected in path:', path)
+    }
+    if (path.startsWith('/')) {
+      console.warn('⚠️  Path starts with slash (should not):', path)
+    }
+    if (!path) {
+      console.error('❌ Empty path provided to createSignedUrl')
+      throw new Error('Path cannot be empty')
+    }
+    
     try {
+      console.log('📤 Calling supabase.storage.createSignedUrl with exact path:', JSON.stringify(path))
+      
+      const supabase = getSupabaseAdmin()
       const { data, error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .createSignedUrl(path, expiresIn)
 
+      console.log('📥 Supabase createSignedUrl response:', { 
+        success: !!data?.signedUrl,
+        hasError: !!error,
+        error: error ? error.message : null,
+        signedUrlLength: data?.signedUrl ? data.signedUrl.length : 0,
+        signedUrlStart: data?.signedUrl ? data.signedUrl.substring(0, 100) + '...' : null
+      })
+
       if (error || !data?.signedUrl) {
+        console.error('Signed URL creation failed:', error)
         throw new Error(`Failed to create signed URL: ${error?.message || 'No URL returned'}`)
       }
 
+      console.log('Signed URL created successfully:', data.signedUrl)
       return data.signedUrl
     } catch (error) {
       console.error('Signed URL creation error:', error)
@@ -163,10 +198,118 @@ export class FileStorageService {
   }
 
   /**
+   * Test storage bucket access and configuration
+   */
+  async testStorageBucket(): Promise<{
+    exists: boolean
+    accessible: boolean
+    canCreateSignedUrls: boolean
+    error?: string
+  }> {
+    const result = {
+      exists: false,
+      accessible: false,
+      canCreateSignedUrls: false,
+      error: undefined as string | undefined
+    }
+
+    try {
+      // Test bucket access by listing files
+      const supabase = getSupabaseAdmin()
+      const { error } = await supabase.storage
+        .from(this.BUCKET_NAME)
+        .list('', { limit: 1 })
+
+      if (error) {
+        result.error = error.message
+        return result
+      }
+
+      result.exists = true
+      result.accessible = true
+
+      // Test signed URL creation with a dummy path
+      try {
+        await supabase.storage
+          .from(this.BUCKET_NAME)
+          .createSignedUrl('test/dummy.txt', 60)
+        result.canCreateSignedUrls = true
+      } catch (err) {
+        console.log('Signed URL test failed:', err)
+      }
+
+    } catch (error) {
+      result.error = error instanceof Error ? error.message : 'Unknown error'
+    }
+
+    return result
+  }
+
+  /**
+   * Test document URL access
+   */
+  async testDocumentAccess(path: string): Promise<{
+    publicUrl: string
+    signedUrl?: string
+    publicAccessible: boolean
+    signedAccessible: boolean
+    contentType?: string
+    error?: string
+  }> {
+    const result = {
+      publicUrl: '',
+      signedUrl: undefined as string | undefined,
+      publicAccessible: false,
+      signedAccessible: false,
+      contentType: undefined as string | undefined,
+      error: undefined as string | undefined
+    }
+
+    try {
+      // Get public URL  
+      const supabase = getSupabaseAdmin()
+      const { data: publicData } = supabase.storage
+        .from(this.BUCKET_NAME)
+        .getPublicUrl(path)
+      result.publicUrl = publicData.publicUrl
+
+      // Test public URL access
+      try {
+        const publicResponse = await fetch(result.publicUrl, { method: 'HEAD' })
+        result.publicAccessible = publicResponse.ok
+        if (publicResponse.ok) {
+          result.contentType = publicResponse.headers.get('content-type') || undefined
+        }
+      } catch (err) {
+        console.log('Public URL test failed:', err)
+      }
+
+      // Try to create and test signed URL
+      try {
+        result.signedUrl = await this.createSignedUrl(path, 3600)
+        const signedResponse = await fetch(result.signedUrl, { method: 'HEAD' })
+        result.signedAccessible = signedResponse.ok
+        if (signedResponse.ok && !result.contentType) {
+          result.contentType = signedResponse.headers.get('content-type') || undefined
+        }
+      } catch (err) {
+        console.log('Signed URL test failed:', err)
+        result.error = err instanceof Error ? err.message : 'Unknown error'
+      }
+
+    } catch (err) {
+      result.error = err instanceof Error ? err.message : 'Unknown error'
+    }
+
+    return result
+  }
+
+  /**
    * Delete a file from storage
    */
   async deleteFile(path: string): Promise<void> {
     try {
+      const supabase = getSupabaseAdmin()
       const { error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .remove([path])
@@ -186,6 +329,7 @@ export class FileStorageService {
   async deleteDocumentVersions(documentId: string): Promise<void> {
     try {
       // List all files in the document's version folder
+      const supabase = getSupabaseAdmin()
       const { data: files, error: listError } = await supabase.storage
         .from(this.BUCKET_NAME)
         .list(`versions/${documentId}`, {
@@ -219,6 +363,7 @@ export class FileStorageService {
    */
   async copyFile(sourcePath: string, destinationPath: string): Promise<void> {
     try {
+      const supabase = getSupabaseAdmin()
       const { error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .copy(sourcePath, destinationPath)
@@ -238,6 +383,7 @@ export class FileStorageService {
   async getFileInfo(path: string): Promise<{ size: number; lastModified: Date; mimeType?: string }> {
     try {
       // Download just the file to get metadata
+      const supabase = getSupabaseAdmin()
       const { data, error } = await supabase.storage
         .from(this.BUCKET_NAME)
         .download(path, {

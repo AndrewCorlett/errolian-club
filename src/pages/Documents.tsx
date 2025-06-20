@@ -20,44 +20,70 @@ import { documentLockNotifications, documentGeneralNotifications } from '@/utils
 import { useDocumentRealTime } from '@/hooks/useDocumentRealTime'
 import RealTimeStatusIndicator from '@/components/documents/RealTimeStatusIndicator'
 
+// Helper function to get proper document URL
+const getDocumentUrl = async (storagePath: string, _documentId: string, isPublic: boolean = false): Promise<string> => {
+  console.log('getDocumentUrl called with:', { storagePath, isPublic })
+  
+  try {
+    // Always use signed URLs for better reliability and access control
+    // This avoids issues with bucket public access configuration
+    console.log('Generating signed URL for storage path:', storagePath)
+    const { fileStorage } = await import('@/lib/fileStorage')
+    const signedUrl = await fileStorage.createSignedUrl(storagePath, 3600) // 1 hour expiry
+    console.log('Signed URL generated:', signedUrl)
+    return signedUrl
+  } catch {
+    console.log(`File not found in storage: ${storagePath}`)
+    
+    // Return a placeholder URL for missing files
+    const placeholderData = `File not found: ${storagePath}`
+    return `data:text/plain;charset=utf-8,${encodeURIComponent(placeholderData)}`
+  }
+}
+
 // Helper functions to convert database types to frontend types
-const convertDocumentRowToDocument = (row: DocumentRow): Document => ({
-  id: row.id,
-  name: row.name,
-  type: row.type,
-  size: row.size_bytes,
-  mimeType: row.mime_type,
-  url: row.storage_path, // This might need to be converted to a full URL
-  thumbnailUrl: row.thumbnail_path || undefined,
-  folderId: row.folder_id || undefined,
-  uploadedBy: row.uploaded_by,
-  uploadedAt: new Date(row.created_at),
-  updatedAt: new Date(row.updated_at),
-  status: row.status,
-  approvedBy: row.approved_by || undefined,
-  approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
-  rejectedReason: row.rejected_reason || undefined,
-  description: row.description || undefined,
-  tags: row.tags,
-  isPublic: row.is_public,
-  downloadCount: row.download_count,
-  version: row.version,
-  parentDocumentId: row.parent_document_id || undefined,
-  // Document locking fields
-  isLocked: row.is_locked || false,
-  lockedBy: row.locked_by || undefined,
-  lockedAt: row.locked_at ? new Date(row.locked_at) : undefined,
-  // Document signature fields
-  requiresSignatures: row.requires_signatures || false,
-  signatures: (row.signatures as any) || [],
-  signatureDeadline: row.signature_deadline ? new Date(row.signature_deadline) : undefined,
-})
+const convertDocumentRowToDocument = async (row: DocumentRow): Promise<Document> => {
+  // Get proper URL for the document
+  const url = await getDocumentUrl(row.storage_path, row.id, row.is_public)
+  
+  return {
+    id: row.id,
+    name: row.name,
+    type: row.type,
+    size: row.size_bytes,
+    mimeType: row.mime_type,
+    url: url, // Now using proper URL instead of just storage path
+    thumbnailUrl: row.thumbnail_path || undefined,
+    folderId: row.folder_id || undefined,
+    uploadedBy: row.uploaded_by,
+    uploadedAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+    status: row.status,
+    approvedBy: row.approved_by || undefined,
+    approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
+    rejectedReason: row.rejected_reason || undefined,
+    description: row.description || undefined,
+    tags: row.tags,
+    isPublic: row.is_public,
+    downloadCount: row.download_count,
+    version: row.version,
+    parentDocumentId: row.parent_document_id || undefined,
+    // Document locking fields
+    isLocked: row.is_locked || false,
+    lockedBy: row.locked_by || undefined,
+    lockedAt: row.locked_at ? new Date(row.locked_at) : undefined,
+    // Document signature fields
+    requiresSignatures: row.requires_signatures || false,
+    signatures: (row.signatures as any) || [],
+    signatureDeadline: row.signature_deadline ? new Date(row.signature_deadline) : undefined,
+  }
+}
 
 const convertDocumentFolderRowToFolder = (row: DocumentFolderRow): DocumentFolder => ({
   id: row.id,
   name: row.name,
   description: row.description || undefined,
-  parentId: row.parent_id || undefined,
+  parentId: row.parent_id, // Keep as null for top-level folders to match filter logic
   createdBy: row.created_by,
   createdAt: new Date(row.created_at),
   updatedAt: new Date(row.updated_at),
@@ -156,8 +182,23 @@ export default function Documents() {
           documentService.getFolders()
         ])
         
-        const convertedDocuments = documentsResponse.map(convertDocumentRowToDocument)
-        setDocuments(convertedDocuments)
+        console.log('Documents: Converting document rows to documents...')
+        const convertedDocuments = await Promise.all(
+          documentsResponse.map(row => convertDocumentRowToDocument(row))
+        )
+        console.log('Documents: Converted documents:', convertedDocuments.length)
+        
+        // Filter out documents with placeholder URLs (missing files)  
+        const validDocuments = convertedDocuments.filter(doc => {
+          const isValid = !doc.url.startsWith('data:text/plain')
+          if (!isValid) {
+            console.log(`Filtering out document with missing file: ${doc.name}`)
+          }
+          return isValid
+        })
+        console.log('Documents: Valid documents after filtering:', validDocuments.length)
+        
+        setDocuments(validDocuments)
         
         let allFolders = foldersResponse.map(convertDocumentFolderRowToFolder)
         
@@ -295,7 +336,9 @@ export default function Documents() {
         } else {
           // Just reload current folder to maintain consistency
           const documentsResponse = await documentService.getDocuments(currentFolder?.id)
-          const convertedDocs = documentsResponse.map(convertDocumentRowToDocument)
+          const convertedDocs = await Promise.all(
+            documentsResponse.map(row => convertDocumentRowToDocument(row))
+          )
           setDocuments(convertedDocs)
         }
       }
@@ -458,30 +501,67 @@ export default function Documents() {
     }
   }
 
-  // Debug function to force create a test folder
-  const handleCreateTestFolder = async () => {
+  // Cleanup function to remove orphaned document records
+  const handleCleanupOrphanedDocuments = async () => {
     if (!profile) return
     
+    const confirmCleanup = confirm(
+      'This will remove document records from the database that reference missing files. ' +
+      'This action cannot be undone. Continue?'
+    )
+    
+    if (!confirmCleanup) return
+    
     try {
-      console.log('Creating TEST folder for debugging')
-      const testFolder = await documentService.createFolder({
-        name: `TEST Folder ${Date.now()}`,
-        parent_id: null, // Always create at root for testing
-        is_public: true,
-        created_by: profile.id,
-        icon: '🧪'
-      })
-      console.log('TEST folder created:', testFolder)
+      console.log('Starting cleanup of orphaned documents...')
       
-      // Add to local state
-      const folder = convertDocumentFolderRowToFolder(testFolder)
-      setFolders(prev => [...prev, folder])
-      alert('Test folder created successfully!')
+      // Get all documents across all folders
+      const allDocumentsPromises = []
+      
+      // Get documents in root (no folder)
+      allDocumentsPromises.push(documentService.getDocuments())
+      
+      // Get documents in each folder
+      for (const folder of folders) {
+        allDocumentsPromises.push(documentService.getDocuments(folder.id))
+      }
+      
+      const allDocumentArrays = await Promise.all(allDocumentsPromises)
+      const allDocuments = allDocumentArrays.flat()
+      
+      console.log('Found', allDocuments.length, 'total documents in database across all folders')
+      
+      let removedCount = 0
+      for (const doc of allDocuments) {
+        try {
+          // Test if the file exists by trying to create a signed URL
+          const { fileStorage } = await import('@/lib/fileStorage')
+          await fileStorage.createSignedUrl(doc.storage_path, 60) // Short expiry for test
+          console.log('✅ File exists:', doc.storage_path)
+        } catch {
+          console.log('❌ File missing, removing database record:', doc.name, 'at', doc.storage_path)
+          // File doesn't exist, remove the database record
+          await documentService.deleteDocument(doc.id)
+          removedCount++
+        }
+      }
+      
+      alert(`Cleanup complete! Removed ${removedCount} orphaned document records.`)
+      
+      // Reload the current folder view
+      const documentsResponse = await documentService.getDocuments(currentFolder?.id)
+      const convertedDocs = await Promise.all(
+        documentsResponse.map(row => convertDocumentRowToDocument(row))
+      )
+      const validDocs = convertedDocs.filter(doc => !doc.url.startsWith('data:text/plain'))
+      setDocuments(validDocs)
+      
     } catch (err) {
-      console.error('Failed to create test folder:', err)
-      alert('Failed to create test folder: ' + (err as Error).message)
+      console.error('Cleanup failed:', err)
+      alert('Cleanup failed: ' + (err as Error).message)
     }
   }
+
 
   const handleRenameFolder = async (folder: DocumentFolder) => {
     if (!newFolderName.trim() || newFolderName === folder.name) {
@@ -618,40 +698,28 @@ export default function Documents() {
                           Create Folder
                         </Button>
                         <Button 
-                          onClick={handleCreateTestFolder}
+                          onClick={handleCleanupOrphanedDocuments}
                           variant="outline" 
                           size="sm"
-                          className="bg-yellow-100 text-yellow-800 border-yellow-300"
+                          className="bg-red-100 text-red-800 border-red-300"
                         >
-                          🧪 Test Folder
+                          🧹 Cleanup DB
                         </Button>
                         <Button 
-                          onClick={() => {
-                            console.log('=== FOLDER DEBUG INFO ===')
-                            console.log('Total folders:', folders.length)
-                            console.log('Current folders:', currentFolders.length)
-                            console.log('Profile:', profile)
-                            console.log('Folders:', folders.map(f => ({
-                              name: f.name,
-                              id: f.id,
-                              isPublic: f.isPublic,
-                              createdBy: f.createdBy,
-                              parentId: f.parentId
-                            })))
-                            console.log('Current folders:', currentFolders.map(f => ({
-                              name: f.name,
-                              id: f.id,
-                              isPublic: f.isPublic,
-                              createdBy: f.createdBy,
-                              parentId: f.parentId
-                            })))
-                            console.log('=== END DEBUG ===')
+                          onClick={async () => {
+                            try {
+                              const { fileStorage } = await import('@/lib/fileStorage')
+                              const result = await fileStorage.testStorageBucket()
+                              alert(`Storage Test Results:\nExists: ${result.exists}\nAccessible: ${result.accessible}\nCan Create Signed URLs: ${result.canCreateSignedUrls}\nError: ${result.error || 'None'}`)
+                            } catch (err) {
+                              alert('Storage test failed: ' + (err as Error).message)
+                            }
                           }}
                           variant="outline" 
                           size="sm"
                           className="bg-blue-100 text-blue-800 border-blue-300"
                         >
-                          🔍 Debug
+                          🔧 Test Storage
                         </Button>
                       </>
                     )}
