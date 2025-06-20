@@ -46,7 +46,7 @@ export interface DocumentFolder {
   id: string
   name: string
   description?: string
-  parentId?: string // For nested folders
+  parentId?: string | null // For nested folders
   createdBy: string
   createdAt: Date
   updatedAt: Date

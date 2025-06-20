@@ -103,7 +103,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions['permissions']> 
     canUploadDocuments: true,
     canApproveDocuments: false,
     canDeleteAllDocuments: false,
-    canManageFolders: false,
+    canManageFolders: true, // Fixed: Allow officers to manage folders
     canInviteUsers: true,
     canManageUserRoles: false,
     canDeactivateUsers: false,
@@ -123,7 +123,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, RolePermissions['permissions']> 
     canUploadDocuments: true,
     canApproveDocuments: false,
     canDeleteAllDocuments: false,
-    canManageFolders: false,
+    canManageFolders: true, // TEMPORARY: Allow members to create folders for testing
     canInviteUsers: false,
     canManageUserRoles: false,
     canDeactivateUsers: false,

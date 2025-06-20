@@ -173,40 +173,74 @@ export default function DocumentUploadModal({
 
       const uploadedDocuments = await Promise.all(uploadPromises)
       
-      // Call the upload handler for each document
-      uploadedDocuments.forEach(document => {
-        // Convert to frontend Document type
-        const frontendDocument: Document = {
-          id: document.id,
-          name: document.name,
-          type: document.type,
-          size: document.size_bytes,
-          mimeType: document.mime_type,
-          url: document.storage_path,
-          thumbnailUrl: undefined,
-          folderId: document.folder_id || undefined,
-          uploadedBy: document.uploaded_by,
-          uploadedAt: new Date(document.created_at),
-          updatedAt: new Date(document.updated_at),
-          status: document.status,
-          approvedBy: document.approved_by || undefined,
-          approvedAt: document.approved_at ? new Date(document.approved_at) : undefined,
-          rejectedReason: document.rejected_reason || undefined,
-          description: document.description || undefined,
-          tags: document.tags || [],
-          isPublic: document.is_public,
-          downloadCount: 0,
-          version: document.version || 1,
-          parentDocumentId: document.parent_document_id || undefined,
-          isLocked: document.is_locked || false,
-          lockedBy: document.locked_by || undefined,
-          lockedAt: document.locked_at ? new Date(document.locked_at) : undefined,
-          requiresSignatures: document.requires_signatures || false,
-          signatures: [],
-          signatureDeadline: document.signature_deadline ? new Date(document.signature_deadline) : undefined
+      // Helper function to get proper URL for documents
+      const getDocumentUrl = async (storagePath: string, isPublic: boolean = false): Promise<string> => {
+        try {
+          if (isPublic) {
+            // For public documents, use the public URL
+            const { supabase } = await import('@/lib/supabase')
+            const { data } = supabase.storage
+              .from('documents')
+              .getPublicUrl(storagePath)
+            return data.publicUrl
+          } else {
+            // For private documents, use signed URL
+            const { fileStorage } = await import('@/lib/fileStorage')
+            return await fileStorage.createSignedUrl(storagePath, 3600)
+          }
+        } catch (error) {
+          console.error('Failed to create document URL:', error)
+          // Fallback to public URL
+          const { supabase } = await import('@/lib/supabase')
+          const { data } = supabase.storage
+            .from('documents')
+            .getPublicUrl(storagePath)
+          return data.publicUrl
         }
-
-        onUpload(frontendDocument)
+      }
+      
+      // Convert uploaded documents to frontend format with proper URLs
+      const frontendDocuments = await Promise.all(
+        uploadedDocuments.map(async (document) => {
+          const documentUrl = await getDocumentUrl(document.storage_path, document.is_public)
+          
+          const frontendDocument: Document = {
+            id: document.id,
+            name: document.name,
+            type: document.type,
+            size: document.size_bytes,
+            mimeType: document.mime_type,
+            url: documentUrl,
+            thumbnailUrl: undefined,
+            folderId: document.folder_id || undefined,
+            uploadedBy: document.uploaded_by,
+            uploadedAt: new Date(document.created_at),
+            updatedAt: new Date(document.updated_at),
+            status: document.status,
+            approvedBy: document.approved_by || undefined,
+            approvedAt: document.approved_at ? new Date(document.approved_at) : undefined,
+            rejectedReason: document.rejected_reason || undefined,
+            description: document.description || undefined,
+            tags: document.tags || [],
+            isPublic: document.is_public,
+            downloadCount: 0,
+            version: document.version || 1,
+            parentDocumentId: document.parent_document_id || undefined,
+            isLocked: document.is_locked || false,
+            lockedBy: document.locked_by || undefined,
+            lockedAt: document.locked_at ? new Date(document.locked_at) : undefined,
+            requiresSignatures: document.requires_signatures || false,
+            signatures: [],
+            signatureDeadline: document.signature_deadline ? new Date(document.signature_deadline) : undefined
+          }
+          
+          return frontendDocument
+        })
+      )
+      
+      // Call the upload handler for each document
+      frontendDocuments.forEach(document => {
+        onUpload(document)
       })
 
       console.log(`Successfully uploaded ${uploadedDocuments.length} documents`)

@@ -1,5 +1,6 @@
 import type { UserRole } from '@/types/user'
 import type { Document, DocumentFolder } from '@/types/documents'
+import { ROLE_PERMISSIONS } from '@/types/user'
 
 // Role-based visibility helpers for UI components
 export const roleBasedUI = {
@@ -9,7 +10,7 @@ export const roleBasedUI = {
   },
 
   canShowCreateFolderButton: (userRole: UserRole): boolean => {
-    return ['super-admin', 'commodore', 'officer'].includes(userRole)
+    return ROLE_PERMISSIONS[userRole]?.canManageFolders || false
   },
 
   canShowEditDocumentButton: (userRole: UserRole, document: Document, userId: string): boolean => {
@@ -57,22 +58,42 @@ export const roleBasedUI = {
 
   // Document viewing restrictions
   canViewDocument: (userRole: UserRole, document: Document, userId: string): boolean => {
+    console.log('Permission check for document:', document.name, {
+      userRole,
+      userId,
+      docIsPublic: document.isPublic,
+      docStatus: document.status,
+      docUploadedBy: document.uploadedBy
+    })
+    
     // Public documents can be viewed by all members
-    if (document.isPublic) return true
+    if (document.isPublic) {
+      console.log('Document is public - allowing access')
+      return true
+    }
     
     // Super-admin and commodore can view all documents
-    if (['super-admin', 'commodore'].includes(userRole)) return true
+    if (['super-admin', 'commodore'].includes(userRole)) {
+      console.log('User is super-admin/commodore - allowing access')
+      return true
+    }
     
     // Officers can view all approved and pending documents
-    if (userRole === 'officer' && ['approved', 'pending'].includes(document.status)) return true
+    if (userRole === 'officer' && ['approved', 'pending'].includes(document.status)) {
+      console.log('User is officer and doc is approved/pending - allowing access')
+      return true
+    }
     
     // Members can view approved documents and their own documents
     if (userRole === 'member') {
-      return document.status === 'approved' || document.uploadedBy === userId
+      const canView = document.status === 'approved' || document.uploadedBy === userId
+      console.log('Member check:', { approved: document.status === 'approved', ownDoc: document.uploadedBy === userId, canView })
+      return canView
     }
     
     // Note: guest role not defined in current UserRole type but included for future extensibility
     
+    console.log('No permission rules matched - denying access')
     return false
   },
 
@@ -92,7 +113,6 @@ export const roleBasedUI = {
     }
     
     // Note: guest role not defined in current UserRole type but included for future extensibility
-    
     return false
   },
 
