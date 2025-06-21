@@ -1,12 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { googleMapsLoader } from '@/lib/googleMaps'
 
 interface LocationData {
   address: string
   lat: number
   lng: number
   placeId?: string
+  viewport?: {
+    northeast: { lat: number; lng: number }
+    southwest: { lat: number; lng: number }
+  }
 }
 
 interface LocationPickerProps {
@@ -16,12 +21,6 @@ interface LocationPickerProps {
   className?: string
 }
 
-declare global {
-  interface Window {
-    google: any
-    initMap: () => void
-  }
-}
 
 export default function LocationPicker({ 
   value, 
@@ -32,216 +31,600 @@ export default function LocationPicker({
   const [searchValue, setSearchValue] = useState(value?.address || '')
   const [isMapLoaded, setIsMapLoaded] = useState(false)
   const [showMap, setShowMap] = useState(false)
+  const [autocompleteStatus, setAutocompleteStatus] = useState<'loading' | 'ready' | 'error' | 'not-available'>('loading')
+  const [geolocationStatus, setGeolocationStatus] = useState<'loading' | 'granted' | 'denied' | 'timeout' | 'error'>('loading')
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<any>(null)
   const markerRef = useRef<any>(null)
+  const userMarkerRef = useRef<any>(null)
+  const infoWindowRef = useRef<any>(null)
   const autocompleteRef = useRef<any>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const debounceTimeoutRef = useRef<number | null>(null)
+
+  // Helper function to manage single marker
+  const updateMarker = (position: { lat: number; lng: number }, title?: string) => {
+    if (!mapInstanceRef.current) {
+      console.warn('[LocationPicker] Cannot update marker - no map instance')
+      return
+    }
+
+    try {
+      // If marker exists, just update its position
+      if (markerRef.current) {
+        markerRef.current.setPosition(position)
+        if (title) {
+          markerRef.current.setTitle(title)
+        }
+      } else {
+        // Create new marker
+        markerRef.current = new window.google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          draggable: true,
+          title: title || 'Selected location'
+        })
+
+        // Add drag listener only once when marker is created
+        markerRef.current.addListener('dragend', (event: any) => {
+          const lat = event.latLng.lat()
+          const lng = event.latLng.lng()
+          debouncedGeocode({ lat, lng })
+        })
+
+        // Add click listener for InfoWindow
+        markerRef.current.addListener('click', () => {
+          const markerPosition = markerRef.current.getPosition()
+          const pos = {
+            lat: markerPosition.lat(),
+            lng: markerPosition.lng()
+          }
+          showInfoWindow(markerRef.current, title || 'Selected location', pos)
+        })
+      }
+    } catch (error) {
+      console.error('[LocationPicker] Failed to update marker:', error)
+    }
+  }
+
+  // Debounced geocoding function to improve performance during rapid marker movements
+  const debouncedGeocode = (position: { lat: number; lng: number }) => {
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current)
+    }
+
+    // Set new timeout using requestAnimationFrame for smooth performance
+    debounceTimeoutRef.current = window.setTimeout(() => {
+      requestAnimationFrame(() => {
+        const geocoder = new window.google.maps.Geocoder()
+        geocoder.geocode({ location: position }, (results: any, status: any) => {
+          if (status === 'OK' && results[0]) {
+            const newLocation = {
+              address: results[0].formatted_address,
+              lat: position.lat,
+              lng: position.lng,
+              placeId: results[0].place_id
+            }
+            onChange(newLocation)
+            setSearchValue(results[0].formatted_address)
+          }
+        })
+      })
+    }, 300) // 300ms debounce delay
+  }
+
+  // Helper function to clear marker
+  const clearMarker = () => {
+    if (markerRef.current) {
+      markerRef.current.setMap(null)
+      markerRef.current = null
+    }
+  }
+
+  // Helper function to manage user location marker (blue dot)
+  const updateUserLocationMarker = (position: { lat: number; lng: number }) => {
+    if (!mapInstanceRef.current) {
+      return
+    }
+
+    try {
+      // If user marker exists, just update its position
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setPosition(position)
+      } else {
+        // Create new user location marker with blue dot style
+        userMarkerRef.current = new window.google.maps.Marker({
+          position,
+          map: mapInstanceRef.current,
+          title: 'Your location',
+          draggable: false,
+          icon: {
+            path: window.google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: '#4285f4',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          },
+          zIndex: 1000 // Higher z-index to show above other markers
+        })
+
+        // Add click listener for user location InfoWindow
+        userMarkerRef.current.addListener('click', () => {
+          showInfoWindow(userMarkerRef.current, 'Your location', position)
+        })
+      }
+    } catch (error) {
+      console.error('[LocationPicker] Failed to update user location marker:', error)
+    }
+  }
+
+
+  // Helper function to show toast
+  const showToast = (message: string) => {
+    setToastMessage(message)
+    setTimeout(() => setToastMessage(null), 5000)
+  }
+
+  // Helper function to show InfoWindow
+  const showInfoWindow = (marker: any, title: string, position: { lat: number; lng: number }) => {
+    if (!mapInstanceRef.current) return
+
+    // Close existing InfoWindow
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close()
+    }
+
+    // Create new InfoWindow
+    const content = `
+      <div style="padding: 8px; min-width: 200px;">
+        <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">${title}</h3>
+        <p style="margin: 0; font-size: 12px; color: #666;">
+          Lat: ${position.lat.toFixed(6)}<br>
+          Lng: ${position.lng.toFixed(6)}
+        </p>
+      </div>
+    `
+
+    infoWindowRef.current = new window.google.maps.InfoWindow({
+      content,
+      position
+    })
+
+    infoWindowRef.current.open(mapInstanceRef.current, marker)
+  }
+
+  // Geolocation service with timeout and error handling
+  const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        setGeolocationStatus('error')
+        reject(new Error('Geolocation not supported'))
+        return
+      }
+
+      const timeoutId = setTimeout(() => {
+        setGeolocationStatus('timeout')
+        showToast('Location request timed out. Using default location.')
+        reject(new Error('Geolocation timeout'))
+      }, 8000)
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          clearTimeout(timeoutId)
+          const coords = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          }
+          setGeolocationStatus('granted')
+          resolve(coords)
+        },
+        (error: GeolocationPositionError) => {
+          clearTimeout(timeoutId)
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setGeolocationStatus('denied')
+              showToast('Location access denied. Using default location.')
+              reject(new Error('Geolocation permission denied'))
+              break
+            case error.POSITION_UNAVAILABLE:
+              setGeolocationStatus('error')
+              showToast('Location unavailable. Using default location.')
+              reject(new Error('Geolocation position unavailable'))
+              break
+            case error.TIMEOUT:
+              setGeolocationStatus('timeout')
+              showToast('Location request timed out. Using default location.')
+              reject(new Error('Geolocation timeout'))
+              break
+            default:
+              setGeolocationStatus('error')
+              showToast('Could not get location. Using default location.')
+              reject(new Error('Unknown geolocation error'))
+              break
+          }
+        },
+        {
+          timeout: 8000,
+          maximumAge: 600000, // 10 minutes cache
+          enableHighAccuracy: false
+        }
+      )
+    })
+  }
 
   // Load Google Maps API
   useEffect(() => {
-    if (window.google && window.google.maps) {
-      setIsMapLoaded(true)
-      return
-    }
-
-    // Check if script is already being loaded
-    if (document.querySelector('script[src*="maps.googleapis.com"]')) {
-      // Wait for it to load
-      const checkGoogleMaps = () => {
-        if (window.google && window.google.maps) {
-          setIsMapLoaded(true)
-        } else {
-          setTimeout(checkGoogleMaps, 100)
-        }
+    const loadMaps = async () => {
+      try {
+        await googleMapsLoader.load()
+        setIsMapLoaded(true)
+      } catch (error) {
+        console.error('Failed to load Google Maps:', error)
       }
-      checkGoogleMaps()
-      return
     }
 
-    const script = document.createElement('script')
-    // TODO: Replace 'YOUR_API_KEY' with your actual Google Maps API key
-    // Get your API key from: https://console.cloud.google.com/google/maps-apis/
-    // Make sure to enable the "Maps JavaScript API" and "Places API"
-    script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initMap`
-    script.async = true
-    script.defer = true
-    
-    window.initMap = () => {
+    if (googleMapsLoader.isReady()) {
       setIsMapLoaded(true)
-    }
-    
-    document.head.appendChild(script)
-
-    return () => {
-      // Cleanup - remove script if component unmounts
-      const existingScript = document.querySelector('script[src*="maps.googleapis.com"]')
-      if (existingScript && existingScript.parentNode) {
-        existingScript.parentNode.removeChild(existingScript)
-      }
+    } else {
+      loadMaps()
     }
   }, [])
 
   // Initialize map when map is shown and Google Maps is loaded
   useEffect(() => {
     if (!isMapLoaded || !showMap || !mapRef.current) return
-
-    // Initialize map
-    const defaultLocation = value ? { lat: value.lat, lng: value.lng } : { lat: -33.8688, lng: 151.2093 } // Sydney default
     
-    mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
-      center: defaultLocation,
-      zoom: value ? 15 : 11,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    })
-
-    // Add marker if we have a location
-    if (value) {
-      markerRef.current = new window.google.maps.Marker({
-        position: { lat: value.lat, lng: value.lng },
-        map: mapInstanceRef.current,
-        draggable: true,
-      })
-
-      // Handle marker drag
-      markerRef.current.addListener('dragend', (event: any) => {
-        const lat = event.latLng.lat()
-        const lng = event.latLng.lng()
+    // Only initialize map if it doesn't exist yet
+    if (!mapInstanceRef.current) {
+      const initializeMap = async () => {
+        let initialLocation = { lat: -33.8688, lng: 151.2093 } // Sydney fallback
+        let initialZoom = 11
         
-        // Reverse geocode to get address
-        const geocoder = new window.google.maps.Geocoder()
-        geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-          if (status === 'OK' && results[0]) {
-            onChange({
-              address: results[0].formatted_address,
-              lat,
-              lng,
-              placeId: results[0].place_id
-            })
-            setSearchValue(results[0].formatted_address)
-          }
+        // Try to get user location first
+        let hasUserLocation = false
+        try {
+          const userCoords = await getUserLocation()
+          initialLocation = userCoords
+          initialZoom = 12
+          hasUserLocation = true
+        } catch (error) {
+          // Fall back to Sydney default
+        }
+        
+        mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+          center: initialLocation,
+          zoom: initialZoom,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
         })
-      })
+        
+        // Add user location marker if we got user location
+        if (hasUserLocation) {
+          updateUserLocationMarker(initialLocation)
+        }
+      }
+      
+      initializeMap()
     }
 
-    // Handle map clicks
-    mapInstanceRef.current.addListener('click', (event: any) => {
+  }, [isMapLoaded, showMap])
+
+  // Update map when location value changes
+  useEffect(() => {
+    // Multiple safety checks before proceeding
+    if (!mapInstanceRef.current) {
+      return
+    }
+    
+    if (!value) {
+      return
+    }
+    
+    if (typeof value.lat !== 'number' || typeof value.lng !== 'number') {
+      return
+    }
+    
+    if (isNaN(value.lat) || isNaN(value.lng)) {
+      return
+    }
+    
+    // Additional check to ensure map instance has required methods
+    if (!mapInstanceRef.current.setCenter || !mapInstanceRef.current.setZoom) {
+      return
+    }
+    
+    try {
+      // Use viewport bounds if available, otherwise center point
+      if (value.viewport) {
+        const bounds = new window.google.maps.LatLngBounds(
+          new window.google.maps.LatLng(value.viewport.southwest.lat, value.viewport.southwest.lng),
+          new window.google.maps.LatLng(value.viewport.northeast.lat, value.viewport.northeast.lng)
+        )
+        
+        // Use panToBounds for smooth animation
+        mapInstanceRef.current.panToBounds(bounds)
+      } else {
+        // Fallback to smooth center point animation
+        const newCenter = { lat: value.lat, lng: value.lng }
+        
+        // First pan to the location smoothly
+        mapInstanceRef.current.panTo(newCenter)
+        
+        // Then adjust zoom if necessary (smooth zoom)
+        const currentZoom = mapInstanceRef.current.getZoom()
+        if (currentZoom < 14) {
+          setTimeout(() => {
+            mapInstanceRef.current.setZoom(14)
+          }, 500) // Delay zoom change to let pan complete
+        }
+      }
+    } catch (error) {
+      console.error('[LocationPicker] Failed to center map:', error)
+      return
+    }
+    
+    // Update marker using helper function
+    const newCenter = { lat: value.lat, lng: value.lng }
+    updateMarker(newCenter, value.address)
+  }, [value, onChange])
+
+  // Setup map click handlers (only once)
+  useEffect(() => {
+    if (!mapInstanceRef.current) return
+
+    const handleMapClick = (event: any) => {
       const lat = event.latLng.lat()
       const lng = event.latLng.lng()
 
-      // Remove existing marker
-      if (markerRef.current) {
-        markerRef.current.setMap(null)
-      }
+      // Update marker using helper function
+      updateMarker({ lat, lng }, 'Clicked location')
 
-      // Add new marker
-      markerRef.current = new window.google.maps.Marker({
-        position: { lat, lng },
-        map: mapInstanceRef.current,
-        draggable: true,
-      })
+      // Use debounced geocoding for map clicks as well
+      debouncedGeocode({ lat, lng })
+    }
 
-      // Handle marker drag
-      markerRef.current.addListener('dragend', (dragEvent: any) => {
-        const dragLat = dragEvent.latLng.lat()
-        const dragLng = dragEvent.latLng.lng()
-        
-        // Reverse geocode to get address
-        const geocoder = new window.google.maps.Geocoder()
-        geocoder.geocode({ location: { lat: dragLat, lng: dragLng } }, (results: any, status: any) => {
-          if (status === 'OK' && results[0]) {
-            onChange({
-              address: results[0].formatted_address,
-              lat: dragLat,
-              lng: dragLng,
-              placeId: results[0].place_id
-            })
-            setSearchValue(results[0].formatted_address)
-          }
-        })
-      })
-
-      // Reverse geocode to get address
-      const geocoder = new window.google.maps.Geocoder()
-      geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
-        if (status === 'OK' && results[0]) {
-          onChange({
-            address: results[0].formatted_address,
-            lat,
-            lng,
-            placeId: results[0].place_id
-          })
-          setSearchValue(results[0].formatted_address)
-        }
-      })
-    })
-  }, [isMapLoaded, showMap, value, onChange])
+    mapInstanceRef.current.addListener('click', handleMapClick)
+  }, [isMapLoaded, showMap, onChange])
 
   // Initialize autocomplete
   useEffect(() => {
-    if (!isMapLoaded || !searchInputRef.current) return
+    if (!isMapLoaded || !searchInputRef.current) {
+      setAutocompleteStatus('loading')
+      return
+    }
 
-    autocompleteRef.current = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-      fields: ['formatted_address', 'geometry', 'place_id'],
-    })
+    if (!window.google?.maps?.places?.Autocomplete) {
+      setAutocompleteStatus('not-available')
+      return
+    }
 
-    autocompleteRef.current.addListener('place_changed', () => {
-      const place = autocompleteRef.current.getPlace()
+    try {
       
-      if (place.geometry && place.geometry.location) {
-        const location = {
-          address: place.formatted_address,
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-          placeId: place.place_id
+      // Clear any existing autocomplete
+      if (autocompleteRef.current) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current)
+      }
+
+      // Try the new PlaceAutocompleteElement first, fallback to old Autocomplete
+      if (window.google.maps.places.PlaceAutocompleteElement) {
+        // Create the new element (minimal configuration - some properties not supported)
+        const autocompleteElement = new window.google.maps.places.PlaceAutocompleteElement()
+        
+        // Only set supported properties
+        try {
+          autocompleteElement.fields = ['formatted_address', 'geometry', 'place_id', 'name']
+        } catch (e) {
+          // Fields property not supported on new element
         }
         
-        onChange(location)
-        setSearchValue(place.formatted_address)
-        setShowMap(true)
-
-        // Update map if it's visible
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setCenter({ lat: location.lat, lng: location.lng })
-          mapInstanceRef.current.setZoom(15)
+        // Replace the input with the autocomplete element
+        if (searchInputRef.current && searchInputRef.current.parentNode) {
+          // Copy styles and attributes
+          autocompleteElement.className = searchInputRef.current.className
+          autocompleteElement.placeholder = searchInputRef.current.placeholder
           
-          // Remove existing marker
-          if (markerRef.current) {
-            markerRef.current.setMap(null)
+          // Replace the input
+          searchInputRef.current.parentNode.replaceChild(autocompleteElement, searchInputRef.current)
+          autocompleteRef.current = autocompleteElement
+          
+          // Update ref to point to the new element
+          searchInputRef.current = autocompleteElement as any
+        }
+        
+        const handlePlaceChanged = (event: any) => {
+          const place = event.place
+          
+          if (place?.geometry?.location) {
+            // Ensure we have valid coordinates
+            const rawLat = typeof place.geometry.location.lat === 'function' 
+              ? place.geometry.location.lat() 
+              : place.geometry.location.lat
+            const rawLng = typeof place.geometry.location.lng === 'function' 
+              ? place.geometry.location.lng() 
+              : place.geometry.location.lng
+            
+            // Validate coordinates are numbers
+            const lat = parseFloat(rawLat)
+            const lng = parseFloat(rawLng)
+            
+            if (isNaN(lat) || isNaN(lng)) {
+              console.error('[LocationPicker] Invalid coordinates received:', { rawLat, rawLng, lat, lng })
+              return
+            }
+            
+            // Extract viewport information if available
+            let viewport = undefined
+            if (place.geometry?.viewport) {
+              const vp = place.geometry.viewport
+              if (vp.getNorthEast && vp.getSouthWest) {
+                // Legacy viewport object with methods
+                const ne = vp.getNorthEast()
+                const sw = vp.getSouthWest()
+                viewport = {
+                  northeast: { 
+                    lat: typeof ne.lat === 'function' ? ne.lat() : ne.lat, 
+                    lng: typeof ne.lng === 'function' ? ne.lng() : ne.lng 
+                  },
+                  southwest: { 
+                    lat: typeof sw.lat === 'function' ? sw.lat() : sw.lat, 
+                    lng: typeof sw.lng === 'function' ? sw.lng() : sw.lng 
+                  }
+                }
+              } else if (vp.northeast && vp.southwest) {
+                // Direct viewport object
+                viewport = {
+                  northeast: { 
+                    lat: typeof vp.northeast.lat === 'function' ? vp.northeast.lat() : vp.northeast.lat,
+                    lng: typeof vp.northeast.lng === 'function' ? vp.northeast.lng() : vp.northeast.lng
+                  },
+                  southwest: { 
+                    lat: typeof vp.southwest.lat === 'function' ? vp.southwest.lat() : vp.southwest.lat,
+                    lng: typeof vp.southwest.lng === 'function' ? vp.southwest.lng() : vp.southwest.lng
+                  }
+                }
+              }
+            }
+            
+              
+            const location = {
+              address: place.formatted_address || place.name || '',
+              lat,
+              lng,
+              placeId: place.place_id,
+              viewport
+            }
+            
+            onChange(location)
+            setSearchValue(location.address)
+            
+            // Always show map when location is selected
+            setShowMap(true)
+          } else {
+            console.warn('[LocationPicker] No valid geometry in selected place (new element)')
           }
+        }
 
-          // Add new marker
-          markerRef.current = new window.google.maps.Marker({
-            position: { lat: location.lat, lng: location.lng },
-            map: mapInstanceRef.current,
-            draggable: true,
-          })
+        autocompleteElement.addEventListener('gmp-placeselect', handlePlaceChanged)
+        
+      } else {
+        
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+          fields: ['formatted_address', 'geometry', 'place_id', 'name'],
+          types: ['establishment', 'geocode']
+        })
+
+        const handlePlaceChanged = () => {
+          const place = autocompleteRef.current?.getPlace()
+          
+          if (place?.geometry?.location) {
+            // Get coordinates and validate
+            const rawLat = place.geometry.location.lat()
+            const rawLng = place.geometry.location.lng()
+            const lat = parseFloat(rawLat)
+            const lng = parseFloat(rawLng)
+            
+            if (isNaN(lat) || isNaN(lng)) {
+              console.error('[LocationPicker] Invalid coordinates received (legacy):', { rawLat, rawLng, lat, lng })
+              return
+            }
+            
+            // Extract viewport information if available
+            let viewport = undefined
+            if (place.geometry?.viewport) {
+              const vp = place.geometry.viewport
+              if (vp.getNorthEast && vp.getSouthWest) {
+                // Legacy viewport object with methods
+                const ne = vp.getNorthEast()
+                const sw = vp.getSouthWest()
+                viewport = {
+                  northeast: { 
+                    lat: typeof ne.lat === 'function' ? ne.lat() : ne.lat, 
+                    lng: typeof ne.lng === 'function' ? ne.lng() : ne.lng 
+                  },
+                  southwest: { 
+                    lat: typeof sw.lat === 'function' ? sw.lat() : sw.lat, 
+                    lng: typeof sw.lng === 'function' ? sw.lng() : sw.lng 
+                  }
+                }
+              } else if (vp.northeast && vp.southwest) {
+                // Direct viewport object
+                viewport = {
+                  northeast: { 
+                    lat: typeof vp.northeast.lat === 'function' ? vp.northeast.lat() : vp.northeast.lat,
+                    lng: typeof vp.northeast.lng === 'function' ? vp.northeast.lng() : vp.northeast.lng
+                  },
+                  southwest: { 
+                    lat: typeof vp.southwest.lat === 'function' ? vp.southwest.lat() : vp.southwest.lat,
+                    lng: typeof vp.southwest.lng === 'function' ? vp.southwest.lng() : vp.southwest.lng
+                  }
+                }
+              }
+            }
+            
+            
+            const location = {
+              address: place.formatted_address || place.name || '',
+              lat,
+              lng,
+              placeId: place.place_id,
+              viewport
+            }
+            
+            onChange(location)
+            setSearchValue(location.address)
+            
+            // Always show map when location is selected
+            setShowMap(true)
+          } else {
+            console.warn('[LocationPicker] No valid geometry in selected place (legacy)')
+          }
+        }
+
+        autocompleteRef.current.addListener('place_changed', handlePlaceChanged)
+      }
+      
+      setAutocompleteStatus('ready')
+
+      return () => {
+        if (autocompleteRef.current) {
+          if (window.google?.maps?.event?.clearInstanceListeners) {
+            window.google.maps.event.clearInstanceListeners(autocompleteRef.current)
+          }
+          if (autocompleteRef.current.removeEventListener) {
+            autocompleteRef.current.removeEventListener('gmp-placeselect', () => {})
+          }
         }
       }
-    })
-  }, [isMapLoaded, onChange])
+    } catch (error) {
+      console.error('[LocationPicker] Failed to initialize autocomplete:', error)
+      setAutocompleteStatus('error')
+    }
+  }, [isMapLoaded])
 
   const handleClearLocation = () => {
     onChange(null)
     setSearchValue('')
     setShowMap(false)
-    if (markerRef.current) {
-      markerRef.current.setMap(null)
-    }
+    clearMarker()
   }
 
   const toggleMap = () => {
     setShowMap(!showMap)
   }
 
-  if (!isMapLoaded) {
+  if (!isMapLoaded || geolocationStatus === 'loading') {
     return (
       <div className={className}>
         <div className="flex items-center gap-2 p-3 border border-gray-300 rounded-xl bg-gray-50">
           <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
-          <span className="text-sm text-gray-600">Loading maps...</span>
+          <span className="text-sm text-gray-600">
+            {!isMapLoaded ? 'Loading maps...' : 'Getting your location...'}
+          </span>
         </div>
       </div>
     )
@@ -250,6 +633,41 @@ export default function LocationPicker({
   return (
     <div className={className}>
       <div className="space-y-3">
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <p className="text-sm text-yellow-800">{toastMessage}</p>
+          </div>
+        )}
+        
+        {/* Autocomplete Status */}
+        <div className="flex items-center gap-2 text-xs">
+          {autocompleteStatus === 'loading' && (
+            <>
+              <div className="animate-spin w-3 h-3 border border-blue-500 border-t-transparent rounded-full"></div>
+              <span className="text-gray-600">Loading autocomplete...</span>
+            </>
+          )}
+          {autocompleteStatus === 'ready' && (
+            <>
+              <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+              <span className="text-green-600">Search ready</span>
+            </>
+          )}
+          {autocompleteStatus === 'error' && (
+            <>
+              <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+              <span className="text-red-600">Search error</span>
+            </>
+          )}
+          {autocompleteStatus === 'not-available' && (
+            <>
+              <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+              <span className="text-yellow-600">Search not available</span>
+            </>
+          )}
+        </div>
+        
         {/* Search Input */}
         <div className="relative">
           <Input
