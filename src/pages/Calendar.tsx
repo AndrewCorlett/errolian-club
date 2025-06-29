@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import VerticalCalendar from '@/components/calendar/VerticalCalendar'
 import DayViewSheet from '@/components/calendar/DayViewSheet'
 import NewEventSheet from '@/components/calendar/NewEventSheet'
@@ -15,6 +15,8 @@ import type { EventWithDetails } from '@/types/supabase'
 
 export default function Calendar() {
   const { user } = useAuth()
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [headerHeight, setHeaderHeight] = useState(0)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<EventWithDetails | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
@@ -35,6 +37,20 @@ export default function Calendar() {
   const [allEvents, setAllEvents] = useState<EventWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Measure header height
+  useEffect(() => {
+    const measureHeader = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight)
+      }
+    }
+    
+    measureHeader()
+    window.addEventListener('resize', measureHeader)
+    
+    return () => window.removeEventListener('resize', measureHeader)
+  }, [])
 
   // Load events from Supabase
   useEffect(() => {
@@ -272,12 +288,13 @@ export default function Calendar() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-20">
-      {/* iOS Calendar Header */}
-      <IOSHeader 
-        title="Calendar"
-        titleClassName="text-royal-600"
-        rightActions={[
+    <div className="relative h-screen bg-white">
+      {/* iOS Calendar Header - Fixed */}
+      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-50 bg-white">
+        <IOSHeader 
+          title="Calendar"
+          titleClassName="text-royal-600"
+          rightActions={[
           <IOSActionButton 
             key="filters"
             onClick={() => setShowFilters(true)}
@@ -304,9 +321,16 @@ export default function Calendar() {
           />
         ]}
       />
+      </div>
 
-      {/* Vertical Calendar */}
-      <div className="flex-1 pt-20">
+      {/* Calendar Container - Bounded between header and footer */}
+      <div 
+        className="fixed left-0 right-0 overflow-y-auto"
+        style={{ 
+          top: '85px',
+          bottom: '80px'
+        }}
+      >
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-gray-500">Loading calendar...</div>
@@ -321,6 +345,7 @@ export default function Calendar() {
             onDayShortPress={handleDayShortPress}
             onDayLongPress={handleDayLongPress}
             initialDate={new Date()}
+            headerHeight={0}
           />
         )}
       </div>

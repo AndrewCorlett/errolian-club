@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { 
   format, 
-  isSameDay, 
   isSameMonth, 
   startOfWeek, 
   endOfWeek, 
@@ -19,6 +18,7 @@ interface VerticalCalendarProps {
   onDayShortPress: (date: Date) => void
   onDayLongPress: (date: Date) => void
   initialDate?: Date
+  headerHeight?: number
 }
 
 interface EventPill {
@@ -37,300 +37,294 @@ export default function VerticalCalendar({
   events,
   onDayShortPress,
   onDayLongPress,
-  initialDate = new Date()
+  initialDate = new Date(),
+  headerHeight = 0
 }: VerticalCalendarProps) {
   const [months, setMonths] = useState<MonthData[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
   const [currentMonthIndex, setCurrentMonthIndex] = useState(0)
+  
   // Helper function to convert string dates to Date objects
   const parseEventDate = (dateString: string): Date => new Date(dateString)
 
   // Initialize months (previous 6 months, current, next 18 months)
   useEffect(() => {
-    const monthsArray: MonthData[] = []
+    const monthsData: MonthData[] = []
     const startMonth = subMonths(initialDate, 6)
     
     for (let i = 0; i < 25; i++) {
       const monthDate = addMonths(startMonth, i)
       const monthStart = startOfMonth(monthDate)
       const monthEnd = endOfMonth(monthDate)
-      const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
-      const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+      const weekStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+      const weekEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
       
-      const days = eachDayOfInterval({
-        start: calendarStart,
-        end: calendarEnd
-      })
-
-      monthsArray.push({
+      const days = eachDayOfInterval({ start: weekStart, end: weekEnd })
+      
+      monthsData.push({
         date: monthDate,
         days
       })
-      
-      // Mark current month index
-      if (isSameMonth(monthDate, initialDate)) {
-        setCurrentMonthIndex(i)
-      }
     }
     
-    setMonths(monthsArray)
+    setMonths(monthsData)
+    setCurrentMonthIndex(6) // Start at current month
   }, [initialDate])
 
   // Scroll to current month on mount
   useEffect(() => {
-    if (months.length > 0 && scrollRef.current) {
+    if (scrollRef.current && months.length > 0) {
       const currentMonthElement = scrollRef.current.children[currentMonthIndex] as HTMLElement
       if (currentMonthElement) {
-        currentMonthElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        currentMonthElement.scrollIntoView({ behavior: 'auto', block: 'start' })
       }
     }
   }, [months, currentMonthIndex])
 
-  const getEventPillsForDay = (date: Date): EventPill[] => {
-    const pills: EventPill[] = []
-    
-    // Regular events from Supabase - exclude multi-day events
-    events.forEach(event => {
-      const startDate = parseEventDate(event.start_date)
-      const endDate = parseEventDate(event.end_date)
+  const getEventsForDate = (date: Date): EventWithDetails[] => {
+    return events.filter(event => {
+      const eventStart = parseEventDate(event.start_date)
+      const eventEnd = parseEventDate(event.end_date)
       
-      // Check if this is a multi-day event
-      const isMultiDay = endDate && startDate < endDate && 
-        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) > 1
-      
-      // Only include if it's on this date AND it's not a multi-day event
-      if (!isMultiDay && (isSameDay(date, startDate) || 
-          (endDate && date >= startDate && date <= endDate))) {
-        pills.push({
-          id: event.id,
-          title: event.title,
-          color: event.color || (
-            event.type === 'adventure' ? '#d7c6ff' : 
-            event.type === 'meeting' ? '#bae6fd' :
-            event.type === 'social' ? '#fde68a' :
-            event.type === 'training' ? '#fecaca' : '#e5e7eb'
-          ),
-          isItinerary: false
-        })
-      }
+      // Check if the date falls within the event range
+      return date >= eventStart && date <= eventEnd
     })
-
-    return pills.slice(0, 3)
   }
 
-  const getMultiDayEvents = (date: Date) => {
-    const multiDayEvents: Array<{
-      event: EventWithDetails
-      position: 'start' | 'middle' | 'end' | 'single'
-      color: string
-    }> = []
-
-    events.forEach(event => {
-      const startDate = parseEventDate(event.start_date)
-      const endDate = parseEventDate(event.end_date)
+  const getEventPillsForDate = (date: Date): EventPill[] => {
+    const dayEvents = getEventsForDate(date)
+    const pills: EventPill[] = []
+    
+    // Add regular events as pills
+    for (const event of dayEvents) {
+      pills.push({
+        id: event.id,
+        title: event.title,
+        color: event.color || '#8b5cf6'
+      })
       
-      if (endDate && startDate < endDate) {
-        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        if (daysDiff > 1) { // Multi-day event
-          const eventColor = event.color || (
-            event.type === 'adventure' ? '#d7c6ff' : 
-            event.type === 'meeting' ? '#bae6fd' :
-            event.type === 'social' ? '#fde68a' :
-            event.type === 'training' ? '#fecaca' : '#e5e7eb'
-          )
-          
-          if (isSameDay(date, startDate)) {
-            multiDayEvents.push({
-              event,
-              position: 'start',
-              color: eventColor
-            })
-          } else if (isSameDay(date, endDate)) {
-            multiDayEvents.push({
-              event,
-              position: 'end', 
-              color: eventColor
-            })
-          } else if (date > startDate && date < endDate) {
-            multiDayEvents.push({
-              event,
-              position: 'middle',
-              color: eventColor
-            })
-          }
+      // Add itinerary items as separate pills if they exist
+      if (event.itinerary_items) {
+        for (const item of event.itinerary_items) {
+          pills.push({
+            id: `${event.id}-${item.id}`,
+            title: item.title,
+            color: event.color || '#8b5cf6',
+            isItinerary: true
+          })
         }
       }
-    })
+    }
+    
+    return pills
+  }
 
+  const getMultiDayEvents = (month: MonthData) => {
+    const multiDayEvents: Array<{
+      event: EventWithDetails
+      startDate: Date
+      endDate: Date
+      daysInMonth: number
+    }> = []
+    
+    for (const event of events) {
+      const eventStart = parseEventDate(event.start_date)
+      const eventEnd = parseEventDate(event.end_date)
+      
+      // Check if event spans multiple days and intersects with this month
+      if (eventStart < eventEnd) {
+        const monthStart = startOfMonth(month.date)
+        const monthEnd = endOfMonth(month.date)
+        
+        if (eventEnd >= monthStart && eventStart <= monthEnd) {
+          const daysInMonth = Math.min(
+            Math.floor((eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+            30 // Cap at 30 days for rendering
+          )
+          
+          multiDayEvents.push({
+            event,
+            startDate: eventStart,
+            endDate: eventEnd,
+            daysInMonth
+          })
+        }
+      }
+    }
+    
     return multiDayEvents
   }
 
-  const getOverflowCount = (date: Date): number => {
-    const regularEvents = events.filter(event => {
-      const startDate = parseEventDate(event.start_date)
-      const endDate = parseEventDate(event.end_date)
-      
-      // Check if this is a multi-day event
-      const isMultiDay = endDate && startDate < endDate && 
-        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) > 1
-      
-      // Only count non-multi-day events
-      return !isMultiDay && (isSameDay(date, startDate) || 
-             (endDate && date >= startDate && date <= endDate))
-    }).length
-    return Math.max(0, regularEvents - 3)
-  }
-
-  const handleDayClick = (date: Date) => {
-    onDayShortPress(date)
-  }
-
-  const handleDayLongPress = (date: Date) => {
-    onDayLongPress(date)
-  }
-
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   return (
-    <div className="flex-1 overflow-hidden">
-
-      {/* Scrollable months */}
-      <div 
-        ref={scrollRef}
-        className="absolute inset-x-0 overflow-y-auto"
-        style={{ top: '120px', bottom: '70px' }}
-      >
-        {months.map((month) => (
-          <div key={month.date.toISOString()} className="mb-6">
-            {/* Month title with day headers */}
-            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-sm border-b border-primary-100">
-              <div className="py-2 px-4">
-                <h2 className="text-lg font-semibold text-royal-600">
-                  {format(month.date, 'MMMM yyyy')}
-                </h2>
-              </div>
-              {/* Day headers for this month */}
-              <div className="grid grid-cols-7 py-1 border-t border-primary-200/50">
-                {weekDays.map(day => (
-                  <div 
-                    key={day} 
-                    className="text-center text-xs font-semibold text-royal-600 py-1"
-                  >
-                    {day}
+    <div 
+      ref={scrollRef}
+      className="h-full bg-white"
+    >
+      <div className="px-4">
+        {/* Render months without map */}
+        {months.length > 0 && (
+          <>
+            {/* Month 0 */}
+            {months[0] && (
+              <div className="mb-8">
+                {/* Month header with day headers - Sticky together */}
+                <div className="sticky top-0 bg-white z-10">
+                  <h2 className="text-xl font-bold text-primary-900 mb-2 py-2">
+                    {format(months[0].date, 'MMMM yyyy')}
+                  </h2>
+                  
+                  {/* Week day headers */}
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Mon</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Tue</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Wed</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Thu</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Fri</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Sat</div>
+                    <div className="text-center text-xs font-medium text-primary-600 py-1">Sun</div>
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            {/* Month grid */}
-            <div className="grid grid-cols-7 gap-0">
-              {month.days.map((date) => {
-                const isCurrentMonth = isSameMonth(date, month.date)
-                const isCurrentDay = isToday(date)
-                const eventPills = getEventPillsForDay(date)
-                const overflowCount = getOverflowCount(date)
-                const multiDayEvents = getMultiDayEvents(date)
-                
-                return (
-                  <div
-                    key={date.toString()}
-                    className={`min-h-[80px] p-2 cursor-pointer transition-all duration-200 hover:bg-gray-50 active:bg-gray-100 relative ${
-                      !isCurrentMonth ? 'opacity-30' : ''
-                    }`}
-                    onClick={() => handleDayClick(date)}
-                    onTouchStart={() => {
-                      const timer = setTimeout(() => handleDayLongPress(date), 500)
-                      const element = document.activeElement as HTMLElement
-                      const cleanup = () => {
-                        clearTimeout(timer)
-                        element?.removeEventListener('touchend', cleanup)
-                        element?.removeEventListener('touchmove', cleanup)
-                      }
-                      element?.addEventListener('touchend', cleanup)
-                      element?.addEventListener('touchmove', cleanup)
-                    }}
-                  >
-                    {/* Multi-day event continuous lines */}
-                    {multiDayEvents.map((multiEvent, index) => (
+
+                {/* Calendar grid */}
+                <div className="grid grid-cols-7 gap-1">
+                  {months[0].days.slice(0, 35).reduce((acc: React.ReactElement[], date) => {
+                    const isCurrentMonth = isSameMonth(date, months[0].date)
+                    const isCurrentDay = isToday(date)
+                    const eventPills = getEventPillsForDate(date)
+                    
+                    acc.push(
                       <div
-                        key={`multi-${multiEvent.event.id}-${index}`}
-                        className="absolute top-8 h-4 flex items-center"
-                        style={{
-                          left: multiEvent.position === 'start' ? '8px' : '0px',
-                          right: multiEvent.position === 'end' ? '8px' : '0px',
-                          zIndex: 10,
-                          marginTop: `${index * 16}px`
+                        key={date.toISOString()}
+                        className={`
+                          min-h-[60px] p-1 cursor-pointer
+                          hover:bg-primary-50 transition-colors relative
+                          ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}
+                          ${isCurrentDay ? 'bg-primary-100' : ''}
+                        `}
+                        onClick={() => onDayShortPress(date)}
+                        onContextMenu={(e) => {
+                          e.preventDefault()
+                          onDayLongPress(date)
                         }}
                       >
-                        <div
-                          className={`h-2 flex items-center ${
-                            multiEvent.position === 'start' 
-                              ? 'rounded-l-full pl-2' 
-                              : multiEvent.position === 'end'
-                              ? 'rounded-r-full pr-2'
-                              : ''
-                          }`}
-                          style={{ 
-                            backgroundColor: multiEvent.color,
-                            width: '100%'
-                          }}
-                        >
-                          {multiEvent.position === 'start' && (
-                            <span className="text-[9px] font-medium text-white truncate">
-                              {multiEvent.event.title}
-                            </span>
+                        <div className={`text-sm font-medium mb-1 ${isCurrentDay ? 'text-primary-900' : ''}`}>
+                          {format(date, 'd')}
+                        </div>
+                        
+                        {/* Event pills - limit to 2 */}
+                        <div className="space-y-0.5">
+                          {eventPills.slice(0, 2).reduce((pillAcc: React.ReactElement[], pill, pillIndex) => {
+                            pillAcc.push(
+                              <div
+                                key={`pill-${pill.id}-${pillIndex}`}
+                                className="h-3 text-[10px] px-1 rounded text-white truncate leading-3"
+                                style={{ backgroundColor: pill.color }}
+                                title={pill.title}
+                              >
+                                {pill.isItinerary ? '→' : ''}{pill.title}
+                              </div>
+                            )
+                            return pillAcc
+                          }, [])}
+                          
+                          {eventPills.length > 2 && (
+                            <div className="text-[10px] text-primary-600 font-medium">
+                              +{eventPills.length - 2} more
+                            </div>
                           )}
                         </div>
                       </div>
-                    ))}
+                    )
+                    return acc
+                  }, [])}
+                </div>
+              </div>
+            )}
 
-                    {/* Day number */}
-                    <div className="flex items-center justify-center mb-1">
-                      <span
-                        className={`inline-flex items-center justify-center w-7 h-7 text-sm rounded-full transition-all duration-200 ${
-                          isCurrentDay
-                            ? 'bg-royal-600 text-white font-semibold'
-                            : isCurrentMonth
-                            ? 'text-gray-900 font-medium hover:bg-gray-100'
-                            : 'text-gray-400'
-                        }`}
-                      >
-                        {format(date, 'd')}
-                      </span>
-                    </div>
-
-                    {/* Event pills (positioned below multi-day lines) */}
-                    <div 
-                      className="space-y-0.5"
-                      style={{ marginTop: `${multiDayEvents.length * 16 + 4}px` }}
-                    >
-                      {eventPills.map((pill, pillIndex) => (
-                        <div
-                          key={`${pill.id}-${pillIndex}`}
-                          className="h-3 rounded-full text-[10px] font-medium text-white px-1.5 transition-all duration-200 shadow-sm overflow-hidden"
-                          style={{ backgroundColor: pill.color }}
-                          title={pill.title}
-                        >
-                          <div className="truncate">
-                            {pill.title}
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {/* Overflow indicator */}
-                      {overflowCount > 0 && (
-                        <div className="h-3 rounded-full bg-gray-200 text-[10px] font-medium text-gray-600 px-1.5 text-center">
-                          +{overflowCount}
-                        </div>
-                      )}
+            {/* Render additional months (1-24) */}
+            {months.slice(1, 25).reduce((acc: React.ReactElement[], month) => {
+              acc.push(
+                <div key={month.date.toISOString()} className="mb-8">
+                  {/* Month header with day headers - Sticky together */}
+                  <div className="sticky top-0 bg-white z-10">
+                    <h2 className="text-xl font-bold text-primary-900 mb-2 py-2">
+                      {format(month.date, 'MMMM yyyy')}
+                    </h2>
+                    
+                    {/* Week day headers */}
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Mon</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Tue</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Wed</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Thu</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Fri</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Sat</div>
+                      <div className="text-center text-xs font-medium text-primary-600 py-1">Sun</div>
                     </div>
                   </div>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+
+
+                  {/* Calendar grid */}
+                  <div className="grid grid-cols-7 gap-1">
+                    {month.days.slice(0, 35).reduce((dayAcc: React.ReactElement[], date, dayIndex) => {
+                      const isCurrentMonth = isSameMonth(date, month.date)
+                      const isCurrentDay = isToday(date)
+                      const eventPills = getEventPillsForDate(date)
+                      
+                      dayAcc.push(
+                        <div
+                          key={`${date.toISOString()}-${dayIndex}`}
+                          className={`
+                            min-h-[60px] p-1 cursor-pointer
+                            hover:bg-primary-50 transition-colors relative
+                            ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}
+                            ${isCurrentDay ? 'bg-primary-100' : ''}
+                          `}
+                          onClick={() => onDayShortPress(date)}
+                          onContextMenu={(e) => {
+                            e.preventDefault()
+                            onDayLongPress(date)
+                          }}
+                        >
+                          <div className={`text-sm font-medium mb-1 ${isCurrentDay ? 'text-primary-900' : ''}`}>
+                            {format(date, 'd')}
+                          </div>
+                          
+                          {/* Event pills - limit to 2 */}
+                          <div className="space-y-0.5">
+                            {eventPills.slice(0, 2).reduce((pillAcc: React.ReactElement[], pill, pillIndex) => {
+                              pillAcc.push(
+                                <div
+                                  key={`pill-${pill.id}-${pillIndex}-${dayIndex}`}
+                                  className="h-3 text-[10px] px-1 rounded text-white truncate leading-3"
+                                  style={{ backgroundColor: pill.color }}
+                                  title={pill.title}
+                                >
+                                  {pill.isItinerary ? '→' : ''}{pill.title}
+                                </div>
+                              )
+                              return pillAcc
+                            }, [])}
+                            
+                            {eventPills.length > 2 && (
+                              <div className="text-[10px] text-primary-600 font-medium">
+                                +{eventPills.length - 2} more
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                      return dayAcc
+                    }, [])}
+                  </div>
+                </div>
+              )
+              return acc
+            }, [])}
+          </>
+        )}
       </div>
     </div>
   )
