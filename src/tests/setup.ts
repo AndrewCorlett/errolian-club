@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Set environment variables for tests
 process.env.VITE_SUPABASE_URL = 'https://test.supabase.co'

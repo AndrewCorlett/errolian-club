@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPreviewProps } from '../../types/places';
+import type { MapPreviewProps } from '../../types/places';
 import { openInGoogleMaps, buildGoogleMapsUrl, validateCoordinates } from '../../utils/maps';
 
 export const MapPreview: React.FC<MapPreviewProps> = ({ 

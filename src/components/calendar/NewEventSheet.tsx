@@ -88,7 +88,22 @@ export default function NewEventSheet({
         
         // Set itinerary items if they exist
         if (editEvent.itinerary_items) {
-          setItineraryItems(editEvent.itinerary_items as ItineraryItem[])
+          const mappedItems: ItineraryItem[] = editEvent.itinerary_items.map(item => ({
+            id: item.id,
+            eventId: item.event_id,
+            type: item.type,
+            title: item.title,
+            description: item.description || '',
+            startTime: item.start_time || '',
+            endTime: item.end_time || '',
+            location: item.location || '',
+            cost: item.cost || 0,
+            notes: item.notes || '',
+            order: item.order_index || 0,
+            createdAt: new Date(item.created_at),
+            updatedAt: new Date(item.updated_at)
+          }))
+          setItineraryItems(mappedItems)
         }
       } else if (selectedDate) {
         // Reset form for new event

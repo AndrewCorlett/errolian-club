@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LocationPicker } from '../LocationPicker';
-import { Place } from '../../../types/places';
+import type { Place } from '../../../types/places';
 
 /**
  * Demo component showing how to use the Google Maps Places Autocomplete

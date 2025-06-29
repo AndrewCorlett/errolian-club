@@ -16,7 +16,7 @@ import type { EventWithDetails } from '@/types/supabase'
 export default function Calendar() {
   const { user } = useAuth()
   const headerRef = useRef<HTMLDivElement>(null)
-  const [headerHeight, setHeaderHeight] = useState(0)
+  const [, setHeaderHeight] = useState(0)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<EventWithDetails | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)

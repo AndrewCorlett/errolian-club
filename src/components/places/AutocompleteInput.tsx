@@ -24,7 +24,9 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           });
 
           // Add place change listener
-          autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+          if (autocompleteRef.current) {
+            autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+          }
           setIsLoaded(true);
         }
       } catch (error) {
@@ -40,7 +42,9 @@ export const AutocompleteInput: React.FC<AutocompleteInputProps> = ({
           fields: ['place_id', 'name', 'formatted_address', 'geometry', 'url', 'website', 'formatted_phone_number'],
           types: ['establishment', 'geocode']
         });
-        autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+        if (autocompleteRef.current) {
+          autocompleteRef.current.addListener('place_changed', handlePlaceSelect);
+        }
         setIsLoaded(true);
       }
     } else {

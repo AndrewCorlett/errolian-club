@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AutocompleteInput } from './AutocompleteInput';
 import { MapPreview } from './MapPreview';
-import { Place } from '../../types/places';
+import type { Place } from '../../types/places';
 
 interface LocationPickerProps {
   onLocationSelected?: (place: Place) => void;

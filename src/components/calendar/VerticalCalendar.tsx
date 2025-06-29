@@ -38,7 +38,6 @@ export default function VerticalCalendar({
   onDayShortPress,
   onDayLongPress,
   initialDate = new Date(),
-  headerHeight = 0
 }: VerticalCalendarProps) {
   const [months, setMonths] = useState<MonthData[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -119,41 +118,41 @@ export default function VerticalCalendar({
     return pills
   }
 
-  const getMultiDayEvents = (month: MonthData) => {
-    const multiDayEvents: Array<{
-      event: EventWithDetails
-      startDate: Date
-      endDate: Date
-      daysInMonth: number
-    }> = []
-    
-    for (const event of events) {
-      const eventStart = parseEventDate(event.start_date)
-      const eventEnd = parseEventDate(event.end_date)
-      
-      // Check if event spans multiple days and intersects with this month
-      if (eventStart < eventEnd) {
-        const monthStart = startOfMonth(month.date)
-        const monthEnd = endOfMonth(month.date)
-        
-        if (eventEnd >= monthStart && eventStart <= monthEnd) {
-          const daysInMonth = Math.min(
-            Math.floor((eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-            30 // Cap at 30 days for rendering
-          )
-          
-          multiDayEvents.push({
-            event,
-            startDate: eventStart,
-            endDate: eventEnd,
-            daysInMonth
-          })
-        }
-      }
-    }
-    
-    return multiDayEvents
-  }
+  // const getMultiDayEvents = (month: MonthData) => {
+  //   const multiDayEvents: Array<{
+  //     event: EventWithDetails
+  //     startDate: Date
+  //     endDate: Date
+  //     daysInMonth: number
+  //   }> = []
+  //   
+  //   for (const event of events) {
+  //     const eventStart = parseEventDate(event.start_date)
+  //     const eventEnd = parseEventDate(event.end_date)
+  //     
+  //     // Check if event spans multiple days and intersects with this month
+  //     if (eventStart < eventEnd) {
+  //       const monthStart = startOfMonth(month.date)
+  //       const monthEnd = endOfMonth(month.date)
+  //       
+  //       if (eventEnd >= monthStart && eventStart <= monthEnd) {
+  //         const daysInMonth = Math.min(
+  //           Math.floor((eventEnd.getTime() - eventStart.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+  //           30 // Cap at 30 days for rendering
+  //         )
+  //         
+  //         multiDayEvents.push({
+  //           event,
+  //           startDate: eventStart,
+  //           endDate: eventEnd,
+  //           daysInMonth
+  //         })
+  //       }
+  //     }
+  //   }
+  //   
+  //   return multiDayEvents
+  // }
 
 
   return (

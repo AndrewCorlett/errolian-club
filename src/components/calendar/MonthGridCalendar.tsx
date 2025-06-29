@@ -80,7 +80,7 @@ export default function MonthGridCalendar({
 
       {/* Week day headers */}
       <div className="grid grid-cols-7 border-b border-gray-200">
-        {weekDays.length > 0 && weekDays.reduce((acc, day, index) => {
+        {weekDays.length > 0 && weekDays.reduce((acc, day) => {
           acc.push(
             <div 
               key={day} 
