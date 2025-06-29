@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug LocationPicker Map Issue</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .input-container { margin: 20px 0; }
+        input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
+        #map { width: 100%; height: 400px; margin: 20px 0; border: 1px solid #ddd; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .info { background: #e3f2fd; color: #1565c0; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .error { background: #ffebee; color: #c62828; }
+        .location-info { padding: 15px; margin: 10px 0; background: #f5f5f5; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>LocationPicker Map Debug</h1>
+        
+        <div id="status-container"></div>
+        
+        <div class="input-container">
+            <input id="autocomplete-input" type="text" placeholder="Search for a location (try 'Eiffel Tower' or 'Times Square')...">
+        </div>
+        
+        <div id="map"></div>
+        
+        <div id="location-info" class="location-info" style="display: none;">
+            <h3>Selected Location:</h3>
+            <div id="location-details"></div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let marker;
+        let autocomplete;
+        
+        function addStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}:</strong> ${message}`;
+            container.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function initMap() {
+            addStatus('Google Maps API loaded successfully', 'success');
+            
+            // Initialize map centered on Sydney
+            const sydneyLocation = { lat: -33.8688, lng: 151.2093 };
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: sydneyLocation,
+                zoom: 10,
+                mapTypeControl: true,
+                streetViewControl: true,
+                fullscreenControl: true
+            });
+            
+            addStatus(`Map initialized at Sydney: ${sydneyLocation.lat}, ${sydneyLocation.lng}`, 'info');
+            
+            // Initialize autocomplete
+            const input = document.getElementById('autocomplete-input');
+            
+            if (google.maps.places.PlaceAutocompleteElement) {
+                addStatus('Using new PlaceAutocompleteElement', 'info');
+                initNewAutocomplete(input);
+            } else if (google.maps.places.Autocomplete) {
+                addStatus('Using legacy Autocomplete', 'info');
+                initLegacyAutocomplete(input);
+            } else {
+                addStatus('No autocomplete API available!', 'error');
+            }
+        }
+        
+        function initNewAutocomplete(input) {
+            try {
+                const autocompleteElement = new google.maps.places.PlaceAutocompleteElement();
+                
+                // Copy styling
+                autocompleteElement.className = input.className;
+                autocompleteElement.placeholder = input.placeholder;
+                autocompleteElement.style.cssText = input.style.cssText;
+                
+                // Replace input
+                input.parentNode.replaceChild(autocompleteElement, input);
+                
+                autocompleteElement.addEventListener('gmp-placeselect', (event) => {
+                    addStatus('Place selected via new API', 'success');
+                    handlePlaceSelect(event.place);
+                });
+                
+                addStatus('New PlaceAutocompleteElement initialized', 'success');
+            } catch (error) {
+                addStatus(`New autocomplete failed: ${error.message}`, 'error');
+                initLegacyAutocomplete(input);
+            }
+        }
+        
+        function initLegacyAutocomplete(input) {
+            try {
+                autocomplete = new google.maps.places.Autocomplete(input, {
+                    fields: ['formatted_address', 'geometry', 'place_id', 'name'],
+                    types: ['establishment', 'geocode']
+                });
+                
+                autocomplete.addListener('place_changed', () => {
+                    addStatus('Place selected via legacy API', 'success');
+                    const place = autocomplete.getPlace();
+                    handlePlaceSelect(place);
+                });
+                
+                addStatus('Legacy Autocomplete initialized', 'success');
+            } catch (error) {
+                addStatus(`Legacy autocomplete failed: ${error.message}`, 'error');
+            }
+        }
+        
+        function handlePlaceSelect(place) {
+            addStatus('Processing selected place...', 'info');
+            console.log('Full place object:', place);
+            
+            if (!place) {
+                addStatus('No place object received', 'error');
+                return;
+            }
+            
+            if (!place.geometry) {
+                addStatus('No geometry in place object', 'error');
+                console.log('Place without geometry:', place);
+                return;
+            }
+            
+            if (!place.geometry.location) {
+                addStatus('No location in geometry', 'error');
+                console.log('Geometry without location:', place.geometry);
+                return;
+            }
+            
+            // Extract coordinates
+            let lat, lng;
+            if (typeof place.geometry.location.lat === 'function') {
+                lat = place.geometry.location.lat();
+                lng = place.geometry.location.lng();
+            } else {
+                lat = place.geometry.location.lat;
+                lng = place.geometry.location.lng;
+            }
+            
+            addStatus(`Extracted coordinates: ${lat}, ${lng}`, 'success');
+            
+            const location = {
+                name: place.name || '',
+                address: place.formatted_address || '',
+                lat: lat,
+                lng: lng,
+                placeId: place.place_id || ''
+            };
+            
+            // Update location info display
+            document.getElementById('location-info').style.display = 'block';
+            document.getElementById('location-details').innerHTML = `
+                <strong>Name:</strong> ${location.name}<br>
+                <strong>Address:</strong> ${location.address}<br>
+                <strong>Coordinates:</strong> ${location.lat}, ${location.lng}<br>
+                <strong>Place ID:</strong> ${location.placeId}
+            `;
+            
+            // Center map on selected location
+            addStatus(`Centering map on: ${location.lat}, ${location.lng}`, 'info');
+            const newCenter = { lat: location.lat, lng: location.lng };
+            
+            map.setCenter(newCenter);
+            map.setZoom(15);
+            
+            // Verify map center changed
+            setTimeout(() => {
+                const currentCenter = map.getCenter();
+                const currentLat = currentCenter.lat();
+                const currentLng = currentCenter.lng();
+                
+                if (Math.abs(currentLat - location.lat) < 0.001 && Math.abs(currentLng - location.lng) < 0.001) {
+                    addStatus(`✅ Map center updated successfully to: ${currentLat}, ${currentLng}`, 'success');
+                } else {
+                    addStatus(`❌ Map center failed to update. Expected: ${location.lat}, ${location.lng}, Got: ${currentLat}, ${currentLng}`, 'error');
+                }
+            }, 500);
+            
+            // Remove existing marker
+            if (marker) {
+                marker.setMap(null);
+                addStatus('Removed existing marker', 'info');
+            }
+            
+            // Add new marker
+            marker = new google.maps.Marker({
+                position: newCenter,
+                map: map,
+                title: location.name || location.address,
+                draggable: true
+            });
+            
+            addStatus('✅ New marker added successfully', 'success');
+            
+            // Add info window
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div>
+                        <h4>${location.name || 'Selected Location'}</h4>
+                        <p>${location.address}</p>
+                        <p><small>Lat: ${location.lat}, Lng: ${location.lng}</small></p>
+                    </div>
+                `
+            });
+            
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+        }
+        
+        // Error handling
+        window.addEventListener('error', (e) => {
+            addStatus(`JavaScript Error: ${e.message}`, 'error');
+        });
+        
+        addStatus('Debug page loaded, waiting for Google Maps...', 'info');
+    </script>
+    
+    <script async defer 
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAErq0KKqanMpE2rn5PXVqnR0zWrNx9BpI&libraries=places&callback=initMap">
+    </script>
+</body>
+</html>

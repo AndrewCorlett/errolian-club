@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import LocationPicker from '@/components/maps/LocationPicker'
 import type { EventType, EventStatus } from '@/types/events'
 import { useUserStore } from '@/store/userStore'
 import { hasPermission } from '@/types/user'
@@ -30,18 +31,6 @@ export interface EventFormData {
   estimatedCost: number | null
 }
 
-const eventTypes: { value: EventType; label: string }[] = [
-  { value: 'adventure', label: 'Adventure' },
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'social', label: 'Social' },
-  { value: 'training', label: 'Training' },
-  { value: 'other', label: 'Other' }
-]
-
-const eventStatuses: { value: EventStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'published', label: 'Published' }
-]
 
 export default function EventCreateModal({ 
   isOpen, 
@@ -206,11 +195,11 @@ export default function EventCreateModal({
                 value={formData.type}
                 onChange={(e) => handleInputChange('type', e.target.value as EventType)}
               >
-                {eventTypes.map(type => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
+                <option value="adventure">Adventure</option>
+                <option value="meeting">Meeting</option>
+                <option value="social">Social</option>
+                <option value="training">Training</option>
+                <option value="other">Other</option>
               </Select>
             </div>
 
@@ -222,15 +211,13 @@ export default function EventCreateModal({
                 onChange={(e) => handleInputChange('status', e.target.value as EventStatus)}
                 disabled={!canPublishEvents && formData.status === 'published'}
               >
-                {eventStatuses.map(status => (
-                  <option 
-                    key={status.value} 
-                    value={status.value}
-                    disabled={!canPublishEvents && status.value === 'published'}
-                  >
-                    {status.label}
-                  </option>
-                ))}
+                <option value="draft">Draft</option>
+                <option 
+                  value="published"
+                  disabled={!canPublishEvents}
+                >
+                  Published
+                </option>
               </Select>
               {!canPublishEvents && (
                 <p className="text-xs text-gray-500">Events require approval before publishing</p>
@@ -266,11 +253,11 @@ export default function EventCreateModal({
           {/* Location */}
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={formData.location}
-              onChange={(e) => handleInputChange('location', e.target.value)}
-              placeholder="Enter event location"
+            <LocationPicker
+              value={formData.location ? { address: formData.location, lat: 0, lng: 0 } : null}
+              onChange={(location) => handleInputChange('location', location?.address || '')}
+              placeholder="Search for event location..."
+              className="w-full"
             />
           </div>
 

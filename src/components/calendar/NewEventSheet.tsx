@@ -5,6 +5,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import ItineraryBuilder from './ItineraryBuilder'
+import LocationPicker from '@/components/maps/LocationPicker'
+import { LocationPickerDebug } from '@/components/maps/LocationPickerDebug'
 import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
 
@@ -86,23 +88,7 @@ export default function NewEventSheet({
         
         // Set itinerary items if they exist
         if (editEvent.itinerary_items) {
-          // Map database fields to component fields
-          const mappedItems = editEvent.itinerary_items.map(item => ({
-            id: item.id,
-            eventId: item.event_id,
-            type: item.type,
-            title: item.title,
-            description: item.description || '',
-            startTime: item.start_time || '',
-            endTime: item.end_time || '',
-            location: item.location || '',
-            cost: item.cost || 0,
-            notes: item.notes || '',
-            order: item.order_index || 0,
-            createdAt: new Date(item.created_at),
-            updatedAt: new Date(item.updated_at)
-          }))
-          setItineraryItems(mappedItems)
+          setItineraryItems(editEvent.itinerary_items as ItineraryItem[])
         }
       } else if (selectedDate) {
         // Reset form for new event
@@ -200,15 +186,6 @@ export default function NewEventSheet({
     handleClose()
   }
 
-  const handleAddExpense = (expenseData: {
-    title: string
-    amount: number
-    category: string
-    description?: string
-  }) => {
-    // This would integrate with Split-Pay system
-    console.log('Adding expense from itinerary:', expenseData)
-  }
 
 
   const isFormValid = eventData.title.trim().length > 0
@@ -221,6 +198,7 @@ export default function NewEventSheet({
       onClick={handleClose}
       style={{ overscrollBehavior: 'contain' }}
     >
+      <LocationPickerDebug />
       <div 
         className={`absolute inset-x-0 bottom-0 bg-white rounded-t-xl overflow-hidden transition-transform duration-300 flex flex-col ${
           isClosing ? 'translate-y-full' : 'translate-y-0'
@@ -306,11 +284,11 @@ export default function NewEventSheet({
                   <label className="block text-sm font-medium text-primary-700 mb-2">
                     Location
                   </label>
-                  <input 
-                    type="text"
-                    className="w-full px-3 py-2 border border-primary-300 rounded-md focus:ring-2 focus:ring-royal-500 focus:border-royal-500 text-primary-900"
-                    placeholder="Enter location"
-                    onChange={(e) => setEventData(prev => ({ ...prev, location: { address: e.target.value, lat: 0, lng: 0 } }))}
+                  <LocationPicker
+                    value={eventData.location}
+                    onChange={(location) => setEventData(prev => ({ ...prev, location }))}
+                    placeholder="Search for a location..."
+                    className="w-full"
                   />
                 </div>
               </div>
@@ -390,19 +368,66 @@ export default function NewEventSheet({
                   Color
                 </label>
                 <div className="flex gap-3">
-                  {colorOptions.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => setEventData(prev => ({ ...prev, color: option.value }))}
-                      className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
-                        eventData.color === option.value
-                          ? 'border-primary-900 scale-110'
-                          : 'border-primary-200 hover:border-primary-400'
-                      }`}
-                      style={{ backgroundColor: option.color }}
-                      title={option.label}
-                    />
-                  ))}
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'violet' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'violet'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#8b5cf6' }}
+                    title="Royal Purple"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'sky' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'sky'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#3b82f6' }}
+                    title="Sky Blue"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'emerald' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'emerald'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#10b981' }}
+                    title="Forest Green"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'indigo' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'indigo'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#6366f1' }}
+                    title="Deep Purple"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'amber' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'amber'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#f97316' }}
+                    title="Coral"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'rose' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'rose'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#ec4899' }}
+                    title="Pink"
+                  />
                 </div>
               </div>
 
@@ -424,10 +449,8 @@ export default function NewEventSheet({
 
           {activeTab === 'itinerary' && (
             <ItineraryBuilder
-              eventId="temp_event"
-              initialItems={itineraryItems}
+              items={itineraryItems}
               onItemsChange={setItineraryItems}
-              onAddExpense={handleAddExpense}
             />
           )}
         </div>

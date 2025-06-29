@@ -196,32 +196,31 @@ export default function EventDetailSheet({
             <CardContent>
               {participants.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {participants.map(participant => (
-                    <div key={participant!.id} className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        {participant.avatar_url ? (
-                          <img 
-                            src={participant.avatar_url} 
-                            alt={participant.name}
-                            className="w-8 h-8 rounded-full"
-                          />
-                        ) : (
+                  {participants.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-blue-600">
-                            {participant.name.split(' ').map((n: string) => n[0]).join('')}
+                            {participants[0]?.name?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{participants[0]?.name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-500 capitalize">{participants[0]?.role?.replace('-', ' ') || 'member'}</p>
+                        </div>
+                        {participants[0]?.id === event.created_by && (
+                          <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                            Organizer
                           </span>
                         )}
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">{participant.name}</p>
-                        <p className="text-xs text-gray-500 capitalize">{participant!.role.replace('-', ' ')}</p>
-                      </div>
-                      {participant.id === event.created_by && (
-                        <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                          Organizer
-                        </span>
+                      {participants.length > 1 && (
+                        <div className="text-sm text-gray-600">
+                          +{participants.length - 1} more participants
+                        </div>
                       )}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-4">No participants yet</p>
@@ -237,41 +236,48 @@ export default function EventDetailSheet({
             <CardContent>
               {event.itinerary_items && event.itinerary_items.length > 0 ? (
                 <div className="space-y-3">
-                  {event.itinerary_items.map((item: any) => (
-                    <div key={item.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="flex-shrink-0 w-12 text-sm text-gray-500 font-medium">
-                        {item.start_time && item.start_time.trim() ? 
-                          (item.start_time.includes('T') ? 
-                            format(new Date(item.start_time), 'HH:mm') : 
-                            item.start_time
-                          ) : 
-                          'TBD'
-                        }
-                      </div>
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{item.title}</h4>
-                        {item.description && (
-                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                        )}
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span className={`px-2 py-1 rounded ${getEventTypeColor(item.type as any)}`}>
-                            {item.type}
-                          </span>
-                          {item.location && (
-                            <span className="flex items-center gap-1">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              </svg>
-                              {item.location}
+                  {event.itinerary_items.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-shrink-0 w-12 text-sm text-gray-500 font-medium">
+                          {event.itinerary_items[0]?.start_time && event.itinerary_items[0].start_time.trim() ? 
+                            (event.itinerary_items[0].start_time.includes('T') ? 
+                              format(new Date(event.itinerary_items[0].start_time), 'HH:mm') : 
+                              event.itinerary_items[0].start_time
+                            ) : 
+                            'TBD'
+                          }
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{event.itinerary_items[0]?.title || 'Untitled'}</h4>
+                          {event.itinerary_items[0]?.description && (
+                            <p className="text-sm text-gray-600 mt-1">{event.itinerary_items[0].description}</p>
+                          )}
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span className={`px-2 py-1 rounded ${getEventTypeColor(event.itinerary_items[0]?.type as any)}`}>
+                              {event.itinerary_items[0]?.type || 'activity'}
                             </span>
-                          )}
-                          {item.cost && (
-                            <span>${item.cost.toFixed(2)}</span>
-                          )}
+                            {event.itinerary_items[0]?.location && (
+                              <span className="flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                </svg>
+                                {event.itinerary_items[0].location}
+                              </span>
+                            )}
+                            {event.itinerary_items[0]?.cost && (
+                              <span>${event.itinerary_items[0].cost.toFixed(2)}</span>
+                            )}
+                          </div>
                         </div>
                       </div>
+                      {event.itinerary_items.length > 1 && (
+                        <div className="text-sm text-gray-600 text-center">
+                          +{event.itinerary_items.length - 1} more itinerary items
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  ) : null}
                 </div>
               ) : (
                 <p className="text-gray-500 text-center py-4">No itinerary items yet</p>

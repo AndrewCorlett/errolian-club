@@ -185,20 +185,23 @@ export default function AvailabilitySheet({
             <div className="space-y-3">
               <Label>Availability Status</Label>
               <div className="grid grid-cols-1 gap-2">
-                {statusOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setStatus(option.value as any)}
-                    className={`p-3 rounded-lg text-white font-medium transition-colors ${
-                      status === option.value
-                        ? option.color
-                        : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {statusOptions.length > 0 && statusOptions.reduce((acc, option) => {
+                  acc.push(
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatus(option.value as any)}
+                      className={`p-3 rounded-lg text-white font-medium transition-colors ${
+                        status === option.value
+                          ? option.color
+                          : 'bg-gray-300 hover:bg-gray-400 text-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  )
+                  return acc
+                }, [] as React.ReactElement[])}
               </div>
             </div>
 

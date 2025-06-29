@@ -104,15 +104,6 @@ export default function EnhancedEventCreateModal({
     setItineraryItems([])
   }
 
-  const handleAddExpense = (expenseData: {
-    title: string
-    amount: number
-    category: string
-    description?: string
-  }) => {
-    // This would integrate with Split-Pay system
-    console.log('Adding expense from itinerary:', expenseData)
-  }
 
   const toggleInvitee = (userId: string) => {
     setEventData(prev => ({
@@ -324,10 +315,8 @@ export default function EnhancedEventCreateModal({
             <div>
               {activeTab === 'itinerary' && (
                 <ItineraryBuilder
-                  eventId="temp_event"
-                  initialItems={itineraryItems}
+                  items={itineraryItems}
                   onItemsChange={setItineraryItems}
-                  onAddExpense={handleAddExpense}
                 />
               )}
             </div>

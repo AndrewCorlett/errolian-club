@@ -16,6 +16,11 @@ export default defineConfig({
   define: {
     'process.env': {}, // react-pdf still refers to process.env
   },
+  optimizeDeps: {
+    include: [
+      '@googlemaps/js-api-loader'
+    ]
+  },
   plugins: [
     react(),
     VitePWA({

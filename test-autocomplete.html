@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps Autocomplete Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #test-input { width: 400px; padding: 10px; margin: 10px 0; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        #results { margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; }
+        #map { width: 100%; height: 300px; margin: 20px 0; border: 1px solid #ccc; }
+        .status { padding: 5px 10px; margin: 5px 0; border-radius: 3px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>Google Maps Autocomplete Test</h1>
+    <div id="status"></div>
+    
+    <input id="test-input" type="text" placeholder="Search for a location (e.g., Sydney Opera House)...">
+    <div id="map"></div>
+    <div id="results">
+        <h3>Results:</h3>
+        <div id="output">No location selected yet</div>
+    </div>
+
+    <script>
+        let autocomplete;
+        let map;
+        let marker;
+        
+        function addStatus(message, type = 'info') {
+            const status = document.getElementById('status');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            status.appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function initGoogleMaps() {
+            addStatus('Google Maps API loaded', 'success');
+            
+            // Initialize map
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: -33.8688, lng: 151.2093 },
+                zoom: 13
+            });
+            
+            const input = document.getElementById('test-input');
+            
+            // Try new PlaceAutocompleteElement first
+            if (google.maps.places.PlaceAutocompleteElement) {
+                addStatus('Using new PlaceAutocompleteElement', 'info');
+                
+                try {
+                    // Create new element
+                    const autocompleteElement = new google.maps.places.PlaceAutocompleteElement();
+                    
+                    // Try to set fields if supported
+                    try {
+                        autocompleteElement.fields = ['formatted_address', 'geometry', 'place_id', 'name'];
+                        addStatus('Fields set successfully', 'success');
+                    } catch (e) {
+                        addStatus(`Fields not supported: ${e.message}`, 'error');
+                    }
+                    
+                    // Replace input with autocomplete element
+                    autocompleteElement.className = input.className;
+                    autocompleteElement.placeholder = input.placeholder;
+                    input.parentNode.replaceChild(autocompleteElement, input);
+                    
+                    // Add event listener
+                    autocompleteElement.addEventListener('gmp-placeselect', (event) => {
+                        addStatus('Place selected (new API)', 'success');
+                        const place = event.place;
+                        handlePlaceSelect(place);
+                    });
+                    
+                    addStatus('New PlaceAutocompleteElement initialized successfully', 'success');
+                    
+                } catch (error) {
+                    addStatus(`Failed to use new element: ${error.message}`, 'error');
+                    
+                    // Fallback to legacy
+                    initLegacyAutocomplete(input);
+                }
+                
+            } else {
+                addStatus('PlaceAutocompleteElement not available, using legacy', 'info');
+                initLegacyAutocomplete(input);
+            }
+        }
+        
+        function initLegacyAutocomplete(input) {
+            addStatus('Using legacy Autocomplete', 'info');
+            
+            try {
+                autocomplete = new google.maps.places.Autocomplete(input, {
+                    fields: ['formatted_address', 'geometry', 'place_id', 'name'],
+                    types: ['establishment', 'geocode']
+                });
+                
+                autocomplete.addListener('place_changed', () => {
+                    addStatus('Place selected (legacy API)', 'success');
+                    const place = autocomplete.getPlace();
+                    handlePlaceSelect(place);
+                });
+                
+                addStatus('Legacy Autocomplete initialized successfully', 'success');
+                
+            } catch (error) {
+                addStatus(`Failed to initialize legacy autocomplete: ${error.message}`, 'error');
+            }
+        }
+        
+        function handlePlaceSelect(place) {
+            const output = document.getElementById('output');
+            
+            if (!place || !place.geometry || !place.geometry.location) {
+                addStatus('No valid geometry in selected place', 'error');
+                output.innerHTML = '<div style="color: red;">Error: No valid location data</div>';
+                return;
+            }
+            
+            const lat = typeof place.geometry.location.lat === 'function' 
+                ? place.geometry.location.lat() 
+                : place.geometry.location.lat;
+            const lng = typeof place.geometry.location.lng === 'function' 
+                ? place.geometry.location.lng() 
+                : place.geometry.location.lng;
+            
+            const location = {
+                name: place.name || '',
+                address: place.formatted_address || '',
+                lat: lat,
+                lng: lng,
+                placeId: place.place_id || ''
+            };
+            
+            addStatus(`Location parsed: ${location.address}`, 'success');
+            
+            // Update map
+            map.setCenter({ lat: location.lat, lng: location.lng });
+            map.setZoom(15);
+            
+            // Remove existing marker
+            if (marker) {
+                marker.setMap(null);
+            }
+            
+            // Add new marker
+            marker = new google.maps.Marker({
+                position: { lat: location.lat, lng: location.lng },
+                map: map,
+                title: location.name || location.address
+            });
+            
+            // Display results
+            output.innerHTML = `
+                <div style="color: green;">
+                    <strong>✅ Success!</strong><br>
+                    <strong>Name:</strong> ${location.name}<br>
+                    <strong>Address:</strong> ${location.address}<br>
+                    <strong>Coordinates:</strong> ${location.lat}, ${location.lng}<br>
+                    <strong>Place ID:</strong> ${location.placeId}
+                </div>
+            `;
+            
+            addStatus('Place successfully processed and mapped', 'success');
+        }
+        
+        // Log any errors
+        window.addEventListener('error', (e) => {
+            addStatus(`JavaScript Error: ${e.message}`, 'error');
+        });
+        
+        addStatus('Test page loaded', 'info');
+    </script>
+    
+    <script async defer 
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAErq0KKqanMpE2rn5PXVqnR0zWrNx9BpI&libraries=places&callback=initGoogleMaps&loading=async">
+    </script>
+</body>
+</html>
