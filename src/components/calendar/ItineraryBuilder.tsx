@@ -6,9 +6,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Trash2, Plus, MapPin, Clock, DollarSign, Edit3 } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Trash2, Plus, MapPin, Clock, DollarSign, Edit3, X } from 'lucide-react'
+import { AutocompleteInput } from '@/components/places/AutocompleteInput'
+import { MapPreview } from '@/components/places/MapPreview'
 import type { ItineraryItem, ItineraryType } from '@/types/events'
+import type { Place } from '@/types/places'
 interface ItineraryBuilderProps {
   items: ItineraryItem[]
   onItemsChange: (items: ItineraryItem[]) => void
@@ -22,6 +25,7 @@ interface ItemFormData {
   startTime: string
   endTime: string
   location: string
+  locationPlace: Place | null
   cost: number
   notes: string
 }
@@ -47,6 +51,7 @@ export default function ItineraryBuilder({
     startTime: '09:00',
     endTime: '10:00',
     location: '',
+    locationPlace: null,
     cost: 0,
     notes: ''
   })
@@ -59,6 +64,7 @@ export default function ItineraryBuilder({
       startTime: '09:00',
       endTime: '10:00',
       location: '',
+      locationPlace: null,
       cost: 0,
       notes: ''
     })
@@ -79,6 +85,7 @@ export default function ItineraryBuilder({
       startTime: item.startTime,
       endTime: item.endTime,
       location: item.location,
+      locationPlace: null, // We don't store place data in itinerary items yet
       cost: item.cost,
       notes: item.notes
     })
@@ -179,6 +186,14 @@ export default function ItineraryBuilder({
       total += item.cost || 0
     }
     return total
+  }
+
+  const handlePlaceSelected = (place: Place) => {
+    setFormData(prev => ({
+      ...prev,
+      location: place.address,
+      locationPlace: place
+    }))
   }
 
   return (
@@ -334,125 +349,161 @@ export default function ItineraryBuilder({
         )}
       </div>
 
-      {/* Add/Edit Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? 'Edit Itinerary Item' : 'Add Itinerary Item'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6">
-            {/* Type Selection */}
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select
-                value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as ItineraryType }))}
-              >
-                {/* Render options without using map */}
-                <option value="accommodation">🏨 Accommodation</option>
-                <option value="activity">🎯 Activity</option>
-                <option value="meal">🍽️ Meal</option>
-                <option value="other">📝 Other</option>
-              </Select>
+      {/* Add/Edit Dialog - Rendered to body to avoid z-index conflicts */}
+      {showAddDialog && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowAddDialog(false)}
+          />
+          
+          {/* Dialog content */}
+          <div className="relative z-[100000] w-full max-w-2xl mx-4 bg-white rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto">
+            {/* Close button */}
+            <button 
+              onClick={() => setShowAddDialog(false)}
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 z-10"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Close</span>
+            </button>
+            
+            {/* Header */}
+            <div className="p-6 pb-4">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">
+                {editingItem ? 'Edit Itinerary Item' : 'Add Itinerary Item'}
+              </h2>
             </div>
 
-            {/* Title */}
-            <div className="space-y-2">
-              <Label>Title *</Label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter item title"
-              />
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label>Description</Label>
-              <Textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Describe this itinerary item..."
-                rows={3}
-              />
-            </div>
-
-            {/* Time */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Form content */}
+            <div className="px-6 pb-6 space-y-6">
+              {/* Type Selection */}
               <div className="space-y-2">
-                <Label>Start Time</Label>
+                <Label>Type</Label>
+                <Select
+                  value={formData.type}
+                  onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as ItineraryType }))}
+                >
+                  {/* Render options without using map */}
+                  <option value="accommodation">🏨 Accommodation</option>
+                  <option value="activity">🎯 Activity</option>
+                  <option value="meal">🍽️ Meal</option>
+                  <option value="other">📝 Other</option>
+                </Select>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-2">
+                <Label>Title *</Label>
                 <Input
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  value={formData.title}
+                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter item title"
                 />
               </div>
+
+              {/* Description */}
               <div className="space-y-2">
-                <Label>End Time</Label>
-                <Input
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                <Label>Description</Label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe this itinerary item..."
+                  rows={3}
                 />
               </div>
-            </div>
 
-            {/* Location */}
-            <div className="space-y-2">
-              <Label>Location</Label>
-              <Input
-                value={formData.location}
-                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="Enter location"
-              />
-            </div>
+              {/* Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Time</Label>
+                  <Input
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                  />
+                </div>
+              </div>
 
-            {/* Cost */}
-            <div className="space-y-2">
-              <Label>Cost ($)</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.cost}
-                onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-                placeholder="0.00"
-              />
-            </div>
+              {/* Location */}
+              <div className="space-y-2">
+                <Label>Location</Label>
+                <AutocompleteInput
+                  key={`itinerary-location-${editingItem?.id || 'new'}`}
+                  onPlaceSelected={handlePlaceSelected}
+                  placeholder="Search for a location..."
+                />
+                {formData.locationPlace && (
+                  <>
+                    <div className="text-sm text-primary-600 mt-1">
+                      Selected: {formData.locationPlace.name} - {formData.locationPlace.address}
+                    </div>
+                    <div className="mt-4">
+                      <MapPreview
+                        latitude={formData.locationPlace.coordinates.latitude}
+                        longitude={formData.locationPlace.coordinates.longitude}
+                        name={formData.locationPlace.name}
+                        address={formData.locationPlace.address}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
 
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>Notes</Label>
-              <Textarea
-                value={formData.notes}
-                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                placeholder="Any additional notes..."
-                rows={2}
-              />
-            </div>
+              {/* Cost */}
+              <div className="space-y-2">
+                <Label>Cost ($)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={(e) => setFormData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
+                  placeholder="0.00"
+                />
+              </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowAddDialog(false)
-                  resetForm()
-                  setEditingItem(null)
-                }}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveItem} disabled={!formData.title.trim()}>
-                {editingItem ? 'Update Item' : 'Add Item'}
-              </Button>
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label>Notes</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Any additional notes..."
+                  rows={2}
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowAddDialog(false)
+                    resetForm()
+                    setEditingItem(null)
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveItem} disabled={!formData.title.trim()}>
+                  {editingItem ? 'Update Item' : 'Add Item'}
+                </Button>
+              </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

@@ -66,13 +66,19 @@ class GoogleMapsLoader {
     return new Promise((resolve, reject) => {
       const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
       
+      console.log('[GoogleMapsLoader] Checking API key availability...')
+      
       if (!apiKey) {
+        console.error('[GoogleMapsLoader] No API key found in environment variables')
         reject(new Error('Google Maps API key not found. Please set VITE_GOOGLE_MAPS_API_KEY in your .env file'))
         return
       }
 
+      console.log('[GoogleMapsLoader] API key found, proceeding with script loading...')
+
       // Clean up any existing scripts that might have failed to load
       const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]')
+      console.log(`[GoogleMapsLoader] Found ${existingScripts.length} existing Google Maps scripts, cleaning up...`)
       existingScripts.forEach(script => {
         if (script.parentNode) {
           script.parentNode.removeChild(script)
@@ -80,29 +86,49 @@ class GoogleMapsLoader {
       })
 
       const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps&loading=async`
+      const scriptUrl = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps&loading=async`
+      script.src = scriptUrl
       script.async = true
       script.defer = true
 
+      console.log('[GoogleMapsLoader] Creating script element with URL:', scriptUrl)
+
       // Set up callback
       window.initGoogleMaps = () => {
-        if (window.google && window.google.maps) {
+        console.log('[GoogleMapsLoader] initGoogleMaps callback triggered')
+        console.log('[GoogleMapsLoader] window.google available:', !!window.google)
+        console.log('[GoogleMapsLoader] window.google.maps available:', !!window.google?.maps)
+        console.log('[GoogleMapsLoader] window.google.maps.places available:', !!window.google?.maps?.places)
+        
+        if (window.google && window.google.maps && window.google.maps.places) {
+          console.log('[GoogleMapsLoader] Google Maps API loaded successfully with Places library')
           resolve()
         } else {
-          reject(new Error('Google Maps API failed to load'))
+          console.error('[GoogleMapsLoader] Google Maps API loaded but missing required components')
+          reject(new Error('Google Maps API failed to load completely'))
         }
       }
 
-      script.onerror = () => {
+      script.onerror = (error) => {
+        console.error('[GoogleMapsLoader] Script loading error:', error)
         reject(new Error('Failed to load Google Maps API script'))
       }
 
+      console.log('[GoogleMapsLoader] Appending script to document head...')
       document.head.appendChild(script)
     })
   }
 
   isReady(): boolean {
-    return this.isLoaded && window.google && window.google.maps
+    const ready = this.isLoaded && window.google && window.google.maps && window.google.maps.places
+    console.log('[GoogleMapsLoader] isReady() check:', {
+      isLoaded: this.isLoaded,
+      hasGoogle: !!window.google,
+      hasMaps: !!window.google?.maps,
+      hasPlaces: !!window.google?.maps?.places,
+      ready
+    })
+    return ready
   }
 
   onReady(callback: () => void): void {

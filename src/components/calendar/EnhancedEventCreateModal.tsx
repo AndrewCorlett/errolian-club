@@ -5,8 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { userService } from '@/lib/database'
-import LocationPicker from '@/components/maps/LocationPicker'
-import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
+import type { EventType, EventStatus, ItineraryItem } from '@/types/events'
 import ItineraryBuilder from './ItineraryBuilder'
 
 interface EnhancedEventCreateModalProps {
@@ -37,7 +36,7 @@ export default function EnhancedEventCreateModal({
     startTime: '09:00',
     endDate: format(selectedDate, 'yyyy-MM-dd'),
     endTime: '17:00',
-    location: null as LocationData | null,
+    location: '',
     isPublic: true,
     invitees: [] as string[]
   })
@@ -80,7 +79,7 @@ export default function EnhancedEventCreateModal({
       status: eventData.status,
       start_date: startDateTime.toISOString(),
       end_date: endDateTime.toISOString(),
-      location: eventData.location?.address || null,
+      location: eventData.location || null,
       is_public: eventData.isPublic,
       max_participants: eventData.invitees.length > 0 ? eventData.invitees.length : null,
       created_by: user.id,
@@ -97,7 +96,7 @@ export default function EnhancedEventCreateModal({
       startTime: '09:00',
       endDate: format(selectedDate, 'yyyy-MM-dd'),
       endTime: '17:00',
-      location: null as LocationData | null,
+      location: '',
       isPublic: true,
       invitees: []
     })
@@ -250,10 +249,11 @@ export default function EnhancedEventCreateModal({
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <LocationPicker
-                  value={eventData.location as LocationData | null}
-                  onChange={(location) => setEventData(prev => ({ ...prev, location }))}
-                  placeholder="Search for event location..."
+                <Input
+                  type="text"
+                  value={eventData.location}
+                  onChange={(e) => setEventData(prev => ({ ...prev, location: e.target.value }))}
+                  placeholder="Enter event location..."
                 />
               </div>
 

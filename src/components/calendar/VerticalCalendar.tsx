@@ -19,6 +19,8 @@ interface VerticalCalendarProps {
   onDayLongPress: (date: Date) => void
   initialDate?: Date
   headerHeight?: number
+  availability?: any[]
+  showAvailability?: boolean
 }
 
 interface EventPill {
@@ -38,6 +40,8 @@ export default function VerticalCalendar({
   onDayShortPress,
   onDayLongPress,
   initialDate = new Date(),
+  availability = [],
+  showAvailability = false,
 }: VerticalCalendarProps) {
   const [months, setMonths] = useState<MonthData[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -90,9 +94,41 @@ export default function VerticalCalendar({
     })
   }
 
+  const getAvailabilityForDate = (date: Date): any | null => {
+    if (!showAvailability) return null
+    
+    return availability.find(avail => {
+      const startDate = new Date(avail.start_date)
+      const endDate = new Date(avail.end_date)
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+      
+      return dateOnly >= new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()) &&
+             dateOnly <= new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate())
+    })
+  }
+
   const getEventPillsForDate = (date: Date): EventPill[] => {
     const dayEvents = getEventsForDate(date)
     const pills: EventPill[] = []
+    
+    // Add availability as a pill if it exists and is enabled
+    if (showAvailability) {
+      const dayAvailability = getAvailabilityForDate(date)
+      if (dayAvailability) {
+        const availabilityColors = {
+          available: '#10b981', // green
+          busy: '#ef4444', // red
+          tentative: '#f59e0b' // amber
+        }
+        
+        pills.push({
+          id: `availability-${dayAvailability.id}`,
+          title: dayAvailability.availability_type === 'available' ? 'Available' :
+                 dayAvailability.availability_type === 'busy' ? 'Busy' : 'Tentative',
+          color: availabilityColors[dayAvailability.availability_type as keyof typeof availabilityColors] || '#6b7280'
+        })
+      }
+    }
     
     // Add regular events as pills
     for (const event of dayEvents) {
@@ -169,7 +205,7 @@ export default function VerticalCalendar({
               <div className="mb-8">
                 {/* Month header with day headers - Sticky together */}
                 <div className="sticky top-0 bg-white z-10">
-                  <h2 className="text-xl font-bold text-primary-900 mb-2 py-2">
+                  <h2 className="text-xl font-bold text-primary-900 mb-1 py-1">
                     {format(months[0].date, 'MMMM yyyy')}
                   </h2>
                   
@@ -248,7 +284,7 @@ export default function VerticalCalendar({
                 <div key={month.date.toISOString()} className="mb-8">
                   {/* Month header with day headers - Sticky together */}
                   <div className="sticky top-0 bg-white z-10">
-                    <h2 className="text-xl font-bold text-primary-900 mb-2 py-2">
+                    <h2 className="text-xl font-bold text-primary-900 mb-1 py-1">
                       {format(month.date, 'MMMM yyyy')}
                     </h2>
                     

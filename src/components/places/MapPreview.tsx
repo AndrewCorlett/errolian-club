@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { googleMapsLoader } from '@/lib/googleMaps';
 import type { MapPreviewProps } from '../../types/places';
 import { openInGoogleMaps, buildGoogleMapsUrl, validateCoordinates } from '../../utils/maps';
 
@@ -12,7 +13,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   const [mapError, setMapError] = useState<string | null>(null);
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.Marker | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
 
   // Validate coordinates
   const coordsValid = validateCoordinates(latitude, longitude);
@@ -23,38 +24,33 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
       return;
     }
 
-    // Load Google Maps script if not already loaded
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = initializeMap;
-      script.onerror = () => setMapError('Failed to load Google Maps');
-      document.head.appendChild(script);
-    } else {
-      initializeMap();
-    }
+    // Load Google Maps using the loader
+    initializeMap();
 
     return () => {
       // Cleanup marker when component unmounts
       if (markerRef.current) {
-        markerRef.current.setMap(null);
+        markerRef.current.map = null;
       }
     };
   }, [latitude, longitude, coordsValid]);
 
-  const initializeMap = () => {
-    if (!mapRef.current || !window.google) return;
+  const initializeMap = async () => {
+    if (!mapRef.current) return;
 
     try {
+      await googleMapsLoader.load();
+      
+      const { Map } = await window.google.maps.importLibrary("maps") as google.maps.MapsLibrary;
+      const { AdvancedMarkerElement, PinElement } = await window.google.maps.importLibrary("marker") as google.maps.MarkerLibrary;
+      
       const center = { lat: latitude, lng: longitude };
       
       // Initialize map
-      const map = new google.maps.Map(mapRef.current, {
+      const map = new Map(mapRef.current, {
         center,
         zoom: 15,
-        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        mapId: 'DEMO_MAP_ID', // Required for AdvancedMarkerElement
         disableDefaultUI: false,
         zoomControl: true,
         mapTypeControl: false,
@@ -66,12 +62,19 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
 
       googleMapRef.current = map;
 
+      // Create a pin element with custom styling
+      const pinElement = new PinElement({
+        background: '#3B82F6',
+        borderColor: '#1E40AF',
+        glyphColor: '#FFFFFF',
+      });
+
       // Add marker
-      const marker = new google.maps.Marker({
+      const marker = new AdvancedMarkerElement({
         position: center,
         map,
         title: name,
-        animation: google.maps.Animation.DROP,
+        content: pinElement.element,
       });
 
       markerRef.current = marker;

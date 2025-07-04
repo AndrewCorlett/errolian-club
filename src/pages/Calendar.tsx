@@ -8,7 +8,7 @@ import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
 import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { eventService, itineraryService } from '@/lib/database'
+import { eventService, itineraryService, availabilityService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
@@ -37,6 +37,9 @@ export default function Calendar() {
   const [allEvents, setAllEvents] = useState<EventWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Availability data
+  const [availabilityData, setAvailabilityData] = useState<any[]>([])
 
   // Measure header height
   useEffect(() => {
@@ -70,6 +73,30 @@ export default function Calendar() {
 
     loadEvents()
   }, [])
+
+  // Load availability data when filter is enabled
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!activeFilters.availability || !user) return
+      
+      try {
+        // Get availability for the next 12 months
+        const endDate = new Date()
+        endDate.setFullYear(endDate.getFullYear() + 1)
+        
+        const data = await availabilityService.getAvailability(
+          user.id,
+          new Date().toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0]
+        )
+        setAvailabilityData(data)
+      } catch (err) {
+        console.error('Failed to load availability:', err)
+      }
+    }
+
+    loadAvailability()
+  }, [activeFilters.availability, user])
 
   const handleEventFormSubmit = async (eventData: any) => {
     if (!user) {
@@ -346,6 +373,8 @@ export default function Calendar() {
             onDayLongPress={handleDayLongPress}
             initialDate={new Date()}
             headerHeight={0}
+            availability={availabilityData}
+            showAvailability={activeFilters.availability}
           />
         )}
       </div>
@@ -396,9 +425,24 @@ export default function Calendar() {
         isOpen={showAvailabilitySheet}
         onClose={() => setShowAvailabilitySheet(false)}
         selectedDate={selectedDate}
-        onAvailabilitySubmit={(data) => {
+        onAvailabilitySubmit={async (data) => {
           console.log('Availability submitted:', data)
-          // In a real app, this would save to backend
+          // Reload availability data to reflect changes
+          if (activeFilters.availability && user) {
+            try {
+              const endDate = new Date()
+              endDate.setFullYear(endDate.getFullYear() + 1)
+              
+              const availData = await availabilityService.getAvailability(
+                user.id,
+                new Date().toISOString().split('T')[0],
+                endDate.toISOString().split('T')[0]
+              )
+              setAvailabilityData(availData)
+            } catch (err) {
+              console.error('Failed to reload availability:', err)
+            }
+          }
         }}
       />
 

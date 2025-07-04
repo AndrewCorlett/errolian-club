@@ -6,8 +6,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import LocationPicker from '@/components/maps/LocationPicker'
+import { AutocompleteInput } from '@/components/places/AutocompleteInput'
 import type { EventType, EventStatus } from '@/types/events'
+import type { Place } from '@/types/places'
 import { useUserStore } from '@/store/userStore'
 import { hasPermission } from '@/types/user'
 
@@ -26,6 +27,7 @@ export interface EventFormData {
   startDate: Date
   endDate: Date
   location: string
+  locationPlace: Place | null
   maxParticipants: number | null
   isPublic: boolean
   estimatedCost: number | null
@@ -52,6 +54,7 @@ export default function EventCreateModal({
     startDate: selectedDate,
     endDate: addHours(selectedDate, 2),
     location: '',
+    locationPlace: null,
     maxParticipants: null,
     isPublic: true,
     estimatedCost: null
@@ -86,6 +89,18 @@ export default function EventCreateModal({
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }))
+    }
+  }
+
+  const handlePlaceSelected = (place: Place) => {
+    setFormData(prev => ({
+      ...prev,
+      location: place.address,
+      locationPlace: place
+    }))
+    // Clear location error if any
+    if (errors.location) {
+      setErrors(prev => ({ ...prev, location: undefined }))
     }
   }
 
@@ -129,6 +144,7 @@ export default function EventCreateModal({
         startDate: selectedDate,
         endDate: addHours(selectedDate, 2),
         location: '',
+        locationPlace: null,
         maxParticipants: null,
         isPublic: true,
         estimatedCost: null
@@ -253,12 +269,15 @@ export default function EventCreateModal({
           {/* Location */}
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
-            <LocationPicker
-              value={formData.location ? { address: formData.location, lat: 0, lng: 0 } : null}
-              onChange={(location) => handleInputChange('location', location?.address || '')}
+            <AutocompleteInput
+              onPlaceSelected={handlePlaceSelected}
               placeholder="Search for event location..."
-              className="w-full"
             />
+            {formData.locationPlace && (
+              <div className="text-sm text-gray-600 mt-1">
+                Selected: {formData.locationPlace.name} - {formData.locationPlace.address}
+              </div>
+            )}
           </div>
 
           {/* Max Participants and Cost */}

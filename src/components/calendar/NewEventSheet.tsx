@@ -3,12 +3,13 @@ import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
+import { AutocompleteInput } from '@/components/places/AutocompleteInput'
+import { MapPreview } from '@/components/places/MapPreview'
 import { useAuth } from '@/hooks/useAuth'
 import ItineraryBuilder from './ItineraryBuilder'
-import LocationPicker from '@/components/maps/LocationPicker'
-import { LocationPickerDebug } from '@/components/maps/LocationPickerDebug'
-import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
+import type { EventType, EventStatus, ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
+import type { Place } from '@/types/places'
 
 interface NewEventSheetProps {
   isOpen: boolean
@@ -46,7 +47,8 @@ export default function NewEventSheet({
   // Event form data
   const [eventData, setEventData] = useState({
     title: '',
-    location: null as LocationData | null,
+    location: '',
+    locationPlace: null as Place | null,
     allDay: false,
     startDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     startTime: '09:00',
@@ -76,7 +78,8 @@ export default function NewEventSheet({
         
         setEventData({
           title: editEvent.title,
-          location: editEvent.location ? { address: editEvent.location, lat: 0, lng: 0 } : null,
+          location: editEvent.location || '',
+          locationPlace: null,
           allDay: isAllDay,
           startDate: format(startDate, 'yyyy-MM-dd'),
           startTime: format(startDate, 'HH:mm'),
@@ -109,7 +112,8 @@ export default function NewEventSheet({
         // Reset form for new event
         setEventData({
           title: '',
-          location: null,
+          location: '',
+          locationPlace: null,
           allDay: false,
           startDate: format(selectedDate, 'yyyy-MM-dd'),
           startTime: '09:00',
@@ -133,7 +137,8 @@ export default function NewEventSheet({
       // Reset form
       setEventData({
         title: '',
-        location: null,
+        location: '',
+        locationPlace: null,
         allDay: false,
         startDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         startTime: '09:00',
@@ -145,6 +150,14 @@ export default function NewEventSheet({
       setItineraryItems([])
       setActiveTab('event')
     }, 300)
+  }
+
+  const handlePlaceSelected = (place: Place) => {
+    setEventData(prev => ({
+      ...prev,
+      location: place.address,
+      locationPlace: place
+    }))
   }
 
   const handleEventSubmit = () => {
@@ -175,7 +188,7 @@ export default function NewEventSheet({
       end_date: endDateTime.toISOString(),
       startDate: startDateTime,
       endDate: endDateTime,
-      location: eventData.location?.address || null,
+      location: eventData.location || null,
       is_public: true,
       max_participants: null,
       created_by: user.id,
@@ -213,7 +226,6 @@ export default function NewEventSheet({
       onClick={handleClose}
       style={{ overscrollBehavior: 'contain' }}
     >
-      <LocationPickerDebug />
       <div 
         className={`absolute inset-x-0 bottom-0 bg-white rounded-t-xl overflow-hidden transition-transform duration-300 flex flex-col ${
           isClosing ? 'translate-y-full' : 'translate-y-0'
@@ -299,12 +311,25 @@ export default function NewEventSheet({
                   <label className="block text-sm font-medium text-primary-700 mb-2">
                     Location
                   </label>
-                  <LocationPicker
-                    value={eventData.location}
-                    onChange={(location) => setEventData(prev => ({ ...prev, location }))}
-                    placeholder="Search for a location..."
-                    className="w-full"
+                  <AutocompleteInput
+                    onPlaceSelected={handlePlaceSelected}
+                    placeholder="Search for event location..."
                   />
+                  {eventData.locationPlace && (
+                    <>
+                      <div className="text-sm text-primary-600 mt-1">
+                        Selected: {eventData.locationPlace.name} - {eventData.locationPlace.address}
+                      </div>
+                      <div className="mt-4">
+                        <MapPreview
+                          latitude={eventData.locationPlace.coordinates.latitude}
+                          longitude={eventData.locationPlace.coordinates.longitude}
+                          name={eventData.locationPlace.name}
+                          address={eventData.locationPlace.address}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

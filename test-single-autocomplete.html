@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single Autocomplete Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .log-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .places-search-container {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Google Maps Autocomplete - Single Element Test</h1>
+        <p>This test verifies that only one autocomplete search box appears and that it works correctly.</p>
+        
+        <!-- Simulate multiple re-renders -->
+        <button onclick="triggerReRender()">Trigger Re-render</button>
+        <button onclick="runElementCountTest()">Count Search Boxes</button>
+        <button onclick="clearLog()">Clear Log</button>
+        
+        <div id="test-status" class="test-result test-info">
+            <strong>Test Status:</strong> Initializing...
+        </div>
+        
+        <!-- Container for the autocomplete input -->
+        <div class="places-search-container">
+            <div id="places-search-container" style="width: 100%;"></div>
+        </div>
+        
+        <div class="log-output" id="log-output"></div>
+    </div>
+
+    <script>
+        let autocompleteElement = null;
+        let eventListener = null;
+        let logMessages = [];
+        let renderCount = 0;
+
+        function log(message) {
+            const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
+            const logMessage = `[${timestamp}] ${message}`;
+            logMessages.push(logMessage);
+            updateLogDisplay();
+            console.log(logMessage);
+        }
+
+        function updateLogDisplay() {
+            const logOutput = document.getElementById('log-output');
+            logOutput.innerHTML = logMessages.slice(-50).join('\n'); // Show last 50 messages
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+
+        function updateTestStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('test-status');
+            statusDiv.className = `test-result test-${type}`;
+            statusDiv.innerHTML = `<strong>Test Status:</strong> ${message}`;
+        }
+
+        function clearLog() {
+            logMessages = [];
+            updateLogDisplay();
+        }
+
+        function countSearchBoxes() {
+            const container = document.getElementById('places-search-container');
+            const autocompleteElements = container.querySelectorAll('gmp-place-autocomplete');
+            const count = autocompleteElements.length;
+            log(`Found ${count} autocomplete elements in container`);
+            return count;
+        }
+
+        function runElementCountTest() {
+            const count = countSearchBoxes();
+            if (count === 1) {
+                updateTestStatus(`✅ PASS: Exactly 1 search box found`, 'pass');
+            } else if (count === 0) {
+                updateTestStatus(`❌ FAIL: No search boxes found (${count})`, 'fail');
+            } else {
+                updateTestStatus(`❌ FAIL: Multiple search boxes found (${count})`, 'fail');
+            }
+        }
+
+        async function createAutocompleteElement() {
+            try {
+                log('Starting autocomplete element creation...');
+                
+                // Clean up existing elements first (simulate the fixed behavior)
+                const container = document.getElementById('places-search-container');
+                const existingElements = container.querySelectorAll('gmp-place-autocomplete');
+                log(`Found ${existingElements.length} existing elements to clean up`);
+                existingElements.forEach(el => {
+                    el.remove();
+                    log('Removed existing element');
+                });
+
+                // Clean up existing event listener
+                if (autocompleteElement && eventListener) {
+                    autocompleteElement.removeEventListener('gmp-select', eventListener);
+                    log('Removed existing event listener');
+                }
+
+                // Import the library
+                const { PlaceAutocompleteElement } = await google.maps.importLibrary("places");
+                log('PlaceAutocompleteElement imported successfully');
+
+                // Create new element
+                autocompleteElement = new PlaceAutocompleteElement({
+                    includedPrimaryTypes: ['geocode', 'establishment'],
+                    requestedLanguage: 'en',
+                    requestedRegion: 'us'
+                });
+
+                // Style the element
+                autocompleteElement.style.width = '100%';
+                autocompleteElement.style.height = '44px';
+                autocompleteElement.style.border = '1px solid #d1d5db';
+                autocompleteElement.style.borderRadius = '8px';
+                autocompleteElement.style.padding = '0 12px';
+                autocompleteElement.style.fontSize = '16px';
+
+                // Set placeholder
+                setTimeout(() => {
+                    const input = autocompleteElement.querySelector('input');
+                    if (input) {
+                        input.placeholder = 'Search for a location...';
+                    }
+                }, 100);
+
+                // Create event listener
+                eventListener = async (event) => {
+                    log('Place selection event triggered!');
+                    try {
+                        if (event.placePrediction) {
+                            const place = event.placePrediction.toPlace();
+                            await place.fetchFields({
+                                fields: ['displayName', 'formattedAddress', 'location']
+                            });
+                            log(`Place selected: ${place.displayName || place.formattedAddress}`);
+                            updateTestStatus(`✅ Place selected: ${place.displayName || place.formattedAddress}`, 'pass');
+                        }
+                    } catch (error) {
+                        log(`Error processing place: ${error.message}`);
+                    }
+                };
+
+                autocompleteElement.addEventListener('gmp-select', eventListener);
+                log('Event listener added');
+
+                // Append to container
+                container.appendChild(autocompleteElement);
+                log('Element appended to container');
+
+                // Count elements after creation
+                const finalCount = countSearchBoxes();
+                if (finalCount === 1) {
+                    updateTestStatus(`✅ Successfully created single autocomplete element`, 'pass');
+                } else {
+                    updateTestStatus(`❌ Expected 1 element, found ${finalCount}`, 'fail');
+                }
+
+            } catch (error) {
+                log(`Error creating autocomplete: ${error.message}`);
+                updateTestStatus(`❌ Error: ${error.message}`, 'fail');
+            }
+        }
+
+        async function triggerReRender() {
+            renderCount++;
+            log(`--- Triggering re-render #${renderCount} ---`);
+            await createAutocompleteElement();
+            
+            // Count elements after re-render
+            setTimeout(() => {
+                runElementCountTest();
+            }, 500);
+        }
+
+        // Initialize when Google Maps loads
+        window.initGoogleMaps = async () => {
+            log('Google Maps API loaded successfully');
+            updateTestStatus('Google Maps loaded, creating autocomplete...', 'info');
+            await createAutocompleteElement();
+            
+            // Run initial test
+            setTimeout(() => {
+                runElementCountTest();
+            }, 1000);
+        };
+
+        // Load Google Maps API
+        function loadGoogleMaps() {
+            const script = document.createElement('script');
+            script.src = 'https://maps.googleapis.com/maps/api/js?key=AIzaSyD5YOd2mDmxPCEqXRu5RpKrLMpDfFJFXkY&libraries=places&callback=initGoogleMaps&loading=async';
+            script.async = true;
+            script.onerror = () => {
+                log('Failed to load Google Maps API');
+                updateTestStatus('❌ Failed to load Google Maps API', 'fail');
+            };
+            document.head.appendChild(script);
+            log('Loading Google Maps API...');
+        }
+
+        // Start the test
+        loadGoogleMaps();
+    </script>
+</body>
+</html>

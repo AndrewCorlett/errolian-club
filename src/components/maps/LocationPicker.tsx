@@ -30,7 +30,7 @@ export default function LocationPicker({
 }: LocationPickerProps) {
   const [searchValue, setSearchValue] = useState(value?.address || '')
   const [isMapLoaded, setIsMapLoaded] = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(false) // Start with map hidden
   const [autocompleteStatus, setAutocompleteStatus] = useState<'loading' | 'ready' | 'error' | 'not-available'>('loading')
   const [geolocationStatus, setGeolocationStatus] = useState<'loading' | 'granted' | 'denied' | 'timeout' | 'error'>('loading')
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -273,6 +273,13 @@ export default function LocationPicker({
       loadMaps()
     }
   }, [])
+
+  // Show map if there's an initial value
+  useEffect(() => {
+    if (value && value.lat && value.lng) {
+      setShowMap(true)
+    }
+  }, [value])
 
   // Initialize map when map is shown and Google Maps is loaded
   useEffect(() => {

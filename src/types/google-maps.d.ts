@@ -41,6 +41,76 @@ declare global {
           getPlace(): PlaceResult;
         }
 
+        class PlaceAutocompleteElement extends HTMLElement {
+          constructor(options?: PlaceAutocompleteElementOptions);
+          addEventListener(type: string, listener: EventListener): void;
+          removeEventListener(type: string, listener: EventListener): void;
+          includedPrimaryTypes?: string[];
+          includedRegionCodes?: string[];
+          locationBias?: any;
+          locationRestriction?: any;
+          name?: string;
+          origin?: LatLng | LatLngLiteral;
+          requestedLanguage?: string;
+          requestedRegion?: string;
+        }
+
+        interface PlaceAutocompleteElementOptions {
+          includedPrimaryTypes?: string[];
+          includedRegionCodes?: string[];
+          locationBias?: any;
+          locationRestriction?: any;
+          name?: string;
+          origin?: LatLng | LatLngLiteral;
+          requestedLanguage?: string;
+          requestedRegion?: string;
+        }
+
+        interface PlacePrediction {
+          toPlace(): Place;
+        }
+
+        interface Place {
+          fetchFields(options: { fields: string[] }): Promise<void>;
+          displayName?: string;
+          formattedAddress?: string;
+          location?: LatLng;
+          viewport?: any;
+          id?: string;
+          name?: string;
+          formatted_address?: string;
+          geometry?: {
+            location?: LatLng;
+          };
+          url?: string;
+          website?: string;
+          formatted_phone_number?: string;
+        }
+
+        interface PlacePredictionSelectEvent extends Event {
+          placePrediction: PlacePrediction;
+        }
+
+        class PlacesService {
+          constructor(attrContainer: HTMLDivElement | Map);
+          getDetails(request: PlaceDetailsRequest, callback: (place: PlaceResult | null, status: PlacesServiceStatus) => void): void;
+        }
+
+        interface PlaceDetailsRequest {
+          placeId: string;
+          fields?: string[];
+        }
+
+        enum PlacesServiceStatus {
+          OK = 'OK',
+          ZERO_RESULTS = 'ZERO_RESULTS',
+          OVER_QUERY_LIMIT = 'OVER_QUERY_LIMIT',
+          REQUEST_DENIED = 'REQUEST_DENIED',
+          INVALID_REQUEST = 'INVALID_REQUEST',
+          NOT_FOUND = 'NOT_FOUND',
+          UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+        }
+
         interface PlaceResult {
           place_id?: string;
           name?: string;
@@ -56,6 +126,7 @@ declare global {
         interface AutocompleteOptions {
           fields?: string[];
           types?: string[];
+          componentRestrictions?: undefined;
         }
       }
 
