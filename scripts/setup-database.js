@@ -14,8 +14,8 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
 // Load environment variables
-const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://ijsvrotcvrvrmnzazxya.supabase.co'
-const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlqc3Zyb3RjdnJ2cm1uemF6eHlhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MDA5MzI0NiwiZXhwIjoyMDY1NjY5MjQ2fQ.O8Do4QtuPjvhUvIao8A-xDhoTU5I_Zui8uc96phzoWQ'
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('❌ Missing Supabase URL or Service Key')
