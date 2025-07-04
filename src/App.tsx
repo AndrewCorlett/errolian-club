@@ -20,7 +20,6 @@ import Account from './pages/Account'
 
 // Test pages
 import LocationTest from './pages/LocationTest'
-import ItineraryTest from './pages/ItineraryTest'
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(() => {

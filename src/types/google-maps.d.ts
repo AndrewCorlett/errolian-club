@@ -21,9 +21,41 @@ declare global {
         setIcon(icon: string | Icon): void;
       }
 
+      namespace marker {
+        class AdvancedMarkerElement {
+          constructor(opts?: AdvancedMarkerElementOptions);
+          position: LatLng | LatLngLiteral | null;
+          map: Map | null;
+          title: string;
+          content: HTMLElement | null;
+          addListener(eventName: string, handler: () => void): void;
+        }
+
+        class PinElement {
+          constructor(opts?: PinElementOptions);
+          element: HTMLElement;
+          background?: string;
+          borderColor?: string;
+          glyphColor?: string;
+        }
+
+        interface AdvancedMarkerElementOptions {
+          position?: LatLng | LatLngLiteral;
+          map?: Map;
+          title?: string;
+          content?: HTMLElement;
+        }
+
+        interface PinElementOptions {
+          background?: string;
+          borderColor?: string;
+          glyphColor?: string;
+        }
+      }
+
       class InfoWindow {
         constructor(opts?: InfoWindowOptions);
-        open(map?: Map, anchor?: Marker): void;
+        open(map?: Map, anchor?: Marker | marker.AdvancedMarkerElement): void;
         close(): void;
         setContent(content: string | Element): void;
       }
@@ -140,6 +172,7 @@ declare global {
         center?: LatLng | LatLngLiteral;
         zoom?: number;
         mapTypeId?: MapTypeId;
+        mapId?: string;
         disableDefaultUI?: boolean;
         zoomControl?: boolean;
         mapTypeControl?: boolean;
@@ -192,6 +225,20 @@ declare global {
         DROP = 'drop',
         BOUNCE = 'bounce',
       }
+
+      interface MapsLibrary {
+        Map: typeof Map;
+        InfoWindow: typeof InfoWindow;
+        LatLng: typeof LatLng;
+      }
+
+      interface MarkerLibrary {
+        AdvancedMarkerElement: typeof marker.AdvancedMarkerElement;
+        PinElement: typeof marker.PinElement;
+        Marker: typeof Marker;
+      }
+
+      function importLibrary(name: string): Promise<MapsLibrary | MarkerLibrary>;
     }
   }
 }
