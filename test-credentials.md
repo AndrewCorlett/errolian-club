@@ -1,8 +1,8 @@
 # Test Credentials for Errolian Club
 
 ## Login Information
-- **Email:** andrewcorlett2@gmail.com
-- **Password:** Topper45267
+- **Email:** your_test_email@example.com
+- **Password:** your_test_password
 
 ## Usage
 These credentials are for testing the map functionality in the event creation flow.

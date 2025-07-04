@@ -53,7 +53,7 @@
 
 #### 3.1 Add API Key to Environment
 - [ ] Open `.env` file in project root
-- [ ] Add line: `VITE_GOOGLE_MAPS_API_KEY=s7YTfaT8gYcf92Bhu_CYqY1RWpQ=`
+- [ ] Add line: `VITE_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here`
 - [ ] Save .env file
 
 #### 3.2 Update Environment Example
