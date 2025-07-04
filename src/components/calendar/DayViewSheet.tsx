@@ -188,7 +188,9 @@ export default function DayViewSheet({
   }
 
   const getTimePosition = (time: string): number => {
-    const [hours, minutes] = time.split(':').map(Number)
+    const timeParts = time.split(':')
+    const hours = Number(timeParts[0]) || 0
+    const minutes = Number(timeParts[1]) || 0
     return (hours * 60 + minutes) / (24 * 60) * 100
   }
 
@@ -300,9 +302,13 @@ export default function DayViewSheet({
             {/* Timeline */}
             <div className="relative" style={{ height: '1440px' }}> {/* 24 hours * 60px per hour */}
               {/* Hour lines and empty hour slots */}
-              {timelineHours.map((time, index) => {
+              {timelineHours.length > 0 && Array.from({ length: Math.min(24, timelineHours.length) }, (_, index) => {
+                const time = timelineHours[index]
+                if (!time) return null
+                
                 const hourHasEvents = timelineItems.some(item => {
-                  const [startHour] = item.startTime.split(':').map(Number)
+                  const startTimeParts = item.startTime.split(':')
+                  const startHour = Number(startTimeParts[0]) || 0
                   return startHour === index
                 })
                 
@@ -335,64 +341,71 @@ export default function DayViewSheet({
                     </div>
                   </div>
                 )
-              })}
+              }).filter(Boolean)}
 
               {/* Timeline items */}
-              {timelineItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="absolute inset-x-0 px-4 z-30"
-                  style={{
-                    top: `${getTimePosition(item.startTime)}%`,
-                    height: `${getItemHeight(item.startTime, item.endTime)}%`
-                  }}
-                >
-                  <div className={`${item.type === 'itinerary' ? 'ml-16' : 'ml-12'} mr-2 h-full`}>
-                    <Card
-                      className="h-full cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 shadow-sm"
-                      style={{ 
-                        borderLeftColor: item.color,
-                        backgroundColor: `${item.color}20`
-                      }}
-                      onClick={() => handleItemClick(item)}
-                    >
-                      <CardContent className="p-3 h-full flex flex-col justify-start">
-                        <div className="flex items-start justify-between mb-1">
-                          <h4 className={`font-medium text-primary-900 text-sm line-clamp-1 flex-1 ${
-                            item.type === 'itinerary' ? 'text-xs' : ''
-                          }`}>
-                            {item.type === 'itinerary' && '┗ '}{item.title}
-                          </h4>
-                          <span className="text-xs text-royal-600 ml-2 whitespace-nowrap">
-                            {item.startTime} - {item.endTime}
-                          </span>
-                        </div>
-                        {item.type === 'itinerary' && (
-                          <p className="text-xs text-royal-600 line-clamp-1 mb-1">
-                            {(item.data as ItineraryItem).description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 mt-auto">
-                          <span 
-                            className="text-xs px-2 py-0.5 rounded-full text-primary-700 capitalize"
+              {timelineItems.length > 0 ? 
+                timelineItems.slice(0, 10).filter(item => item && item.id).reduce((acc, item, index) => {
+                  if (index < 5) { // Limit to first 5 items to avoid performance issues
+                    acc.push(
+                      <div
+                        key={item.id}
+                        className="absolute inset-x-0 px-4 z-30"
+                        style={{
+                          top: `${getTimePosition(item.startTime)}%`,
+                          height: `${getItemHeight(item.startTime, item.endTime)}%`
+                        }}
+                      >
+                        <div className={`${item.type === 'itinerary' ? 'ml-16' : 'ml-12'} mr-2 h-full`}>
+                          <Card
+                            className="h-full cursor-pointer hover:shadow-md transition-all duration-200 border-l-4 shadow-sm"
                             style={{ 
-                              backgroundColor: item.type === 'itinerary' ? item.color : 'rgba(255,255,255,0.8)',
-                              color: item.type === 'itinerary' ? 'white' : undefined
+                              borderLeftColor: item.color,
+                              backgroundColor: `${item.color}20`
                             }}
+                            onClick={() => handleItemClick(item)}
                           >
-                            {item.type === 'itinerary' ? (item.data as ItineraryItem).type : 'event'}
-                          </span>
-                          {item.type === 'itinerary' && (item.data as ItineraryItem).cost > 0 && (
-                            <span className="text-xs px-2 py-0.5 bg-green-100 rounded-full text-green-700">
-                              £{(item.data as ItineraryItem).cost}
-                            </span>
-                          )}
+                            <CardContent className="p-3 h-full flex flex-col justify-start">
+                              <div className="flex items-start justify-between mb-1">
+                                <h4 className={`font-medium text-primary-900 text-sm line-clamp-1 flex-1 ${
+                                  item.type === 'itinerary' ? 'text-xs' : ''
+                                }`}>
+                                  {item.type === 'itinerary' && '┗ '}{item.title}
+                                </h4>
+                                <span className="text-xs text-royal-600 ml-2 whitespace-nowrap">
+                                  {item.startTime} - {item.endTime}
+                                </span>
+                              </div>
+                              {item.type === 'itinerary' && (
+                                <p className="text-xs text-royal-600 line-clamp-1 mb-1">
+                                  {(item.data as ItineraryItem).description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-auto">
+                                <span 
+                                  className="text-xs px-2 py-0.5 rounded-full text-primary-700 capitalize"
+                                  style={{ 
+                                    backgroundColor: item.type === 'itinerary' ? item.color : 'rgba(255,255,255,0.8)',
+                                    color: item.type === 'itinerary' ? 'white' : undefined
+                                  }}
+                                >
+                                  {item.type === 'itinerary' ? (item.data as ItineraryItem).type : 'event'}
+                                </span>
+                                {item.type === 'itinerary' && (item.data as ItineraryItem).cost > 0 && (
+                                  <span className="text-xs px-2 py-0.5 bg-green-100 rounded-full text-green-700">
+                                    £{(item.data as ItineraryItem).cost}
+                                  </span>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              ))}
+                      </div>
+                    )
+                  }
+                  return acc
+                }, [] as React.ReactElement[]) 
+                : []}
 
               {/* Add event suggestion when no events exist */}
               {timelineItems.length === 0 && (

@@ -13,6 +13,14 @@ export default defineConfig({
     host: true, // This makes preview accessible from Windows
     port: 4173,
   },
+  define: {
+    'process.env': {}, // react-pdf still refers to process.env
+  },
+  optimizeDeps: {
+    include: [
+      '@googlemaps/js-api-loader'
+    ]
+  },
   plugins: [
     react(),
     VitePWA({
@@ -43,6 +51,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'pdfjs-dist/build/pdf.worker.js': 'pdfjs-dist/build/pdf.worker.min.js',
     },
   },
 })

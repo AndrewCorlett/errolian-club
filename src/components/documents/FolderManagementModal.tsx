@@ -18,7 +18,7 @@ export interface FolderFormData {
   description?: string
   color?: string
   icon?: string
-  parentId?: string
+  parentId?: string | null
 }
 
 const FOLDER_COLORS = [

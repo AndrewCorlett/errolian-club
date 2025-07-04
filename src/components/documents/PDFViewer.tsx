@@ -1,21 +1,28 @@
-import { useState, useEffect, useRef } from 'react'
-import { Button } from '@/components/ui/button'
-import * as pdfjsLib from 'pdfjs-dist'
-import type { Document } from '@/types/documents'
-import SignatureOverlay from './SignatureOverlay'
+import React from 'react';
+import { Viewer } from '@react-pdf-viewer/core';
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
+import type { Document } from '@/types/documents';
+import SignatureOverlay from './SignatureOverlay';
 
-// Configure PDF.js worker - use local worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url
-).toString()
+interface SignatureField {
+  id: string
+  x: number
+  y: number
+  width: number
+  height: number
+  signedBy?: string
+  signatureData?: string
+  required: boolean
+}
 
 interface PDFViewerProps {
   url: string
   document?: Document
   showSignatures?: boolean
   isEditingSignatures?: boolean
-  onSignatureFieldsChange?: (fields: any[]) => void
+  onSignatureFieldsChange?: (fields: SignatureField[]) => void
   onSign?: (fieldId: string, signatureData: string) => void
   className?: string
 }
@@ -29,279 +36,163 @@ export default function PDFViewer({
   onSign,
   className = '' 
 }: PDFViewerProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(0)
-  const [scale, setScale] = useState(1.0)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchText, setSearchText] = useState('')
-  const [isSearching, setIsSearching] = useState(false)
-
-  // Load PDF document
-  useEffect(() => {
-    const loadPDF = async () => {
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
+  const [debugInfo, setDebugInfo] = React.useState<any>(null)
+  const [hasError, setHasError] = React.useState(false)
+  const [signedUrl, setSignedUrl] = React.useState<string | null>(null)
+  
+  console.log('PDFViewer: Initial URL:', url)
+  
+  // Generate signed URL from the provided URL
+  React.useEffect(() => {
+    let cancelled = false
+    
+    const generateSignedUrl = async () => {
       try {
-        setLoading(true)
-        setError(null)
-        const loadingTask = pdfjsLib.getDocument(url)
-        const pdfDoc = await loadingTask.promise
-        setPdf(pdfDoc)
-        setTotalPages(pdfDoc.numPages)
-      } catch (err) {
-        console.error('Error loading PDF:', err)
-        setError('Failed to load PDF document')
-      } finally {
-        setLoading(false)
+        // Only generate if URL is not already a time-limited signed URL
+        if (!url?.includes('token=') && !url?.includes('sign/')) {
+          console.log('PDFViewer: Generating signed URL for:', url)
+          
+          // Extract storage path from various URL formats
+          let storagePath = ''
+          
+          // Handle public URL format: /storage/v1/object/public/documents/{path}
+          const publicMatch = url.match(/\/storage\/v1\/object\/public\/documents\/(.+)$/)
+          if (publicMatch) {
+            storagePath = publicMatch[1]
+            console.log('PDFViewer: Extracted path from public URL:', storagePath)
+          }
+          // Handle direct storage path
+          else if (!url.startsWith('http')) {
+            storagePath = url
+            console.log('PDFViewer: Using direct storage path:', storagePath)
+          }
+          // Handle other URL formats or already signed URLs
+          else {
+            console.log('PDFViewer: URL appears to be already signed or unknown format, using as-is')
+            if (!cancelled) setSignedUrl(url)
+            return
+          }
+          
+          if (storagePath) {
+            const { fileStorage } = await import('@/lib/fileStorage')
+            const newSignedUrl = await fileStorage.createSignedUrl(storagePath, 3600)
+            console.log('PDFViewer: Generated signed URL successfully')
+            if (!cancelled) setSignedUrl(newSignedUrl)
+          } else {
+            console.warn('PDFViewer: Could not extract storage path from URL:', url)
+            if (!cancelled) setSignedUrl(url)
+          }
+        } else {
+          console.log('PDFViewer: URL already appears to be signed, using as-is')
+          if (!cancelled) setSignedUrl(url)
+        }
+      } catch (error) {
+        console.error('PDFViewer: Failed to generate signed URL:', error)
+        // Fallback to original URL
+        if (!cancelled) setSignedUrl(url)
       }
     }
-
+    
     if (url) {
-      loadPDF()
+      generateSignedUrl()
     }
-  }, [url])
-
-  // Render current page
-  useEffect(() => {
-    const renderPage = async () => {
-      if (!pdf || !canvasRef.current) return
-
+    
+    return () => { cancelled = true }
+  }, [url]) // Only depends on original URL
+  
+  console.log('PDFViewer: Final signed URL:', signedUrl)
+  
+  // Simple error detection based on URL fetch (only when we have signedUrl)
+  React.useEffect(() => {
+    if (!signedUrl) return
+    
+    const testAccess = async () => {
       try {
-        const page = await pdf.getPage(currentPage)
-        const canvas = canvasRef.current
-        const context = canvas.getContext('2d')
-        
-        if (!context) return
-
-        const viewport = page.getViewport({ scale })
-        canvas.height = viewport.height
-        canvas.width = viewport.width
-
-        const renderContext = {
-          canvasContext: context,
-          viewport: viewport,
+        const response = await fetch(signedUrl, { method: 'HEAD' })
+        if (!response.ok) {
+          console.error('PDFViewer: URL not accessible:', response.status, response.statusText)
+          setHasError(true)
+          setDebugInfo({
+            url: signedUrl,
+            error: `${response.status} ${response.statusText}`,
+            contentType: response.headers.get('content-type')
+          })
+        } else {
+          console.log('PDFViewer: URL accessible, content-type:', response.headers.get('content-type'))
+          setHasError(false)
+          setDebugInfo(null)
         }
-
-        await page.render(renderContext).promise
-      } catch (err) {
-        console.error('Error rendering page:', err)
-        setError('Failed to render PDF page')
+      } catch (error) {
+        console.error('PDFViewer: Failed to test URL access:', error)
+        setHasError(true)
+        setDebugInfo({ 
+          url: signedUrl,
+          error: error instanceof Error ? error.message : 'Network error' 
+        })
       }
     }
-
-    renderPage()
-  }, [pdf, currentPage, scale])
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1)
-    }
-  }
-
-  const handleZoomIn = () => {
-    setScale(prevScale => Math.min(prevScale + 0.25, 3.0))
-  }
-
-  const handleZoomOut = () => {
-    setScale(prevScale => Math.max(prevScale - 0.25, 0.5))
-  }
-
-  const handleFitToWidth = () => {
-    // Calculate scale to fit canvas width to container
-    if (canvasRef.current) {
-      const containerWidth = canvasRef.current.parentElement?.clientWidth || 800
-      setScale(containerWidth / 595) // 595 is standard PDF page width
-    }
-  }
-
-  const handleSearch = async () => {
-    if (!pdf || !searchText.trim()) return
-
-    setIsSearching(true)
-    try {
-      // Simple text search - iterate through pages
-      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
-        const page = await pdf.getPage(pageNum)
-        const textContent = await page.getTextContent()
-        const textItems = textContent.items as any[]
-        
-        const pageText = textItems.map(item => item.str).join(' ')
-        if (pageText.toLowerCase().includes(searchText.toLowerCase())) {
-          setCurrentPage(pageNum)
-          break
-        }
-      }
-    } catch (err) {
-      console.error('Error searching PDF:', err)
-    } finally {
-      setIsSearching(false)
-    }
-  }
-
-  const handleCopyText = async () => {
-    if (!pdf) return
-
-    try {
-      const page = await pdf.getPage(currentPage)
-      const textContent = await page.getTextContent()
-      const textItems = textContent.items as any[]
-      const pageText = textItems.map(item => item.str).join(' ')
-      
-      await navigator.clipboard.writeText(pageText)
-      // Could add a toast notification here
-    } catch (err) {
-      console.error('Error copying text:', err)
-    }
-  }
-
-  if (loading) {
+    
+    testAccess()
+  }, [signedUrl])
+  
+  // Show loading spinner while generating signed URL
+  if (!signedUrl) {
     return (
-      <div className={`bg-gray-50 flex items-center justify-center ${className}`}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-          <p className="text-gray-600">Loading PDF...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
-        <div className="text-center">
-          <svg className="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <p className="text-red-800 font-medium">Error Loading PDF</p>
-          <p className="text-red-600 text-sm mt-1">{error}</p>
+      <div className={`relative ${className}`}>
+        <div className="flex items-center justify-center h-full bg-gray-50 border border-gray-200 rounded">
+          <div className="text-center p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <div className="text-gray-600">Loading PDF...</div>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${className}`}>
-      {/* PDF Toolbar */}
-      <div className="bg-gray-50 border-b border-gray-200 p-3">
-        <div className="flex items-center justify-between gap-4">
-          {/* Navigation Controls */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={currentPage <= 1}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </Button>
-            
-            <span className="text-sm text-gray-600 px-2">
-              Page {currentPage} of {totalPages}
-            </span>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextPage}
-              disabled={currentPage >= totalPages}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Button>
-          </div>
-
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={scale <= 0.5}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-              </svg>
-            </Button>
-            
-            <span className="text-sm text-gray-600 px-2 min-w-[60px] text-center">
-              {Math.round(scale * 100)}%
-            </span>
-            
-            <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={scale >= 3.0}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </Button>
-            
-            <Button variant="outline" size="sm" onClick={handleFitToWidth}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
-            </Button>
-          </div>
-
-          {/* Search and Copy Controls */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                placeholder="Search text..."
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="text-sm px-2 py-1 border border-gray-300 rounded w-32 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSearch}
-                disabled={!searchText.trim() || isSearching}
-              >
-                {isSearching ? (
-                  <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                ) : (
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                )}
-              </Button>
+    <div className={`relative ${className}`}>
+      {/* Debug Info Display */}
+      {debugInfo && (
+        <div className="absolute top-2 right-2 z-10 bg-yellow-100 border border-yellow-300 rounded p-2 text-xs max-w-md">
+          <div className="font-bold">PDF Debug Info:</div>
+          <div>URL: {debugInfo.url?.substring(0, 80)}...</div>
+          <div>Content-Type: {debugInfo.contentType || 'None'}</div>
+          {debugInfo.error && <div className="text-red-600">Error: {debugInfo.error}</div>}
+        </div>
+      )}
+      
+      {hasError ? (
+        <div className="flex items-center justify-center h-full bg-red-50 border border-red-200 rounded">
+          <div className="text-center p-4">
+            <div className="text-red-600 font-medium">PDF Loading Error</div>
+            <div className="text-sm text-red-500 mt-2">
+              The document could not be loaded. Please check the file exists and is accessible.
             </div>
-            
-            <Button variant="outline" size="sm" onClick={handleCopyText}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            </Button>
+            {debugInfo?.error && (
+              <div className="text-xs text-gray-600 mt-1">
+                Error: {debugInfo.error}
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* PDF Canvas */}
-      <div className="overflow-auto max-h-[500px] flex justify-center p-4 bg-gray-100">
-        <div className="relative">
-          <canvas
-            ref={canvasRef}
-            className="shadow-lg border border-gray-300 bg-white"
-            style={{ maxWidth: '100%', height: 'auto' }}
-          />
-          
-          {/* Signature Overlay */}
-          {showSignatures && document && (
-            <SignatureOverlay
-              document={document}
-              isEditing={isEditingSignatures}
-              onFieldsChange={onSignatureFieldsChange}
-              onSign={onSign}
-              className="absolute inset-0"
-            />
-          )}
-        </div>
-      </div>
+      ) : (
+        <Viewer
+          fileUrl={signedUrl}
+          plugins={[defaultLayoutPluginInstance]}
+        />
+      )}
+      
+      {/* Signature Overlay Integration */}
+      {showSignatures && document && !hasError && (
+        <SignatureOverlay
+          document={document}
+          isEditing={isEditingSignatures}
+          onFieldsChange={onSignatureFieldsChange}
+          onSign={onSign}
+          className="absolute inset-0"
+        />
+      )}
     </div>
-  )
+  );
 }

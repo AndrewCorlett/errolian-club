@@ -77,11 +77,14 @@ export default function IOSHeader({
         ${className}
       `}
     >
-      <div className="px-4 pt-2 pb-1">
+      <div className="px-4 pt-2 pb-1" style={{ height: '75px' }}>
         {/* Navigation Row */}
         <div className="flex items-center justify-between mb-1 min-h-[40px]">
-          {/* Left Actions */}
+          {/* Left Actions with Title */}
           <div className="flex items-center gap-2">
+            <h1 className={`text-xl font-bold leading-tight tracking-tight ${titleClassName || 'text-primary-900'}`}>
+              {title}
+            </h1>
             {leftActions.map((action, index) => (
               <div key={index}>{action}</div>
             ))}
@@ -95,17 +98,14 @@ export default function IOSHeader({
           </div>
         </div>
 
-        {/* Title Section */}
-        <div className="mb-1">
-          <h1 className={`text-xl font-bold leading-tight tracking-tight ${titleClassName || 'text-primary-900'}`}>
-            {title}
-          </h1>
-          {subtitle && (
+        {/* Subtitle Section */}
+        {subtitle && (
+          <div className="mb-1">
             <p className="text-sm text-primary-600 mt-0.5 leading-relaxed">
               {subtitle}
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Subtle inner shadow when scrolled */}

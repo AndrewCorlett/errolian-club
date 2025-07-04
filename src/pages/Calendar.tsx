@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import VerticalCalendar from '@/components/calendar/VerticalCalendar'
 import DayViewSheet from '@/components/calendar/DayViewSheet'
 import NewEventSheet from '@/components/calendar/NewEventSheet'
@@ -8,13 +8,15 @@ import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
 import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { eventService, itineraryService } from '@/lib/database'
+import { eventService, itineraryService, availabilityService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
 
 export default function Calendar() {
   const { user } = useAuth()
+  const headerRef = useRef<HTMLDivElement>(null)
+  const [, setHeaderHeight] = useState(0)
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedEvent, setSelectedEvent] = useState<EventWithDetails | null>(null)
   const [selectedItinerary, setSelectedItinerary] = useState<ItineraryItem | null>(null)
@@ -36,6 +38,23 @@ export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Availability data
+  const [availabilityData, setAvailabilityData] = useState<any[]>([])
+
+  // Measure header height
+  useEffect(() => {
+    const measureHeader = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight)
+      }
+    }
+    
+    measureHeader()
+    window.addEventListener('resize', measureHeader)
+    
+    return () => window.removeEventListener('resize', measureHeader)
+  }, [])
+
   // Load events from Supabase
   useEffect(() => {
     const loadEvents = async () => {
@@ -54,6 +73,30 @@ export default function Calendar() {
 
     loadEvents()
   }, [])
+
+  // Load availability data when filter is enabled
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!activeFilters.availability || !user) return
+      
+      try {
+        // Get availability for the next 12 months
+        const endDate = new Date()
+        endDate.setFullYear(endDate.getFullYear() + 1)
+        
+        const data = await availabilityService.getAvailability(
+          user.id,
+          new Date().toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0]
+        )
+        setAvailabilityData(data)
+      } catch (err) {
+        console.error('Failed to load availability:', err)
+      }
+    }
+
+    loadAvailability()
+  }, [activeFilters.availability, user])
 
   const handleEventFormSubmit = async (eventData: any) => {
     if (!user) {
@@ -272,12 +315,13 @@ export default function Calendar() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col pb-20">
-      {/* iOS Calendar Header */}
-      <IOSHeader 
-        title="Calendar"
-        titleClassName="text-royal-600"
-        rightActions={[
+    <div className="relative h-screen bg-white">
+      {/* iOS Calendar Header - Fixed */}
+      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-50 bg-white">
+        <IOSHeader 
+          title="Calendar"
+          titleClassName="text-royal-600"
+          rightActions={[
           <IOSActionButton 
             key="filters"
             onClick={() => setShowFilters(true)}
@@ -304,9 +348,16 @@ export default function Calendar() {
           />
         ]}
       />
+      </div>
 
-      {/* Vertical Calendar */}
-      <div className="flex-1 pt-20">
+      {/* Calendar Container - Bounded between header and footer */}
+      <div 
+        className="fixed left-0 right-0 overflow-y-auto"
+        style={{ 
+          top: '85px',
+          bottom: '80px'
+        }}
+      >
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-gray-500">Loading calendar...</div>
@@ -321,6 +372,9 @@ export default function Calendar() {
             onDayShortPress={handleDayShortPress}
             onDayLongPress={handleDayLongPress}
             initialDate={new Date()}
+            headerHeight={0}
+            availability={availabilityData}
+            showAvailability={activeFilters.availability}
           />
         )}
       </div>
@@ -371,9 +425,24 @@ export default function Calendar() {
         isOpen={showAvailabilitySheet}
         onClose={() => setShowAvailabilitySheet(false)}
         selectedDate={selectedDate}
-        onAvailabilitySubmit={(data) => {
+        onAvailabilitySubmit={async (data) => {
           console.log('Availability submitted:', data)
-          // In a real app, this would save to backend
+          // Reload availability data to reflect changes
+          if (activeFilters.availability && user) {
+            try {
+              const endDate = new Date()
+              endDate.setFullYear(endDate.getFullYear() + 1)
+              
+              const availData = await availabilityService.getAvailability(
+                user.id,
+                new Date().toISOString().split('T')[0],
+                endDate.toISOString().split('T')[0]
+              )
+              setAvailabilityData(availData)
+            } catch (err) {
+              console.error('Failed to reload availability:', err)
+            }
+          }
         }}
       />
 

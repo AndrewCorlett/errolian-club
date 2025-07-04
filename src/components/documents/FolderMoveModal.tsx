@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Label } from '@/components/ui/label'
@@ -55,6 +55,9 @@ export default function FolderMoveModal({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Move "{folder.name}"</DialogTitle>
+          <DialogDescription>
+            Select the destination folder for this item.
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">

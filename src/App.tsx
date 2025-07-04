@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
 import SplashScreen from './components/ui/SplashScreen'
+import { LocationPickerDemo } from './components/places/demo/LocationPickerDemo'
 
 // Public pages
 import Login from './pages/Login'
@@ -16,6 +17,9 @@ import SplitPay from './pages/SplitPay'
 import SplitPayEventDetails from './pages/SplitPayEventDetails'
 import Documents from './pages/Documents'
 import Account from './pages/Account'
+
+// Test pages
+import LocationTest from './pages/LocationTest'
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(() => {
@@ -45,6 +49,8 @@ function App() {
             {/* Public routes */}
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
+            <Route path="/test-autocomplete" element={<LocationPickerDemo />} />
+            <Route path="/test/location" element={<LocationTest />} />
             
             {/* Protected routes */}
             <Route path="/" element={

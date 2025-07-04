@@ -1,12 +1,6 @@
 export type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed'
 export type EventType = 'adventure' | 'meeting' | 'social' | 'training' | 'other'
 
-export interface LocationData {
-  address: string
-  lat: number
-  lng: number
-  placeId?: string
-}
 
 export interface Event {
   id: string
@@ -16,7 +10,7 @@ export interface Event {
   status: EventStatus
   startDate: Date
   endDate: Date
-  location?: string | LocationData
+  location?: string
   maxParticipants?: number
   currentParticipants: string[] // User IDs
   createdBy: string // User ID

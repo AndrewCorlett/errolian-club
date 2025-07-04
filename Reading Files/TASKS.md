@@ -56,6 +56,9 @@
 - [ ] ⏳ Implement offline functionality and data synchronization
 - [ ] ⏳ Add authentication system (magic links + Google SSO)
 
+## UI/UX Improvements
+- [ ] 📝 Add 25px fade effect below calendar header (from solid white to transparent)
+
 ## Performance & PWA
 - [ ] ⏳ Test and optimize PWA performance (target Lighthouse 90+)
 

@@ -3,10 +3,13 @@ import { format } from 'date-fns'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
+import { AutocompleteInput } from '@/components/places/AutocompleteInput'
+import { MapPreview } from '@/components/places/MapPreview'
 import { useAuth } from '@/hooks/useAuth'
 import ItineraryBuilder from './ItineraryBuilder'
-import type { EventType, EventStatus, ItineraryItem, LocationData } from '@/types/events'
+import type { EventType, EventStatus, ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
+import type { Place } from '@/types/places'
 
 interface NewEventSheetProps {
   isOpen: boolean
@@ -44,7 +47,8 @@ export default function NewEventSheet({
   // Event form data
   const [eventData, setEventData] = useState({
     title: '',
-    location: null as LocationData | null,
+    location: '',
+    locationPlace: null as Place | null,
     allDay: false,
     startDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     startTime: '09:00',
@@ -74,7 +78,8 @@ export default function NewEventSheet({
         
         setEventData({
           title: editEvent.title,
-          location: editEvent.location ? { address: editEvent.location, lat: 0, lng: 0 } : null,
+          location: editEvent.location || '',
+          locationPlace: null,
           allDay: isAllDay,
           startDate: format(startDate, 'yyyy-MM-dd'),
           startTime: format(startDate, 'HH:mm'),
@@ -86,8 +91,7 @@ export default function NewEventSheet({
         
         // Set itinerary items if they exist
         if (editEvent.itinerary_items) {
-          // Map database fields to component fields
-          const mappedItems = editEvent.itinerary_items.map(item => ({
+          const mappedItems: ItineraryItem[] = editEvent.itinerary_items.map(item => ({
             id: item.id,
             eventId: item.event_id,
             type: item.type,
@@ -108,7 +112,8 @@ export default function NewEventSheet({
         // Reset form for new event
         setEventData({
           title: '',
-          location: null,
+          location: '',
+          locationPlace: null,
           allDay: false,
           startDate: format(selectedDate, 'yyyy-MM-dd'),
           startTime: '09:00',
@@ -132,7 +137,8 @@ export default function NewEventSheet({
       // Reset form
       setEventData({
         title: '',
-        location: null,
+        location: '',
+        locationPlace: null,
         allDay: false,
         startDate: selectedDate ? format(selectedDate, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
         startTime: '09:00',
@@ -144,6 +150,14 @@ export default function NewEventSheet({
       setItineraryItems([])
       setActiveTab('event')
     }, 300)
+  }
+
+  const handlePlaceSelected = (place: Place) => {
+    setEventData(prev => ({
+      ...prev,
+      location: place.address,
+      locationPlace: place
+    }))
   }
 
   const handleEventSubmit = () => {
@@ -174,7 +188,7 @@ export default function NewEventSheet({
       end_date: endDateTime.toISOString(),
       startDate: startDateTime,
       endDate: endDateTime,
-      location: eventData.location?.address || null,
+      location: eventData.location || null,
       is_public: true,
       max_participants: null,
       created_by: user.id,
@@ -200,15 +214,6 @@ export default function NewEventSheet({
     handleClose()
   }
 
-  const handleAddExpense = (expenseData: {
-    title: string
-    amount: number
-    category: string
-    description?: string
-  }) => {
-    // This would integrate with Split-Pay system
-    console.log('Adding expense from itinerary:', expenseData)
-  }
 
 
   const isFormValid = eventData.title.trim().length > 0
@@ -306,12 +311,25 @@ export default function NewEventSheet({
                   <label className="block text-sm font-medium text-primary-700 mb-2">
                     Location
                   </label>
-                  <input 
-                    type="text"
-                    className="w-full px-3 py-2 border border-primary-300 rounded-md focus:ring-2 focus:ring-royal-500 focus:border-royal-500 text-primary-900"
-                    placeholder="Enter location"
-                    onChange={(e) => setEventData(prev => ({ ...prev, location: { address: e.target.value, lat: 0, lng: 0 } }))}
+                  <AutocompleteInput
+                    onPlaceSelected={handlePlaceSelected}
+                    placeholder="Search for event location..."
                   />
+                  {eventData.locationPlace && (
+                    <>
+                      <div className="text-sm text-primary-600 mt-1">
+                        Selected: {eventData.locationPlace.name} - {eventData.locationPlace.address}
+                      </div>
+                      <div className="mt-4">
+                        <MapPreview
+                          latitude={eventData.locationPlace.coordinates.latitude}
+                          longitude={eventData.locationPlace.coordinates.longitude}
+                          name={eventData.locationPlace.name}
+                          address={eventData.locationPlace.address}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -390,19 +408,66 @@ export default function NewEventSheet({
                   Color
                 </label>
                 <div className="flex gap-3">
-                  {colorOptions.map(option => (
-                    <button
-                      key={option.value}
-                      onClick={() => setEventData(prev => ({ ...prev, color: option.value }))}
-                      className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
-                        eventData.color === option.value
-                          ? 'border-primary-900 scale-110'
-                          : 'border-primary-200 hover:border-primary-400'
-                      }`}
-                      style={{ backgroundColor: option.color }}
-                      title={option.label}
-                    />
-                  ))}
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'violet' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'violet'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#8b5cf6' }}
+                    title="Royal Purple"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'sky' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'sky'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#3b82f6' }}
+                    title="Sky Blue"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'emerald' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'emerald'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#10b981' }}
+                    title="Forest Green"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'indigo' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'indigo'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#6366f1' }}
+                    title="Deep Purple"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'amber' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'amber'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#f97316' }}
+                    title="Coral"
+                  />
+                  <button
+                    onClick={() => setEventData(prev => ({ ...prev, color: 'rose' }))}
+                    className={`w-12 h-12 rounded-full border-4 transition-all duration-200 ${
+                      eventData.color === 'rose'
+                        ? 'border-primary-900 scale-110'
+                        : 'border-primary-200 hover:border-primary-400'
+                    }`}
+                    style={{ backgroundColor: '#ec4899' }}
+                    title="Pink"
+                  />
                 </div>
               </div>
 
@@ -424,10 +489,8 @@ export default function NewEventSheet({
 
           {activeTab === 'itinerary' && (
             <ItineraryBuilder
-              eventId="temp_event"
-              initialItems={itineraryItems}
+              items={itineraryItems}
               onItemsChange={setItineraryItems}
-              onAddExpense={handleAddExpense}
             />
           )}
         </div>
