@@ -6,7 +6,7 @@ import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 import EditExpenseEventModal from '@/components/splitpay/EditExpenseEventModal'
 import { format } from 'date-fns'
-import { eventService, expenseService, userService, expenseEventService } from '@/lib/database'
+import { eventService, expenseService, userService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ExpenseWithDetails, UserProfile } from '@/types/supabase'
 
@@ -181,20 +181,20 @@ export default function ExpenseEventDetail() {
     if (!expenseEventId || !user) return
 
     try {
-      // Update the expense event basic details
+      // Since we're currently using regular events as expense events, 
+      // we need to update the events table instead of expense_events table
       const updatePayload = {
         title: updatedData.title,
         description: updatedData.description,
         location: updatedData.location,
-        currency: updatedData.currency,
-        status: updatedData.status,
-        participant_count: updatedData.participant_count
+        // Note: events table doesn't have currency, status, or participant_count fields
+        // These would need to be added to the events table or handled differently
       }
 
-      console.log('Updating expense event:', expenseEventId, updatePayload)
-      await expenseEventService.updateExpenseEvent(expenseEventId, updatePayload)
+      console.log('Updating calendar event (used as expense event):', expenseEventId, updatePayload)
+      await eventService.updateEvent(expenseEventId, updatePayload)
 
-      // Handle participant changes
+      // Handle participant changes for calendar events
       const currentParticipants = participants.map(p => p.id)
       const newParticipants = updatedData.participants || []
       
@@ -202,23 +202,23 @@ export default function ExpenseEventDetail() {
       const participantsToAdd = newParticipants.filter((id: string) => !currentParticipants.includes(id))
       const participantsToRemove = currentParticipants.filter(id => !newParticipants.includes(id))
 
-      // Add new participants
+      // Add new participants to calendar event
       for (const userId of participantsToAdd) {
         try {
-          await expenseEventService.addParticipant(expenseEventId, userId)
-          console.log('Added participant:', userId)
+          await eventService.joinEvent(expenseEventId, userId)
+          console.log('Added participant to calendar event:', userId)
         } catch (error) {
-          console.error('Failed to add participant:', userId, error)
+          console.error('Failed to add participant to calendar event:', userId, error)
         }
       }
 
-      // Remove participants
+      // Remove participants from calendar event
       for (const userId of participantsToRemove) {
         try {
-          await expenseEventService.removeParticipant(expenseEventId, userId)
-          console.log('Removed participant:', userId)
+          await eventService.leaveEvent(expenseEventId, userId)
+          console.log('Removed participant from calendar event:', userId)
         } catch (error) {
-          console.error('Failed to remove participant:', userId, error)
+          console.error('Failed to remove participant from calendar event:', userId, error)
         }
       }
 

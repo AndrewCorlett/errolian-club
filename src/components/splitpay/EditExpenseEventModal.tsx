@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Select } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { userService } from '@/lib/database'
 import type { UserProfile } from '@/types/supabase'
@@ -25,9 +24,7 @@ export default function EditExpenseEventModal({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    location: '',
-    currency: 'GBP',
-    status: 'active'
+    location: ''
   })
   
   const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([])
@@ -43,9 +40,7 @@ export default function EditExpenseEventModal({
       setFormData({
         title: expenseEvent.title || '',
         description: expenseEvent.description || '',
-        location: expenseEvent.location || '',
-        currency: expenseEvent.currency || 'GBP',
-        status: expenseEvent.status || 'active'
+        location: expenseEvent.location || ''
       })
 
       // Load users and set participants
@@ -108,9 +103,6 @@ export default function EditExpenseEventModal({
         title: formData.title.trim(),
         description: formData.description.trim() || null,
         location: formData.location.trim() || null,
-        currency: formData.currency,
-        status: formData.status,
-        participant_count: selectedParticipants.length,
         participants: selectedParticipants
       }
 
@@ -133,9 +125,7 @@ export default function EditExpenseEventModal({
     setFormData({
       title: expenseEvent.title || '',
       description: expenseEvent.description || '',
-      location: expenseEvent.location || '',
-      currency: expenseEvent.currency || 'GBP',
-      status: expenseEvent.status || 'active'
+      location: expenseEvent.location || ''
     })
     setSelectedParticipants(originalParticipants)
     onClose()
@@ -189,46 +179,16 @@ export default function EditExpenseEventModal({
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <Input
-                    type="text"
-                    value={formData.location}
-                    onChange={(e) => handleInputChange('location', e.target.value)}
-                    placeholder="Event location (optional)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Currency
-                  </label>
-                  <Select
-                    value={formData.currency}
-                    onChange={(e) => handleInputChange('currency', e.target.value)}
-                  >
-                    <option value="GBP">GBP (£)</option>
-                    <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                  </Select>
-                </div>
-              </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Status
+                  Location
                 </label>
-                <Select
-                  value={formData.status}
-                  onChange={(e) => handleInputChange('status', e.target.value)}
-                >
-                  <option value="active">Active</option>
-                  <option value="settled">Settled</option>
-                  <option value="archived">Archived</option>
-                </Select>
+                <Input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => handleInputChange('location', e.target.value)}
+                  placeholder="Event location (optional)"
+                />
               </div>
             </div>
 
