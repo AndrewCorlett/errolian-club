@@ -17,11 +17,17 @@ export const supabase = (() => {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: true,
-        storage: window?.localStorage
+        storage: window?.localStorage,
+        flowType: 'pkce'
       },
       realtime: {
         params: {
           eventsPerSecond: 10
+        }
+      },
+      global: {
+        headers: {
+          'cache-control': 'no-cache'
         }
       }
     })

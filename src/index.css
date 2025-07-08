@@ -39,6 +39,33 @@
     min-height: 100vh;
     min-height: -webkit-fill-available;
     background-color: rgb(225, 220, 200);
+    
+    /* Ensure proper loading state display */
+    &:not([data-app-ready]) {
+      /* Show loading indicator while app is initializing */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    /* Prevent blank screens during auth loading */
+    &:not([data-react-router-loaded]) {
+      background-color: rgb(225, 220, 200) !important;
+    }
+  }
+  
+  /* Prevent flash of white content during page transitions */
+  [data-app-ready="true"] {
+    background-color: rgb(225, 220, 200);
+  }
+  
+  /* Loading state improvements */
+  .loading-container {
+    min-height: 100vh;
+    background-color: rgb(225, 220, 200);
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   /* Custom focus styles */

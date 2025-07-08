@@ -19,8 +19,11 @@ export default function ProtectedRoute({
   // Show loading while checking auth
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="loading-container">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-royal-600 mx-auto mb-4"></div>
+          <p className="text-primary-700 text-sm">Loading...</p>
+        </div>
       </div>
     )
   }
@@ -33,10 +36,10 @@ export default function ProtectedRoute({
   // If we require a profile but don't have one yet, show loading
   if (user && !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="loading-container">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your profile...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-royal-600 mx-auto mb-4"></div>
+          <p className="text-primary-700 text-sm">Loading your profile...</p>
         </div>
       </div>
     )

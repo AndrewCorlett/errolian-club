@@ -112,6 +112,7 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
+
   useEffect(() => {
     // Get initial session
     const getInitialSession = async () => {
@@ -151,8 +152,38 @@ export function useAuth(): UseAuthReturn {
       }
     )
 
+    // Set up periodic session health checks (every 5 minutes)
+    const healthCheckInterval = setInterval(async () => {
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      if (currentSession) {
+        const now = Date.now() / 1000
+        if (currentSession.expires_at && currentSession.expires_at < now) {
+          console.log('Session expired, redirecting to login')
+          window.location.href = '/auth/login'
+        }
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+
+    // Set up visibility change handler to check session when user returns
+    const handleVisibilityChange = async () => {
+      if (!document.hidden) {
+        const { data: { session: currentSession } } = await supabase.auth.getSession()
+        if (currentSession) {
+          const now = Date.now() / 1000
+          if (currentSession.expires_at && currentSession.expires_at < now) {
+            console.log('Session expired on focus, redirecting to login')
+            window.location.href = '/auth/login'
+          }
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       subscription.unsubscribe()
+      clearInterval(healthCheckInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [])
 

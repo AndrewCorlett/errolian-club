@@ -33,24 +33,23 @@ function App() {
     // Mark app as loaded in session storage
     sessionStorage.setItem('app-loaded', 'true')
     
-    // Handle page refresh navigation issue
-    const handleRefreshRedirect = () => {
-      const currentPath = window.location.pathname
-      // If user refreshes on split-pay and there's no proper routing context, redirect to home
-      if (currentPath.includes('/split-pay') && !document.querySelector('[data-react-router]')) {
-        setTimeout(() => {
-          // Only redirect if we're still in a loading state after 3 seconds
-          if (!document.querySelector('[data-splitpay-loaded]')) {
-            window.location.href = '/'
-          }
-        }, 3000)
-      }
+    // Set a data attribute to indicate React Router is loaded
+    document.documentElement.setAttribute('data-react-router-loaded', 'true')
+    
+    // Handle navigation type detection (for older browsers)
+    const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[]
+    const isRefresh = navigationEntries[0]?.type === 'reload' ||
+                     (performance as any).navigation?.type === 1 // Legacy browsers
+    
+    if (isRefresh) {
+      console.log('Page refresh detected, ensuring clean state')
+      // Add a small delay to ensure React has mounted properly
+      setTimeout(() => {
+        document.documentElement.setAttribute('data-page-refreshed', 'true')
+      }, 100)
     }
 
-    // Check for refresh scenario
-    if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
-      handleRefreshRedirect()
-    }
+    // No cleanup needed
   }, [])
 
   const handleSplashComplete = () => {
@@ -64,7 +63,11 @@ function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div className="min-h-screen safe-area-full" style={{ backgroundColor: 'rgb(225, 220, 200)' }}>
+        <div 
+          className="min-h-screen safe-area-full" 
+          style={{ backgroundColor: 'rgb(225, 220, 200)' }}
+          data-app-ready="true"
+        >
           <Routes>
             {/* Public routes */}
             <Route path="/auth/login" element={<Login />} />
