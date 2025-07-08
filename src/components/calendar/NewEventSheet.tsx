@@ -121,7 +121,7 @@ export default function NewEventSheet({
         
         // Set selected participants from existing event
         if (editEvent.participants && editEvent.participants.length > 0) {
-          setSelectedParticipants(editEvent.participants.map(p => p.id))
+          setSelectedParticipants(editEvent.participants.map((p: any) => p.user_id))
         }
         
         // Set itinerary items if they exist
@@ -591,6 +591,7 @@ export default function NewEventSheet({
             <ItineraryBuilder
               items={itineraryItems}
               onItemsChange={setItineraryItems}
+              eventParticipants={availableUsers.filter(u => selectedParticipants.includes(u.id))}
             />
           )}
         </div>

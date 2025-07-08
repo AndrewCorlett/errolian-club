@@ -4,6 +4,7 @@ export type EventType = 'adventure' | 'meeting' | 'social' | 'training' | 'other
 
 export interface Event {
   id: string
+  universal_id: string // Universal identifier linking all related data
   title: string
   description: string
   type: EventType
@@ -27,6 +28,7 @@ export type DifficultyLevel = 'easy' | 'moderate' | 'challenging' | 'extreme'
 export interface ItineraryItem {
   id: string
   eventId: string
+  universal_id: string // Universal identifier linking all related data
   type: ItineraryType
   title: string
   description: string
@@ -38,6 +40,11 @@ export interface ItineraryItem {
   order: number
   createdAt: Date
   updatedAt: Date
+  
+  // Expense-related fields
+  paid_by?: string // User ID of who paid for this item
+  split_between?: string[] // Array of user IDs to split the cost between
+  expense_id?: string // ID of the generated expense in the expense event
   
   // Travel-specific fields
   travelMethod?: string

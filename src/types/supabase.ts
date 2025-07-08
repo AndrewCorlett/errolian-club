@@ -96,6 +96,7 @@ export interface Database {
       events: {
         Row: {
           id: string
+          universal_id: string
           title: string
           description: string | null
           type: EventType
@@ -113,6 +114,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          universal_id?: string
           title: string
           description?: string | null
           type: EventType
@@ -130,6 +132,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          universal_id?: string
           title?: string
           description?: string | null
           type?: EventType

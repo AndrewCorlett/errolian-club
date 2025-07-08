@@ -8,10 +8,11 @@ import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
 import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { eventService, itineraryService, availabilityService, expenseEventService } from '@/lib/database'
+import { eventService, itineraryService, availabilityService, expenseEventService, expenseService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
+import type { ExpenseCategory } from '@/types/expenses'
 
 export default function Calendar() {
   const { user } = useAuth()
@@ -98,6 +99,63 @@ export default function Calendar() {
     loadAvailability()
   }, [activeFilters.availability, user])
 
+  // Helper function to create expenses from itinerary items
+  const createExpensesFromItineraryItems = async (eventId: string, expenseEventId: string, itineraryItems: ItineraryItem[], universalId: string) => {
+    const expensesToCreate = itineraryItems.filter(item => 
+      item.cost > 0 && item.paid_by && item.split_between && item.split_between.length > 0
+    )
+
+    for (const item of expensesToCreate) {
+      try {
+        // Map itinerary type to expense category
+        const getExpenseCategory = (itineraryType: string): ExpenseCategory => {
+          switch (itineraryType) {
+            case 'accommodation': return 'accommodation'
+            case 'meal': return 'food'
+            case 'travel': return 'transport'
+            case 'activity': return 'activities'
+            default: return 'other'
+          }
+        }
+
+        // Calculate share amount for each participant
+        const shareAmount = item.cost / item.split_between!.length
+
+        // Create expense participants
+        const expenseParticipants = item.split_between!.map(userId => ({
+          user_id: userId,
+          share_amount: shareAmount,
+          is_paid: userId === item.paid_by, // Mark as paid if they're the one who paid
+          paid_at: userId === item.paid_by ? new Date().toISOString() : null
+        }))
+
+        // Create the expense
+        const expenseData = {
+          title: item.title,
+          description: item.description || `${item.type} expense from ${item.title}`,
+          amount: item.cost,
+          currency: 'GBP',
+          category: getExpenseCategory(item.type),
+          status: 'pending' as const,
+          paid_by: item.paid_by,
+          expense_event_id: expenseEventId,
+          event_id: eventId,
+          universal_id: universalId, // Link using universal_id
+          participants: expenseParticipants
+        }
+
+        const createdExpense = await expenseService.createExpense(expenseData)
+        
+        // Update the itinerary item with the expense ID
+        item.expense_id = createdExpense.id
+        
+        console.log('Created expense from itinerary item:', createdExpense.id)
+      } catch (error) {
+        console.error('Failed to create expense from itinerary item:', item.title, error)
+      }
+    }
+  }
+
   const handleEventFormSubmit = async (eventData: any) => {
     if (!user) {
       alert('You must be logged in to create events')
@@ -105,12 +163,17 @@ export default function Calendar() {
     }
 
     try {
+      // Generate universal_id for linking all related data
+      const universalId = crypto.randomUUID()
+      
       // Extract itinerary items
       const { itineraryItems, ...eventDataWithoutItinerary } = eventData
 
       // Map camelCase to snake_case for database fields if needed
       const mappedEventData = {
         ...eventDataWithoutItinerary,
+        // Add universal_id for data linking
+        universal_id: universalId,
         // Ensure snake_case fields for database
         start_date: eventData.start_date || eventData.startDate,
         end_date: eventData.end_date || eventData.endDate,
@@ -137,6 +200,7 @@ export default function Calendar() {
         for (const item of itineraryItems) {
           const itineraryData = {
             event_id: newEvent.id,
+            universal_id: universalId, // Link using universal_id
             type: item.type,
             title: item.title,
             description: item.description,
@@ -153,6 +217,7 @@ export default function Calendar() {
       
       // Create corresponding expense event
       try {
+        console.log('Creating expense event for calendar event:', newEvent.id)
         const expenseEventData = {
           title: newEvent.title,
           description: newEvent.description || undefined,
@@ -160,15 +225,28 @@ export default function Calendar() {
           currency: 'GBP',
           createdBy: user.id,
           participants: eventData.selectedParticipants || [user.id], // Use selected participants from calendar event
-          calendar_event_id: newEvent.id // Link to calendar event using correct database column name
+          calendar_event_id: newEvent.id, // Legacy link to calendar event
+          universal_id: universalId // Universal identifier for linking all related data
         }
+        
+        console.log('Expense event data:', expenseEventData)
         
         const expenseEvent = await expenseEventService.createExpenseEvent(expenseEventData)
         
-        console.log('Expense event created for calendar event:', expenseEvent)
+        console.log('Expense event created successfully:', expenseEvent)
+        
+        // Create expenses from itinerary items
+        if (itineraryItems && itineraryItems.length > 0) {
+          console.log('Creating expenses from itinerary items:', itineraryItems)
+          await createExpensesFromItineraryItems(newEvent.id, expenseEvent.id, itineraryItems, universalId)
+        }
+        
+        console.log('✅ Expense event created for calendar event:', expenseEvent.id)
       } catch (expenseErr) {
-        console.error('Failed to create expense event:', expenseErr)
-        // Don't fail the whole operation if expense event creation fails
+        console.error('❌ Failed to create expense event:', expenseErr)
+        console.error('Error details:', JSON.stringify(expenseErr, null, 2))
+        // Show user-friendly error
+        alert('Warning: Calendar event created but expense tracking setup failed. You can manually create expenses in Split Pay.')
       }
       
       // Reload events to get the new one with full details
@@ -258,6 +336,38 @@ export default function Calendar() {
       
       await eventService.updateEvent(eventData.id, mappedEventData)
       
+      // Handle participant changes
+      if (eventData.selectedParticipants) {
+        // Get current participants from database
+        const currentEvent = await eventService.getEvent(eventData.id)
+        const currentParticipants = currentEvent?.participants?.map((p: any) => p.user_id) || []
+        const newParticipants = eventData.selectedParticipants || []
+        
+        // Find participants to add and remove
+        const participantsToAdd = newParticipants.filter((id: string) => !currentParticipants.includes(id))
+        const participantsToRemove = currentParticipants.filter(id => !newParticipants.includes(id))
+        
+        // Add new participants
+        for (const userId of participantsToAdd) {
+          try {
+            await eventService.joinEvent(eventData.id, userId)
+            console.log('Added participant to event:', userId)
+          } catch (error) {
+            console.error('Failed to add participant:', userId, error)
+          }
+        }
+        
+        // Remove participants
+        for (const userId of participantsToRemove) {
+          try {
+            await eventService.leaveEvent(eventData.id, userId)
+            console.log('Removed participant from event:', userId)
+          } catch (error) {
+            console.error('Failed to remove participant:', userId, error)
+          }
+        }
+      }
+      
       // Handle itinerary items update
       if (itineraryItems) {
         // Get existing itinerary items
@@ -295,6 +405,65 @@ export default function Calendar() {
             // Create new item
             await itineraryService.createItineraryItem(itineraryData)
           }
+        }
+        
+        // Handle expense event creation/update for itinerary items
+        try {
+          console.log('Handling expense event for calendar event update:', eventData.id)
+          
+          // Find the associated expense event
+          const updatedEvent = await eventService.getEvent(eventData.id)
+          if (updatedEvent) {
+            // Get all expense events to find the one linked to this calendar event
+            const { data: expenseEvents } = await expenseEventService.getExpenseEvents(1, 100)
+            let linkedExpenseEvent = expenseEvents.find(ee => ee.calendar_event_id === eventData.id)
+            
+            // If no expense event exists, create one
+            if (!linkedExpenseEvent) {
+              console.log('No expense event found for calendar event, creating one...')
+              const expenseEventData = {
+                title: eventData.title,
+                description: eventData.description || undefined,
+                location: eventData.location || undefined,
+                currency: 'GBP',
+                createdBy: user.id,
+                participants: eventData.selectedParticipants || [user.id],
+                calendar_event_id: eventData.id
+              }
+              
+              linkedExpenseEvent = await expenseEventService.createExpenseEvent(expenseEventData)
+              console.log('✅ Created expense event for existing calendar event:', linkedExpenseEvent.id)
+            } else {
+              console.log('📝 Expense event already exists:', linkedExpenseEvent.id)
+              
+              // Update participants if needed
+              if (eventData.selectedParticipants) {
+                console.log('📝 Updating expense event participants if needed')
+                const currentParticipants = linkedExpenseEvent.participants || []
+                const currentUserIds = currentParticipants.map((p: any) => p.user_id)
+                const newParticipants = eventData.selectedParticipants.filter((id: string) => !currentUserIds.includes(id))
+                
+                // Add new participants using the service
+                for (const userId of newParticipants) {
+                  try {
+                    await expenseEventService.addParticipant(linkedExpenseEvent.id, userId)
+                    console.log('✅ Added participant to expense event:', userId)
+                  } catch (error) {
+                    console.error('❌ Failed to add participant to expense event:', userId, error)
+                  }
+                }
+              }
+            }
+            
+            // Create expenses from new/updated itinerary items
+            if (linkedExpenseEvent) {
+              await createExpensesFromItineraryItems(eventData.id, linkedExpenseEvent.id, itineraryItems)
+            }
+          }
+        } catch (expenseError) {
+          console.error('❌ Failed to handle expenses for calendar event update:', expenseError)
+          console.error('Error details:', JSON.stringify(expenseError, null, 2))
+          // Don't fail the whole operation if expense creation fails
         }
       }
       

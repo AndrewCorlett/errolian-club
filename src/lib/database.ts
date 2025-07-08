@@ -117,9 +117,22 @@ export const eventService = {
   },
 
   async joinEvent(eventId: string, userId: string): Promise<EventParticipant> {
+    // First get the event to access its universal_id
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('universal_id')
+      .eq('id', eventId)
+      .single()
+    
+    if (eventError) throw eventError
+
     const { data, error } = await supabase
       .from('event_participants')
-      .insert({ event_id: eventId, user_id: userId })
+      .insert({ 
+        event_id: eventId, 
+        user_id: userId,
+        universal_id: event.universal_id // Link using universal_id
+      })
       .select()
       .single()
 
@@ -889,39 +902,73 @@ export const expenseEventService = {
     createdBy: string
     participants: string[]
     calendar_event_id?: string
+    universal_id?: string
   }): Promise<ExpenseEvent> {
+    console.log('📝 Creating expense event with data:', eventData)
+    
     // Create the expense event
+    const insertData = {
+      title: eventData.title,
+      description: eventData.description,
+      location: eventData.location,
+      currency: eventData.currency,
+      created_by: eventData.createdBy,
+      participant_count: eventData.participants.length,
+      calendar_event_id: eventData.calendar_event_id,
+      universal_id: eventData.universal_id, // Include universal_id for linking
+      status: 'active' as const,
+      total_amount: 0
+    }
+    
+    console.log('📝 Insert data for expense_events table:', insertData)
+    
     const { data: expenseEvent, error: eventError } = await supabase
       .from('expense_events')
-      .insert({
-        title: eventData.title,
-        description: eventData.description,
-        location: eventData.location,
-        currency: eventData.currency,
-        created_by: eventData.createdBy,
-        participant_count: eventData.participants.length,
-        calendar_event_id: eventData.calendar_event_id
-      })
+      .insert(insertData)
       .select()
       .single()
 
-    if (eventError) throw eventError
+    if (eventError) {
+      console.error('❌ Database error creating expense event:', eventError)
+      throw eventError
+    }
+    
+    console.log('✅ Expense event created in database:', expenseEvent)
 
-    // Add participants
+    // Add participants (avoiding duplicates)
     if (eventData.participants.length > 0) {
-      const participantInserts = eventData.participants.map(userId => ({
-        expense_event_id: expenseEvent.id,
-        user_id: userId
-      }))
-
-      const { error: participantsError } = await supabase
+      // First check which participants already exist
+      const { data: existingParticipants } = await supabase
         .from('expense_event_participants')
-        .insert(participantInserts)
+        .select('user_id')
+        .eq('expense_event_id', expenseEvent.id)
 
-      if (participantsError) {
-        // If participants creation fails, delete the event to maintain consistency
-        await supabase.from('expense_events').delete().eq('id', expenseEvent.id)
-        throw participantsError
+      const existingUserIds = existingParticipants?.map(p => p.user_id) || []
+      const newParticipants = eventData.participants.filter(userId => !existingUserIds.includes(userId))
+
+      if (newParticipants.length > 0) {
+        const participantInserts = newParticipants.map(userId => ({
+          expense_event_id: expenseEvent.id,
+          user_id: userId,
+          universal_id: eventData.universal_id // Link participants using universal_id
+        }))
+
+        console.log('📝 Adding new participants to expense event:', participantInserts)
+
+        const { error: participantsError } = await supabase
+          .from('expense_event_participants')
+          .insert(participantInserts)
+
+        if (participantsError) {
+          console.error('❌ Database error creating expense event participants:', participantsError)
+          // If participants creation fails, delete the event to maintain consistency
+          await supabase.from('expense_events').delete().eq('id', expenseEvent.id)
+          throw participantsError
+        }
+        
+        console.log('✅ New participants added to expense event successfully')
+      } else {
+        console.log('📝 All participants already exist in expense event')
       }
     }
 
@@ -950,6 +997,20 @@ export const expenseEventService = {
   },
 
   async addParticipant(expenseEventId: string, userId: string): Promise<void> {
+    // Check if participant already exists
+    const { data: existing } = await supabase
+      .from('expense_event_participants')
+      .select('*')
+      .eq('expense_event_id', expenseEventId)
+      .eq('user_id', userId)
+      .single()
+
+    // If participant already exists, return early
+    if (existing) {
+      console.log('📝 Participant already exists in expense event:', userId)
+      return
+    }
+
     const { error } = await supabase
       .from('expense_event_participants')
       .insert({

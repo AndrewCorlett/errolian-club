@@ -10,12 +10,15 @@ import { createPortal } from 'react-dom'
 import { Trash2, Plus, MapPin, Clock, DollarSign, Edit3, X } from 'lucide-react'
 import { AutocompleteInput } from '@/components/places/AutocompleteInput'
 import { MapPreview } from '@/components/places/MapPreview'
+import { useAuth } from '@/hooks/useAuth'
 import type { ItineraryItem, ItineraryType } from '@/types/events'
 import type { Place } from '@/types/places'
+import type { UserProfile } from '@/types/supabase'
 interface ItineraryBuilderProps {
   items: ItineraryItem[]
   onItemsChange: (items: ItineraryItem[]) => void
   eventDate?: Date
+  eventParticipants?: UserProfile[]
 }
 
 interface ItemFormData {
@@ -28,6 +31,8 @@ interface ItemFormData {
   locationPlace: Place | null
   cost: number
   notes: string
+  paid_by: string
+  split_between: string[]
 }
 
 const ITINERARY_TYPES: Array<{ value: ItineraryType; label: string; icon: string }> = [
@@ -40,8 +45,10 @@ const ITINERARY_TYPES: Array<{ value: ItineraryType; label: string; icon: string
 export default function ItineraryBuilder({
   items,
   onItemsChange,
-  eventDate = new Date()
+  eventDate = new Date(),
+  eventParticipants = []
 }: ItineraryBuilderProps) {
+  const { user } = useAuth()
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [editingItem, setEditingItem] = useState<ItineraryItem | null>(null)
   const [formData, setFormData] = useState<ItemFormData>({
@@ -53,7 +60,9 @@ export default function ItineraryBuilder({
     location: '',
     locationPlace: null,
     cost: 0,
-    notes: ''
+    notes: '',
+    paid_by: user?.id || '',
+    split_between: []
   })
 
   const resetForm = () => {
@@ -66,7 +75,9 @@ export default function ItineraryBuilder({
       location: '',
       locationPlace: null,
       cost: 0,
-      notes: ''
+      notes: '',
+      paid_by: user?.id || '',
+      split_between: []
     })
   }
 
@@ -87,7 +98,9 @@ export default function ItineraryBuilder({
       location: item.location,
       locationPlace: null, // We don't store place data in itinerary items yet
       cost: item.cost,
-      notes: item.notes
+      notes: item.notes,
+      paid_by: item.paid_by || user?.id || '',
+      split_between: item.split_between || []
     })
     setShowAddDialog(true)
   }
@@ -106,6 +119,8 @@ export default function ItineraryBuilder({
       location: formData.location,
       cost: formData.cost,
       notes: formData.notes,
+      paid_by: formData.paid_by,
+      split_between: formData.split_between,
       order: editingItem?.order || items.length,
       createdAt: editingItem?.createdAt || new Date(),
       updatedAt: new Date()
@@ -321,6 +336,11 @@ export default function ItineraryBuilder({
                       <div className="flex items-center gap-2 text-gray-600">
                         <DollarSign className="w-4 h-4" />
                         <span>${items[0].cost.toFixed(2)}</span>
+                        {items[0].paid_by && (
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            Paid by {eventParticipants.find(p => p.id === items[0].paid_by)?.name || 'Unknown'}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -471,6 +491,80 @@ export default function ItineraryBuilder({
                   placeholder="0.00"
                 />
               </div>
+
+              {/* Expense Fields - only show if cost > 0 */}
+              {formData.cost > 0 && (
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <DollarSign className="w-4 h-4" />
+                    <span>Expense Details</span>
+                  </div>
+                  
+                  {/* Paid By */}
+                  <div className="space-y-2">
+                    <Label>Paid By</Label>
+                    <Select
+                      value={formData.paid_by}
+                      onChange={(e) => setFormData(prev => ({ ...prev, paid_by: e.target.value }))}
+                    >
+                      <option value="">Select who paid</option>
+                      {eventParticipants.map(participant => (
+                        <option key={participant.id} value={participant.id}>
+                          {participant.name} {participant.id === user?.id ? '(You)' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  
+                  {/* Split Between */}
+                  <div className="space-y-2">
+                    <Label>Split Between</Label>
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {eventParticipants.map(participant => (
+                        <div
+                          key={participant.id}
+                          className={`flex items-center gap-3 p-2 rounded-lg transition-colors cursor-pointer ${
+                            formData.split_between.includes(participant.id)
+                              ? 'bg-blue-50 border border-blue-200'
+                              : 'bg-white border border-gray-200 hover:bg-gray-50'
+                          }`}
+                          onClick={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              split_between: prev.split_between.includes(participant.id)
+                                ? prev.split_between.filter(id => id !== participant.id)
+                                : [...prev.split_between, participant.id]
+                            }))
+                          }}
+                        >
+                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
+                            formData.split_between.includes(participant.id)
+                              ? 'bg-blue-600 border-blue-600'
+                              : 'border-gray-300'
+                          }`}>
+                            {formData.split_between.includes(participant.id) && (
+                              <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <span className="text-sm font-medium">
+                            {participant.name} {participant.id === user?.id ? '(You)' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {formData.split_between.length > 0 && (
+                        <span>
+                          Split ${formData.cost.toFixed(2)} between {formData.split_between.length} people 
+                          (${(formData.cost / formData.split_between.length).toFixed(2)} each)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Notes */}
               <div className="space-y-2">
