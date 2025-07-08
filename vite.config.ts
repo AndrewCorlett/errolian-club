@@ -23,7 +23,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu']
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-icons']
         }
       }
     }
