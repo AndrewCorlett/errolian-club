@@ -129,7 +129,7 @@ export default function NewEventSheet({
           const mappedItems: ItineraryItem[] = editEvent.itinerary_items.map(item => ({
             id: item.id,
             eventId: item.event_id,
-            universal_id: item.universal_id || crypto.randomUUID(),
+            universal_id: item.universal_id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             type: item.type,
             title: item.title,
             description: item.description || '',

@@ -132,9 +132,9 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
 
   return (
     <div className="fixed inset-0 modal-backdrop z-[9999] flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-fade-in-scale">
-        {/* Header */}
-        <div className="border-b border-gray-200 px-6 py-4">
+      <div className="bg-white rounded-xl w-full max-w-md shadow-2xl animate-fade-in-scale max-h-[90vh] flex flex-col">
+        {/* Header - Fixed */}
+        <div className="border-b border-gray-200 px-6 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Settle Up</h2>
             <button
@@ -148,8 +148,8 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
           </div>
         </div>
 
-        {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        {/* Content - Scrollable */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {loading && (
             <div className="text-center py-4">
               <div className="text-gray-500">Loading settlement suggestions...</div>
@@ -159,10 +159,10 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
           {/* Optimized Settlement Suggestions */}
           {!loading && settlementSuggestions.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Optimized Settlement Suggestions
               </label>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {settlementSuggestions.map((transfer, index) => {
                   const isSelected = selectedTransfer === transfer
                   const isPayment = transfer.fromUserId === user.id
@@ -176,44 +176,44 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
                         setCustomAmount('')
                         setCustomRecipient('')
                       }}
-                      className={`w-full p-4 text-left border-2 rounded-xl transition-all ${ 
+                      className={`w-full p-3 text-left border-2 rounded-lg transition-all ${ 
                         isSelected
                           ? 'border-accent-500 bg-accent-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className={`text-lg font-semibold mb-1 ${isPayment ? 'text-red-700' : 'text-green-700'}`}>
-                            £{transfer.amount.toFixed(2)}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className={`text-base font-semibold ${isPayment ? 'text-red-700' : 'text-green-700'}`}>
+                              £{transfer.amount.toFixed(2)}
+                            </div>
+                            <div className={`text-xs px-2 py-0.5 rounded-full ${isPayment ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
+                              {isPayment ? 'You pay' : 'You receive'}
+                            </div>
                           </div>
-                          <div className="text-sm font-medium mb-1 text-gray-900">
+                          <div className="text-sm text-gray-700 truncate mt-1">
                             {transfer.description}
                           </div>
-                          <div className={`text-xs ${isPayment ? 'text-red-600' : 'text-green-600'}`}>
-                            {isPayment ? 'You pay' : 'You receive'} • Optimized transfer
-                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           {isPayment ? (
-                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-7 h-7 bg-red-100 rounded-full flex items-center justify-center">
+                              <svg className="w-3.5 h-3.5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                               </svg>
                             </div>
                           ) : (
-                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-7 h-7 bg-green-100 rounded-full flex items-center justify-center">
+                              <svg className="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
                               </svg>
                             </div>
                           )}
                           {isSelected && (
-                            <div className="w-4 h-4">
-                              <svg className="w-4 h-4 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                            </div>
+                            <svg className="w-4 h-4 text-accent-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
                           )}
                         </div>
                       </div>
@@ -225,8 +225,8 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
           )}
 
           {!loading && settlementSuggestions.length === 0 && (
-            <div className="text-center py-6">
-              <div className="text-gray-500 mb-2">No optimized settlements available</div>
+            <div className="text-center py-4">
+              <div className="text-gray-500 mb-1">No optimized settlements available</div>
               <div className="text-sm text-gray-400">All balances are already settled or you can create a custom transfer below</div>
             </div>
           )}
@@ -310,16 +310,20 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
               rows={3}
             />
           </div>
+        </form>
 
-          {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+        {/* Action Buttons - Fixed at bottom */}
+        <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0">
+          <div className="flex items-center justify-end gap-3">
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button 
               type="submit" 
+              form="settle-form"
               disabled={!selectedTransfer && (!customAmount || !customRecipient)}
               className="bg-accent-600 hover:bg-accent-700 text-white"
+              onClick={handleSubmit}
             >
               {selectedTransfer 
                 ? `${selectedTransfer.fromUserId === user.id ? 'Record Payment' : 'Request Payment'}`
@@ -327,7 +331,7 @@ export default function SettleUpModal({ isOpen, onClose, onSettlement }: SettleU
               }
             </Button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   )

@@ -111,7 +111,7 @@ export default function ItineraryBuilder({
     const newItem: ItineraryItem = {
       id: editingItem?.id || `item-${Date.now()}`,
       eventId: editingItem?.eventId || '',
-      universal_id: editingItem?.universal_id || crypto.randomUUID(),
+      universal_id: editingItem?.universal_id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: formData.type,
       title: formData.title,
       description: formData.description,

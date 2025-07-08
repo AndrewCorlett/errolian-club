@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import { eventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
+import SettleUpModal from '@/components/splitpay/SettleUpModal'
 
 export default function SplitPay() {
   const { user } = useAuth()
@@ -13,6 +14,7 @@ export default function SplitPay() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userBalance, setUserBalance] = useState({ owed: 0, owing: 0 })
+  const [showSettleUpModal, setShowSettleUpModal] = useState(false)
 
   // Load expense events and user balance
   useEffect(() => {
@@ -162,6 +164,7 @@ export default function SplitPay() {
                     : 'bg-green-600 hover:bg-green-700 text-white'
                   }
                 `}
+                onClick={() => setShowSettleUpModal(true)}
               >
                 {owesAmount > 0 ? 'Settle Up' : 'Request'}
               </Button>
@@ -246,6 +249,29 @@ export default function SplitPay() {
           </Card>
         )}
       </div>
+
+      {/* Settle Up Modal */}
+      <SettleUpModal 
+        isOpen={showSettleUpModal}
+        onClose={() => setShowSettleUpModal(false)}
+        onSettlement={async (settlementData) => {
+          // TODO: Implement settlement recording
+          console.log('Settlement data:', settlementData)
+          // Reload data after settlement
+          const loadData = async () => {
+            if (!user) return
+            try {
+              // TODO: Load expense events data
+              const expenseEventsData: any[] = []
+              setExpenseEvents(expenseEventsData || [])
+              // TODO: Update balance calculation
+            } catch (err) {
+              console.error('Failed to reload data:', err)
+            }
+          }
+          await loadData()
+        }}
+      />
     </div>
   )
 }

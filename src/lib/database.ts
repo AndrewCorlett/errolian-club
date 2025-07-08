@@ -1002,12 +1002,17 @@ export const expenseEventService = {
 
   async addParticipant(expenseEventId: string, userId: string, universalId?: string): Promise<void> {
     // Check if participant already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('expense_event_participants')
       .select('*')
       .eq('expense_event_id', expenseEventId)
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
+
+    if (checkError) {
+      console.error('Error checking existing participant:', checkError)
+      throw checkError
+    }
 
     // If participant already exists, return early
     if (existing) {
@@ -1015,7 +1020,7 @@ export const expenseEventService = {
       return
     }
 
-    const { error } = await supabase
+    const { error: insertError } = await supabase
       .from('expense_event_participants')
       .insert({
         expense_event_id: expenseEventId,
@@ -1023,17 +1028,26 @@ export const expenseEventService = {
         universal_id: universalId // Include universal_id for linking if provided
       })
 
-    if (error) throw error
+    if (insertError) throw insertError
 
-    // Update participant count
-    const { error: updateError } = await supabase
-      .from('expense_events')
-      .update({
-        participant_count: supabase.rpc('increment_participant_count', { expense_event_id: expenseEventId })
-      })
-      .eq('id', expenseEventId)
+    // Update participant count by counting current participants
+    try {
+      const { count } = await supabase
+        .from('expense_event_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('expense_event_id', expenseEventId)
 
-    if (updateError) console.warn('Failed to update participant count:', updateError)
+      if (count !== null) {
+        const { error: updateError } = await supabase
+          .from('expense_events')
+          .update({ participant_count: count })
+          .eq('id', expenseEventId)
+
+        if (updateError) console.warn('Failed to update participant count:', updateError)
+      }
+    } catch (countError) {
+      console.warn('Failed to count participants:', countError)
+    }
   },
 
   async removeParticipant(expenseEventId: string, userId: string): Promise<void> {
@@ -1045,14 +1059,38 @@ export const expenseEventService = {
 
     if (error) throw error
 
-    // Update participant count
-    const { error: updateError } = await supabase
-      .from('expense_events')
-      .update({
-        participant_count: supabase.rpc('decrement_participant_count', { expense_event_id: expenseEventId })
-      })
-      .eq('id', expenseEventId)
+    // Update participant count by counting current participants
+    try {
+      const { count } = await supabase
+        .from('expense_event_participants')
+        .select('*', { count: 'exact', head: true })
+        .eq('expense_event_id', expenseEventId)
 
-    if (updateError) console.warn('Failed to update participant count:', updateError)
+      if (count !== null) {
+        const { error: updateError } = await supabase
+          .from('expense_events')
+          .update({ participant_count: count })
+          .eq('id', expenseEventId)
+
+        if (updateError) console.warn('Failed to update participant count:', updateError)
+      }
+    } catch (countError) {
+      console.warn('Failed to count participants:', countError)
+    }
+  },
+
+  async getExpenseEventByCalendarEventId(calendarEventId: string): Promise<ExpenseEvent | null> {
+    const { data, error } = await supabase
+      .from('expense_events')
+      .select('*')
+      .eq('calendar_event_id', calendarEventId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('Error fetching expense event by calendar event ID:', error)
+      throw error
+    }
+    
+    return data
   }
 }

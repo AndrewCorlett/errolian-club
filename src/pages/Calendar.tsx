@@ -164,7 +164,7 @@ export default function Calendar() {
 
     try {
       // Generate universal_id for linking all related data
-      const universalId = crypto.randomUUID()
+      const universalId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
       
       // Extract itinerary items
       const { itineraryItems, ...eventDataWithoutItinerary } = eventData
@@ -218,13 +218,15 @@ export default function Calendar() {
       // Create corresponding expense event
       try {
         console.log('Creating expense event for calendar event:', newEvent.id)
+        // Deduplicate participants to avoid duplicate key errors
+        const uniqueParticipants = [...new Set(eventData.selectedParticipants || [user.id])] as string[]
         const expenseEventData = {
           title: newEvent.title,
           description: newEvent.description || undefined,
           location: newEvent.location || undefined,
           currency: 'GBP',
           createdBy: user.id,
-          participants: eventData.selectedParticipants || [user.id], // Use selected participants from calendar event
+          participants: uniqueParticipants, // Use deduplicated participants from calendar event
           calendar_event_id: newEvent.id, // Legacy link to calendar event
           universal_id: universalId // Universal identifier for linking all related data
         }
@@ -411,25 +413,24 @@ export default function Calendar() {
         try {
           console.log('Handling expense event for calendar event update:', eventData.id)
           
-          // Find the associated expense event using Universal ID
+          // Find the associated expense event by calendar_event_id
           const updatedEvent = await eventService.getEvent(eventData.id)
           if (updatedEvent) {
-            // Get all expense events to find the one linked to this calendar event via universal_id
-            const { data: expenseEvents } = await expenseEventService.getExpenseEvents(1, 100)
-            let linkedExpenseEvent = expenseEvents.find(ee => 
-              ee.universal_id === updatedEvent.universal_id || ee.calendar_event_id === eventData.id
-            )
+            // Look up expense event by calendar_event_id
+            let linkedExpenseEvent = await expenseEventService.getExpenseEventByCalendarEventId(eventData.id)
             
             // If no expense event exists, create one
             if (!linkedExpenseEvent) {
               console.log('No expense event found for calendar event, creating one...')
+              // Deduplicate participants to avoid duplicate key errors
+              const uniqueParticipants = [...new Set(eventData.selectedParticipants || [user.id])] as string[]
               const expenseEventData = {
                 title: eventData.title,
                 description: eventData.description || undefined,
                 location: eventData.location || undefined,
                 currency: 'GBP',
                 createdBy: user.id,
-                participants: eventData.selectedParticipants || [user.id],
+                participants: uniqueParticipants,
                 calendar_event_id: eventData.id,
                 universal_id: updatedEvent.universal_id // Use Universal ID for linking
               }
@@ -462,7 +463,7 @@ export default function Calendar() {
             if (linkedExpenseEvent) {
               // Get the event's universal_id for linking
               const currentEvent = await eventService.getEvent(eventData.id)
-              const universalId = currentEvent?.universal_id || crypto.randomUUID()
+              const universalId = currentEvent?.universal_id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
               await createExpensesFromItineraryItems(eventData.id, linkedExpenseEvent.id, itineraryItems, universalId)
             }
           }

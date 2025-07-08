@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 import EditExpenseEventModal from '@/components/splitpay/EditExpenseEventModal'
+import SettleUpModal from '@/components/splitpay/SettleUpModal'
 import { format } from 'date-fns'
 import { eventService, expenseService, userService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
@@ -34,6 +35,7 @@ export default function ExpenseEventDetail() {
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showSettleUpModal, setShowSettleUpModal] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -169,8 +171,7 @@ export default function ExpenseEventDetail() {
   }
 
   const handleViewReimbursements = () => {
-    // TODO: Implement view reimbursements functionality
-    alert('View All Suggested Reimbursements functionality will be implemented soon')
+    setShowSettleUpModal(true)
   }
 
   const handleEditEvent = () => {
@@ -666,6 +667,17 @@ export default function ExpenseEventDetail() {
             console.error('Failed to create expense:', error)
             alert('Failed to create expense. Please try again.')
           }
+        }}
+      />
+
+      {/* Settle Up Modal */}
+      <SettleUpModal 
+        isOpen={showSettleUpModal}
+        onClose={() => setShowSettleUpModal(false)}
+        onSettlement={async (settlementData) => {
+          console.log('Settlement data:', settlementData)
+          // Reload data after settlement
+          // TODO: Implement settlement recording and data reload
         }}
       />
     </div>
