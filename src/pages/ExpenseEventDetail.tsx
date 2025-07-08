@@ -5,9 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 import { format } from 'date-fns'
-import { expenseEventService, expenseService, userService } from '@/lib/database'
+import { eventService, expenseService, userService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
-import type { ExpenseEvent } from '@/types/expenses'
 import type { ExpenseWithDetails, UserProfile } from '@/types/supabase'
 
 type ViewMode = 'expenses' | 'balances'
@@ -24,7 +23,7 @@ export default function ExpenseEventDetail() {
   const { expenseEventId } = useParams<{ expenseEventId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [expenseEvent, setExpenseEvent] = useState<ExpenseEvent | null>(null)
+  const [expenseEvent, setExpenseEvent] = useState<any | null>(null)
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([])
   const [participants, setParticipants] = useState<UserProfile[]>([])
   const [balances, setBalances] = useState<UserBalance[]>([])
@@ -42,13 +41,28 @@ export default function ExpenseEventDetail() {
         setLoading(true)
         setError(null)
 
-        // Load expense event details
-        const eventData = await expenseEventService.getExpenseEvent(expenseEventId)
+        // Load event details (using regular events as expense events for now)
+        const eventData = await eventService.getEvent(expenseEventId)
         if (!eventData) {
-          setError('Expense event not found')
+          setError('Event not found')
           return
         }
-        setExpenseEvent(eventData)
+        
+        // Transform event to look like an expense event
+        const mockExpenseEvent = {
+          id: eventData.id,
+          title: eventData.title,
+          description: eventData.description,
+          location: eventData.location,
+          currency: 'GBP',
+          status: 'active',
+          createdBy: eventData.created_by,
+          totalAmount: 0,
+          participantCount: eventData.participants?.length || 1,
+          createdAt: eventData.created_at
+        }
+        
+        setExpenseEvent(mockExpenseEvent)
 
         // Load expenses for this event
         const expensesResponse = await expenseService.getExpenses(1, 100)
@@ -523,7 +537,8 @@ export default function ExpenseEventDetail() {
         onClose={() => setShowAddExpenseModal(false)}
         onExpenseCreate={async (expense) => {
           try {
-            // Add the event_id to link to the expense event (using event_id field for now)
+            // For now, we'll use event_id to store the expense event ID
+            // This is a temporary solution until the database migration is applied
             const expenseData = {
               ...expense,
               event_id: expenseEventId
@@ -537,15 +552,11 @@ export default function ExpenseEventDetail() {
             
             // Reload data to show the new expense
             if (expenseEventId && user) {
-              const eventData = await expenseEventService.getExpenseEvent(expenseEventId)
-              if (eventData) {
-                setExpenseEvent(eventData)
-                // Reload expenses and balances
-                const response = await expenseService.getExpenses(1, 50)
-                const eventExpenses = response.data.filter(exp => exp.event_id === expenseEventId)
-                setExpenses(eventExpenses)
-                setBalances(calculateEventBalances(eventExpenses, participants))
-              }
+              // Reload expenses and balances
+              const response = await expenseService.getExpenses(1, 50)
+              const eventExpenses = response.data.filter(exp => exp.event_id === expenseEventId)
+              setExpenses(eventExpenses)
+              setBalances(calculateEventBalances(eventExpenses, participants))
             }
           } catch (error) {
             console.error('Failed to create expense:', error)

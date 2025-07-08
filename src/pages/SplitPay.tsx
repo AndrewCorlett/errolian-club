@@ -3,14 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { expenseEventService, expenseService } from '@/lib/database'
+import { eventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
-import type { ExpenseEvent } from '@/types/expenses'
 
 export default function SplitPay() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [expenseEvents, setExpenseEvents] = useState<ExpenseEvent[]>([])
+  const [expenseEvents, setExpenseEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userBalance, setUserBalance] = useState({ owed: 0, owing: 0 })
@@ -24,14 +23,27 @@ export default function SplitPay() {
         setLoading(true)
         setError(null)
         
-        // Load expense events and user balance in parallel
-        const [eventsResponse, balanceResponse] = await Promise.all([
-          expenseEventService.getExpenseEvents(1, 100),
-          expenseService.getUserBalance(user.id)
-        ])
+        // For now, use regular events as expense events until the database is properly set up
+        const eventsResponse = await eventService.getEvents(1, 100)
         
-        setExpenseEvents(eventsResponse.data)
-        setUserBalance(balanceResponse)
+        // Transform events to look like expense events
+        const mockExpenseEvents = eventsResponse.data.map(event => ({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          location: event.location,
+          currency: 'GBP',
+          status: 'active',
+          createdBy: event.created_by,
+          totalAmount: 0,
+          participantCount: event.participants?.length || 1,
+          createdAt: event.created_at
+        }))
+        
+        setExpenseEvents(mockExpenseEvents)
+        
+        // Simple balance calculation - using mock data until database is set up
+        setUserBalance({ owed: 0, owing: 0 })
       } catch (err) {
         console.error('Failed to load split-pay data:', err)
         setError('Failed to load expense events')
@@ -51,7 +63,7 @@ export default function SplitPay() {
     navigate(`/split-pay/events/${expenseEventId}`)
   }
 
-  const getExpenseEventIcon = (expenseEvent: ExpenseEvent) => {
+  const getExpenseEventIcon = (expenseEvent: any) => {
     // Return appropriate icon based on event or default
     if (expenseEvent.location?.toLowerCase().includes('restaurant') || expenseEvent.title.toLowerCase().includes('dinner')) {
       return '🍽️'
