@@ -47,6 +47,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         
         // Only create if profile doesn't exist
+        console.log('Creating user profile for:', auth.user!.email)
         const profile = await authService.createUserProfile(
           auth.user!.id,
           auth.user!.email!,
@@ -54,7 +55,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         )
         
         if (profile) {
-          console.log('User profile created successfully')
+          console.log('User profile created successfully:', profile)
+        } else {
+          console.error('Failed to create user profile - this may be due to RLS policies')
+          // Force a profile fetch retry
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
         }
       }
 

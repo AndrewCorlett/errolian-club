@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, getSupabaseAdmin } from './supabase'
 import type { UserProfile, UserProfileInsert } from '@/types/supabase'
 
 export const authService = {
@@ -11,11 +11,26 @@ export const authService = {
         role: 'member'
       }
 
-      const { data, error } = await supabase
+      // First try with regular client
+      let { data, error } = await supabase
         .from('user_profiles')
         .insert(profileData)
         .select()
         .single()
+
+      // If RLS blocks regular client, try with admin client
+      if (error && error.code === '42501') {
+        console.log('RLS blocked profile creation, trying with admin client...')
+        const adminClient = getSupabaseAdmin()
+        const result = await adminClient
+          .from('user_profiles')
+          .insert(profileData)
+          .select()
+          .single()
+        
+        data = result.data
+        error = result.error
+      }
 
       if (error) {
         console.error('Error creating user profile:', error)

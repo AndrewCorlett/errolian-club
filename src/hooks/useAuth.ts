@@ -158,6 +158,7 @@ export function useAuth(): UseAuthReturn {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for:', userId)
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -166,15 +167,21 @@ export function useAuth(): UseAuthReturn {
 
       if (error) {
         console.error('Error fetching user profile:', error)
+        if (error.code === 'PGRST116') {
+          console.log('No profile found for user - this is normal for new users')
+        }
         return
       }
 
       if (data) {
+        console.log('User profile found:', data)
         const profileWithPermissions: UserWithRole = {
           ...data,
           permissions: getPermissions(data.role)
         }
         setProfile(profileWithPermissions)
+      } else {
+        console.log('No profile data returned for user')
       }
     } catch (error) {
       console.error('Error in fetchUserProfile:', error)
