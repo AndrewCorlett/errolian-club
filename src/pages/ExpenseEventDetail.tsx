@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
+import EditExpenseEventModal from '@/components/splitpay/EditExpenseEventModal'
 import { format } from 'date-fns'
-import { eventService, expenseService, userService } from '@/lib/database'
+import { eventService, expenseService, userService, expenseEventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ExpenseWithDetails, UserProfile } from '@/types/supabase'
 
@@ -32,6 +33,7 @@ export default function ExpenseEventDetail() {
   const [viewMode, setViewMode] = useState<ViewMode>('expenses')
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
 
   useEffect(() => {
     const loadData = async () => {
@@ -171,9 +173,128 @@ export default function ExpenseEventDetail() {
   }
 
   const handleEditEvent = () => {
-    // TODO: Implement edit event functionality
-    alert('Edit Event functionality will be implemented soon')
+    setShowEditModal(true)
     setShowMenu(false)
+  }
+
+  const handleEventUpdate = async (updatedData: any) => {
+    if (!expenseEventId || !user) return
+
+    try {
+      // Update the expense event basic details
+      const updatePayload = {
+        title: updatedData.title,
+        description: updatedData.description,
+        location: updatedData.location,
+        currency: updatedData.currency,
+        status: updatedData.status,
+        participant_count: updatedData.participant_count
+      }
+
+      console.log('Updating expense event:', expenseEventId, updatePayload)
+      await expenseEventService.updateExpenseEvent(expenseEventId, updatePayload)
+
+      // Handle participant changes
+      const currentParticipants = participants.map(p => p.id)
+      const newParticipants = updatedData.participants || []
+      
+      // Find participants to add and remove
+      const participantsToAdd = newParticipants.filter((id: string) => !currentParticipants.includes(id))
+      const participantsToRemove = currentParticipants.filter(id => !newParticipants.includes(id))
+
+      // Add new participants
+      for (const userId of participantsToAdd) {
+        try {
+          await expenseEventService.addParticipant(expenseEventId, userId)
+          console.log('Added participant:', userId)
+        } catch (error) {
+          console.error('Failed to add participant:', userId, error)
+        }
+      }
+
+      // Remove participants
+      for (const userId of participantsToRemove) {
+        try {
+          await expenseEventService.removeParticipant(expenseEventId, userId)
+          console.log('Removed participant:', userId)
+        } catch (error) {
+          console.error('Failed to remove participant:', userId, error)
+        }
+      }
+
+      // Reload the data to reflect changes
+      const loadData = async () => {
+        try {
+          setLoading(true)
+          setError(null)
+
+          // Load event details (using regular events as expense events for now)
+          const eventData = await eventService.getEvent(expenseEventId)
+          if (!eventData) {
+            setError('Event not found')
+            return
+          }
+          
+          // Transform event to look like an expense event
+          const mockExpenseEvent = {
+            id: eventData.id,
+            title: eventData.title,
+            description: eventData.description,
+            location: eventData.location,
+            currency: 'GBP',
+            status: 'active',
+            createdBy: eventData.created_by,
+            totalAmount: 0,
+            participantCount: eventData.participants?.length || 1,
+            createdAt: eventData.created_at
+          }
+          
+          setExpenseEvent(mockExpenseEvent)
+
+          // Load expenses for this event
+          const expensesResponse = await expenseService.getExpenses(1, 100)
+          const eventExpenses = expensesResponse.data.filter(expense => 
+            expense.event_id === expenseEventId
+          )
+          setExpenses(eventExpenses)
+
+          // Load all users to get participant details
+          const users = await userService.getUsers()
+          
+          // Get event participants from expense participants
+          const participantIds = new Set<string>()
+          eventExpenses.forEach(expense => {
+            participantIds.add(expense.paid_by)
+            expense.participants.forEach(participant => {
+              participantIds.add(participant.user_id)
+            })
+          })
+
+          const eventParticipants = users.filter(u => participantIds.has(u.id))
+          setParticipants(eventParticipants)
+
+          // Calculate balances
+          const calculatedBalances = calculateEventBalances(eventExpenses, eventParticipants)
+          setBalances(calculatedBalances)
+
+        } catch (err) {
+          console.error('Failed to reload expense event data:', err)
+          setError('Failed to reload expense event')
+        } finally {
+          setLoading(false)
+        }
+      }
+
+      await loadData()
+      
+      console.log('Expense event updated successfully')
+      alert('Expense event updated successfully!')
+      
+    } catch (error) {
+      console.error('Failed to update expense event:', error)
+      alert('Failed to update expense event. Please try again.')
+      throw error
+    }
   }
 
   const handleDeleteEvent = async () => {
@@ -191,17 +312,6 @@ export default function ExpenseEventDetail() {
     setShowMenu(false)
   }
 
-  const handleManageParticipants = () => {
-    // TODO: Implement manage participants functionality
-    alert('Manage Participants functionality will be implemented soon')
-    setShowMenu(false)
-  }
-
-  const handleEventSettings = () => {
-    // TODO: Implement event settings functionality
-    alert('Event Settings functionality will be implemented soon')
-    setShowMenu(false)
-  }
 
   const handleExpenseClick = (expenseId: string) => {
     navigate(`/split-pay/expenses/${expenseId}`)
@@ -288,25 +398,6 @@ export default function ExpenseEventDetail() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
               <span className="text-sm text-gray-700">Edit Event</span>
-            </button>
-            <button
-              onClick={handleManageParticipants}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3"
-            >
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-              <span className="text-sm text-gray-700">Manage Participants</span>
-            </button>
-            <button
-              onClick={handleEventSettings}
-              className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3"
-            >
-              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              <span className="text-sm text-gray-700">Event Settings</span>
             </button>
             <div className="border-t border-gray-200 my-2"></div>
             <button
@@ -530,6 +621,14 @@ export default function ExpenseEventDetail() {
           </>
         )}
       </div>
+
+      {/* Edit Expense Event Modal */}
+      <EditExpenseEventModal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        expenseEvent={expenseEvent}
+        onEventUpdate={handleEventUpdate}
+      />
 
       {/* Add Expense Modal */}
       <AddExpenseModal
