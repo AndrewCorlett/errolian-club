@@ -665,12 +665,12 @@ export default function Documents() {
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-4">
           <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-shrink-0">
                 <h1 className="text-xl font-bold text-gray-900">Documents</h1>
                 <p className="text-sm text-gray-600">Club files and resources</p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                 <RealTimeStatusIndicator 
                   isConnected={isConnected}
                   connectionStatus={connectionStatus}
@@ -678,12 +678,12 @@ export default function Documents() {
                   onManualReconnect={manualReconnect}
                 />
                 {canUpload && (
-                  <>
-                    <Button onClick={() => setShowUploadModal(true)} size="sm">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => setShowUploadModal(true)} size="sm" className="flex-shrink-0">
+                      <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                       </svg>
-                      Upload
+                      <span className="hidden sm:inline">Upload</span>
                     </Button>
                     {canCreateFolder && (
                       <>
@@ -691,39 +691,42 @@ export default function Documents() {
                           onClick={handleCreateFolder}
                           variant="outline" 
                           size="sm"
+                          className="flex-shrink-0"
                         >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                           </svg>
-                          Create Folder
+                          <span className="hidden sm:inline">Create Folder</span>
                         </Button>
-                        <Button 
-                          onClick={handleCleanupOrphanedDocuments}
-                          variant="outline" 
-                          size="sm"
-                          className="bg-red-100 text-red-800 border-red-300"
-                        >
-                          🧹 Cleanup DB
-                        </Button>
-                        <Button 
-                          onClick={async () => {
-                            try {
-                              const { fileStorage } = await import('@/lib/fileStorage')
-                              const result = await fileStorage.testStorageBucket()
-                              alert(`Storage Test Results:\nExists: ${result.exists}\nAccessible: ${result.accessible}\nCan Create Signed URLs: ${result.canCreateSignedUrls}\nError: ${result.error || 'None'}`)
-                            } catch (err) {
-                              alert('Storage test failed: ' + (err as Error).message)
-                            }
-                          }}
-                          variant="outline" 
-                          size="sm"
-                          className="bg-blue-100 text-blue-800 border-blue-300"
-                        >
-                          🔧 Test Storage
-                        </Button>
+                        <div className="hidden md:flex gap-2">
+                          <Button 
+                            onClick={handleCleanupOrphanedDocuments}
+                            variant="outline" 
+                            size="sm"
+                            className="bg-red-100 text-red-800 border-red-300 flex-shrink-0"
+                          >
+                            🧹 <span className="hidden lg:inline ml-1">Cleanup DB</span>
+                          </Button>
+                          <Button 
+                            onClick={async () => {
+                              try {
+                                const { fileStorage } = await import('@/lib/fileStorage')
+                                const result = await fileStorage.testStorageBucket()
+                                alert(`Storage Test Results:\nExists: ${result.exists}\nAccessible: ${result.accessible}\nCan Create Signed URLs: ${result.canCreateSignedUrls}\nError: ${result.error || 'None'}`)
+                              } catch (err) {
+                                alert('Storage test failed: ' + (err as Error).message)
+                              }
+                            }}
+                            variant="outline" 
+                            size="sm"
+                            className="bg-blue-100 text-blue-800 border-blue-300 flex-shrink-0"
+                          >
+                            🔧 <span className="hidden lg:inline ml-1">Test Storage</span>
+                          </Button>
+                        </div>
                       </>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
             </div>
@@ -731,39 +734,43 @@ export default function Documents() {
         </div>
       </div>
 
-      <div className="px-4 py-6 max-w-6xl mx-auto">
+      <div className="px-3 sm:px-4 py-4 sm:py-6 max-w-6xl mx-auto">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 mb-6 text-sm">
-          {currentFolder && (
-            <button
-              onClick={() => handleFolderNavigation(folderPath.length - 2)}
-              className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back
-            </button>
-          )}
-          <button
-            onClick={() => handleFolderNavigation(-1)}
-            className="text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            📁 Root
-          </button>
-          {folderPath.map((folder, index) => (
-            <React.Fragment key={folder.id}>
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+        <div className="mb-6">
+          <div className="flex items-center gap-2 text-sm overflow-x-auto pb-1">
+            {currentFolder && (
               <button
-                onClick={() => handleFolderNavigation(index)}
-                className="text-blue-600 hover:text-blue-800 transition-colors"
+                onClick={() => handleFolderNavigation(folderPath.length - 2)}
+                className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-1 flex-shrink-0 px-2 py-1 rounded-md hover:bg-gray-100"
               >
-                {folder.icon} {folder.name}
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                <span className="hidden sm:inline">Back</span>
               </button>
-            </React.Fragment>
-          ))}
+            )}
+            <button
+              onClick={() => handleFolderNavigation(-1)}
+              className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0 px-2 py-1 rounded-md hover:bg-blue-50"
+            >
+              📁 <span className="hidden xs:inline">Root</span>
+            </button>
+            {folderPath.map((folder, index) => (
+              <React.Fragment key={folder.id}>
+                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+                <button
+                  onClick={() => handleFolderNavigation(index)}
+                  className="text-blue-600 hover:text-blue-800 transition-colors flex-shrink-0 px-2 py-1 rounded-md hover:bg-blue-50 max-w-[120px] truncate"
+                  title={`${folder.icon} ${folder.name}`}
+                >
+                  <span className="hidden xs:inline">{folder.icon} </span>
+                  <span className="truncate">{folder.name}</span>
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
 
         {/* Content - Root Drop Zone */}
@@ -778,7 +785,7 @@ export default function Documents() {
             // Root level - only show folders
             <div>
               {currentFolders.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {currentFolders.map(folder => (
                     <FolderCard
                       key={folder.id}
@@ -819,7 +826,7 @@ export default function Documents() {
               {currentFolders.length > 0 && (
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Folders</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {currentFolders.map(folder => (
                       <FolderCard
                         key={folder.id}
