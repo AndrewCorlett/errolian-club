@@ -197,169 +197,78 @@ export default function VerticalCalendar({
       className="h-full bg-white"
     >
       <div className="px-4">
-        {/* Render months without map */}
-        {months.length > 0 && (
-          <>
-            {/* Month 0 */}
-            {months[0] && (
-              <div className="mb-8">
-                {/* Month header with day headers - Sticky together */}
-                <div className="sticky top-0 bg-white z-10">
-                  <h2 className="text-xl font-bold text-primary-900 mb-1 py-1">
-                    {format(months[0].date, 'MMMM yyyy')}
-                  </h2>
-                  
-                  {/* Week day headers */}
-                  <div className="grid grid-cols-7 gap-1 mb-2">
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Mon</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Tue</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Wed</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Thu</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Fri</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Sat</div>
-                    <div className="text-center text-xs font-medium text-primary-600 py-1">Sun</div>
-                  </div>
-                </div>
-
-
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-1">
-                  {months[0].days.slice(0, 35).reduce((acc: React.ReactElement[], date) => {
-                    const isCurrentMonth = isSameMonth(date, months[0].date)
-                    const isCurrentDay = isToday(date)
-                    const eventPills = getEventPillsForDate(date)
-                    
-                    acc.push(
-                      <div
-                        key={date.toISOString()}
-                        className={`
-                          min-h-[60px] p-1 cursor-pointer
-                          hover:bg-primary-50 transition-colors relative
-                          ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}
-                          ${isCurrentDay ? 'bg-primary-100' : ''}
-                        `}
-                        onClick={() => onDayShortPress(date)}
-                        onContextMenu={(e) => {
-                          e.preventDefault()
-                          onDayLongPress(date)
-                        }}
-                      >
-                        <div className={`text-sm font-medium mb-1 ${isCurrentDay ? 'text-primary-900' : ''}`}>
-                          {format(date, 'd')}
-                        </div>
-                        
-                        {/* Event pills - limit to 2 */}
-                        <div className="space-y-0.5">
-                          {eventPills.slice(0, 2).reduce((pillAcc: React.ReactElement[], pill, pillIndex) => {
-                            pillAcc.push(
-                              <div
-                                key={`pill-${pill.id}-${pillIndex}`}
-                                className="h-3 text-[10px] px-1 rounded text-white truncate leading-3"
-                                style={{ backgroundColor: pill.color }}
-                                title={pill.title}
-                              >
-                                {pill.isItinerary ? '→' : ''}{pill.title}
-                              </div>
-                            )
-                            return pillAcc
-                          }, [])}
-                          
-                          {eventPills.length > 2 && (
-                            <div className="text-[10px] text-primary-600 font-medium">
-                              +{eventPills.length - 2} more
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                    return acc
-                  }, [])}
-                </div>
+        {/* Render months */}
+        {months.map((month, monthIndex) => (
+          <div key={month.date.toISOString()} className="mb-8">
+            {/* Month header with day headers - Sticky together */}
+            <div className="sticky top-0 bg-white z-10">
+              <h2 className="text-xl font-bold text-primary-900 mb-1 py-1">
+                {format(month.date, 'MMMM yyyy')}
+              </h2>
+              
+              {/* Week day headers */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Mon</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Tue</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Wed</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Thu</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Fri</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Sat</div>
+                <div className="text-center text-xs font-medium text-primary-600 py-1">Sun</div>
               </div>
-            )}
+            </div>
 
-            {/* Render additional months (1-24) */}
-            {months.slice(1, 25).reduce((acc: React.ReactElement[], month) => {
-              acc.push(
-                <div key={month.date.toISOString()} className="mb-8">
-                  {/* Month header with day headers - Sticky together */}
-                  <div className="sticky top-0 bg-white z-10">
-                    <h2 className="text-xl font-bold text-primary-900 mb-1 py-1">
-                      {format(month.date, 'MMMM yyyy')}
-                    </h2>
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-1">
+              {month.days.slice(0, 35).map((date, dayIndex) => {
+                const isCurrentMonth = isSameMonth(date, month.date)
+                const isCurrentDay = isToday(date)
+                const eventPills = getEventPillsForDate(date)
+                
+                return (
+                  <div
+                    key={`${date.toISOString()}-${monthIndex}-${dayIndex}`}
+                    className={`
+                      min-h-[60px] p-1 cursor-pointer
+                      hover:bg-primary-50 transition-colors relative
+                      ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}
+                      ${isCurrentDay ? 'bg-primary-100' : ''}
+                    `}
+                    onClick={() => onDayShortPress(date)}
+                    onContextMenu={(e) => {
+                      e.preventDefault()
+                      onDayLongPress(date)
+                    }}
+                  >
+                    <div className={`text-sm font-medium mb-1 ${isCurrentDay ? 'text-primary-900' : ''}`}>
+                      {format(date, 'd')}
+                    </div>
                     
-                    {/* Week day headers */}
-                    <div className="grid grid-cols-7 gap-1 mb-2">
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Mon</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Tue</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Wed</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Thu</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Fri</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Sat</div>
-                      <div className="text-center text-xs font-medium text-primary-600 py-1">Sun</div>
+                    {/* Event pills - limit to 2 */}
+                    <div className="space-y-0.5">
+                      {eventPills.slice(0, 2).map((pill, pillIndex) => (
+                        <div
+                          key={`pill-${pill.id}-${monthIndex}-${dayIndex}-${pillIndex}`}
+                          className="h-3 text-[10px] px-1 rounded text-white truncate leading-3"
+                          style={{ backgroundColor: pill.color }}
+                          title={pill.title}
+                        >
+                          {pill.isItinerary ? '→' : ''}{pill.title}
+                        </div>
+                      ))}
+                      
+                      {eventPills.length > 2 && (
+                        <div className="text-[10px] text-primary-600 font-medium">
+                          +{eventPills.length - 2} more
+                        </div>
+                      )}
                     </div>
                   </div>
-
-
-                  {/* Calendar grid */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {month.days.slice(0, 35).reduce((dayAcc: React.ReactElement[], date, dayIndex) => {
-                      const isCurrentMonth = isSameMonth(date, month.date)
-                      const isCurrentDay = isToday(date)
-                      const eventPills = getEventPillsForDate(date)
-                      
-                      dayAcc.push(
-                        <div
-                          key={`${date.toISOString()}-${dayIndex}`}
-                          className={`
-                            min-h-[60px] p-1 cursor-pointer
-                            hover:bg-primary-50 transition-colors relative
-                            ${isCurrentMonth ? 'bg-white' : 'bg-gray-50 text-gray-400'}
-                            ${isCurrentDay ? 'bg-primary-100' : ''}
-                          `}
-                          onClick={() => onDayShortPress(date)}
-                          onContextMenu={(e) => {
-                            e.preventDefault()
-                            onDayLongPress(date)
-                          }}
-                        >
-                          <div className={`text-sm font-medium mb-1 ${isCurrentDay ? 'text-primary-900' : ''}`}>
-                            {format(date, 'd')}
-                          </div>
-                          
-                          {/* Event pills - limit to 2 */}
-                          <div className="space-y-0.5">
-                            {eventPills.slice(0, 2).reduce((pillAcc: React.ReactElement[], pill, pillIndex) => {
-                              pillAcc.push(
-                                <div
-                                  key={`pill-${pill.id}-${pillIndex}-${dayIndex}`}
-                                  className="h-3 text-[10px] px-1 rounded text-white truncate leading-3"
-                                  style={{ backgroundColor: pill.color }}
-                                  title={pill.title}
-                                >
-                                  {pill.isItinerary ? '→' : ''}{pill.title}
-                                </div>
-                              )
-                              return pillAcc
-                            }, [])}
-                            
-                            {eventPills.length > 2 && (
-                              <div className="text-[10px] text-primary-600 font-medium">
-                                +{eventPills.length - 2} more
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )
-                      return dayAcc
-                    }, [])}
-                  </div>
-                </div>
-              )
-              return acc
-            }, [])}
-          </>
-        )}
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

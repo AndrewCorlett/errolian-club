@@ -15,6 +15,7 @@ import Home from './pages/Home'
 import Calendar from './pages/Calendar'
 import SplitPay from './pages/SplitPay'
 import SplitPayEventDetails from './pages/SplitPayEventDetails'
+import ExpenseEventDetail from './pages/ExpenseEventDetail'
 import Documents from './pages/Documents'
 import Account from './pages/Account'
 
@@ -31,6 +32,25 @@ function App() {
   useEffect(() => {
     // Mark app as loaded in session storage
     sessionStorage.setItem('app-loaded', 'true')
+    
+    // Handle page refresh navigation issue
+    const handleRefreshRedirect = () => {
+      const currentPath = window.location.pathname
+      // If user refreshes on split-pay and there's no proper routing context, redirect to home
+      if (currentPath.includes('/split-pay') && !document.querySelector('[data-react-router]')) {
+        setTimeout(() => {
+          // Only redirect if we're still in a loading state after 3 seconds
+          if (!document.querySelector('[data-splitpay-loaded]')) {
+            window.location.href = '/'
+          }
+        }, 3000)
+      }
+    }
+
+    // Check for refresh scenario
+    if (performance.navigation.type === performance.navigation.TYPE_RELOAD) {
+      handleRefreshRedirect()
+    }
   }, [])
 
   const handleSplashComplete = () => {
@@ -97,6 +117,14 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <SplitPayEventDetails />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/split-pay/events/:expenseEventId" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ExpenseEventDetail />
                 </MainLayout>
               </ProtectedRoute>
             } />

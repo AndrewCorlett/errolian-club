@@ -80,24 +80,9 @@ export default function Home() {
     )
   }
 
-  if (!user || !profile) {
-    return (
-      <div className="min-h-screen bg-primary-50 pb-20 flex items-center justify-center">
-        <Card className="w-full max-w-md mx-4 bg-white border-primary-200 shadow-lg">
-          <CardContent className="text-center py-8">
-            <h2 className="text-xl font-semibold text-primary-900 mb-4">Welcome to Errolian Club</h2>
-            <p className="text-primary-700 mb-4">Please log in to access your dashboard</p>
-            <Link to="/auth/login">
-              <Button className="w-full bg-royal-600 hover:bg-royal-700 text-white">Go to Login</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
   
   const getGreeting = () => {
-    const firstName = profile.name.split(' ')[0]
+    const firstName = profile?.name?.split(' ')[0] || 'Member'
     return `Good ${timeOfDay}, ${firstName}`
   }
 

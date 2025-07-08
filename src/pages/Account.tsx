@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -48,27 +47,9 @@ export default function Account() {
     )
   }
 
-  // Show authentication required if no user is found
-  if (!user || !profile) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <p className="text-gray-600 mb-4">Please log in to view your account</p>
-            <Link to="/auth/login">
-              <Button className="w-full">Go to Login</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
-  const memberSinceDate = profile.member_since ? format(new Date(profile.member_since), 'MMMM yyyy') : 'Unknown'
-  const permissions = profile.permissions ? 'Full access' : 'Member access'
+  const memberSinceDate = profile?.member_since ? format(new Date(profile.member_since), 'MMMM yyyy') : 'Unknown'
+  const permissions = profile?.permissions ? 'Full access' : 'Member access'
 
   const handleSaveProfile = async () => {
     try {
@@ -90,8 +71,8 @@ export default function Account() {
 
   const handleCancelEdit = () => {
     setFormData({
-      name: profile.name,
-      email: user.email || ''
+      name: profile?.name || '',
+      email: user?.email || ''
     })
     setIsEditing(false)
   }
@@ -206,7 +187,7 @@ export default function Account() {
               {/* Avatar */}
               <div className="flex-shrink-0">
                 <div className="relative">
-                  {profile.avatar_url ? (
+                  {profile?.avatar_url ? (
                     <img 
                       src={profile.avatar_url} 
                       alt={profile.name}
@@ -215,7 +196,7 @@ export default function Account() {
                   ) : (
                     <div className="w-20 h-20 bg-blue-100 rounded-full border-4 border-white shadow-lg flex items-center justify-center">
                       <span className="text-2xl font-bold text-blue-600">
-                        {profile.name.split(' ').map(n => n[0]).join('')}
+                        {profile?.name?.split(' ').map(n => n[0]).join('') || 'U'}
                       </span>
                     </div>
                   )}
@@ -244,7 +225,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{profile.name}</p>
+                      <p className="text-gray-900 font-medium">{profile?.name || 'Loading...'}</p>
                     )}
                   </div>
 
@@ -259,7 +240,7 @@ export default function Account() {
                         onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       />
                     ) : (
-                      <p className="text-gray-900 font-medium">{profile.email}</p>
+                      <p className="text-gray-900 font-medium">{profile?.email || 'Loading...'}</p>
                     )}
                   </div>
 
@@ -268,8 +249,8 @@ export default function Account() {
                       Club Role
                     </label>
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-lg border text-sm font-medium ${getRoleColor(profile.role)}`}>
-                        {getRoleDisplayName(profile.role)}
+                      <span className={`px-3 py-1 rounded-lg border text-sm font-medium ${getRoleColor(profile?.role || 'member')}`}>
+                        {getRoleDisplayName(profile?.role || 'member')}
                       </span>
                       <span className="text-sm text-gray-500">• {permissions}</span>
                     </div>
@@ -306,7 +287,7 @@ export default function Account() {
           <Card>
             <CardContent className="text-center py-6">
               <div className="text-3xl font-bold text-purple-600 mb-2">
-                {profile.member_since ? Math.floor((Date.now() - new Date(profile.member_since).getTime()) / (1000 * 60 * 60 * 24)) : 0}
+                {profile?.member_since ? Math.floor((Date.now() - new Date(profile.member_since).getTime()) / (1000 * 60 * 60 * 24)) : 0}
               </div>
               <div className="text-sm text-gray-600">Days as Member</div>
             </CardContent>

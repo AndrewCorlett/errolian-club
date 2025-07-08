@@ -8,7 +8,7 @@ import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
 import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
 import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
-import { eventService, itineraryService, availabilityService } from '@/lib/database'
+import { eventService, itineraryService, availabilityService, expenseEventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import type { ItineraryItem } from '@/types/events'
 import type { EventWithDetails } from '@/types/supabase'
@@ -149,6 +149,30 @@ export default function Calendar() {
           }
           await itineraryService.createItineraryItem(itineraryData)
         }
+      }
+      
+      // Create corresponding expense event
+      try {
+        const expenseEventData = {
+          title: newEvent.title,
+          description: newEvent.description || undefined,
+          location: newEvent.location || undefined,
+          currency: 'GBP',
+          createdBy: user.id,
+          participants: [user.id] // Start with creator as participant, others will be added when they join
+        }
+        
+        const expenseEvent = await expenseEventService.createExpenseEvent(expenseEventData)
+        
+        // Link the expense event to the calendar event by updating the expense event
+        await expenseEventService.updateExpenseEvent(expenseEvent.id, {
+          calendarEventId: newEvent.id
+        })
+        
+        console.log('Expense event created for calendar event:', expenseEvent)
+      } catch (expenseErr) {
+        console.error('Failed to create expense event:', expenseErr)
+        // Don't fail the whole operation if expense event creation fails
       }
       
       // Reload events to get the new one with full details
@@ -352,7 +376,7 @@ export default function Calendar() {
 
       {/* Calendar Container - Bounded between header and footer */}
       <div 
-        className="fixed left-0 right-0 overflow-y-auto"
+        className="fixed left-0 right-0 overflow-y-auto bg-white"
         style={{ 
           top: '85px',
           bottom: '80px'

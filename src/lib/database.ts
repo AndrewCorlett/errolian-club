@@ -831,17 +831,28 @@ export const expenseEventService = {
 
     const { data, error, count } = await supabase
       .from('expense_events')
-      .select(`
-        *,
-        expenses:expenses(*)
-      `, { count: 'exact' })
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(start, end)
 
     if (error) throw error
 
+    // For now, we'll fetch expenses separately if needed
+    // This avoids the 500 error from the nested select
+    const expenseEvents = data || []
+    
+    // Optionally fetch expenses for each event
+    for (const event of expenseEvents) {
+      const { data: expenses } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('expense_event_id', event.id)
+      
+      event.expenses = expenses || []
+    }
+
     return {
-      data: data || [],
+      data: expenseEvents,
       count: count || 0,
       page,
       pageSize,
@@ -850,17 +861,24 @@ export const expenseEventService = {
   },
 
   async getExpenseEvent(id: string): Promise<ExpenseEvent | null> {
-    const { data, error } = await supabase
+    const { data: eventData, error } = await supabase
       .from('expense_events')
-      .select(`
-        *,
-        expenses:expenses(*)
-      `)
+      .select('*')
       .eq('id', id)
       .single()
 
     if (error) throw error
-    return data
+    if (!eventData) return null
+
+    // Fetch expenses separately
+    const { data: expenses } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('expense_event_id', id)
+    
+    eventData.expenses = expenses || []
+    
+    return eventData
   },
 
   async createExpenseEvent(eventData: {
