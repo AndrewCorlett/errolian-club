@@ -68,6 +68,7 @@ export function getExpenseCategoryColor(category: ExpenseCategory): string {
 // Expense Events - separate from calendar events but can be linked
 export interface ExpenseEvent {
   id: string
+  universal_id?: string // Universal identifier linking all related data
   title: string
   description?: string
   location?: string
