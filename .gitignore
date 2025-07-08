@@ -19,6 +19,9 @@ dist-ssr
 .env.test.local
 .env.production.local
 
+# Test credentials
+test-credentials.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
