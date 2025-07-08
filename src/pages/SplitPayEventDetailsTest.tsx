@@ -344,11 +344,7 @@ export default function SplitPayEventDetailsTest() {
         if (newExpense) {
           const participantPromises = participants
             .filter(p => p.selected)
-            .map(p => expenseService.addParticipant(newExpense.id, {
-              user_id: p.id,
-              share_amount: p.amount,
-              is_paid: p.id === paidBy
-            }))
+            .map(p => expenseService.addParticipant(newExpense.id, p.id, p.amount))
           
           await Promise.all(participantPromises)
         }
@@ -542,23 +538,23 @@ export default function SplitPayEventDetailsTest() {
     const [eventName, setEventName] = useState(eventData?.title || '')
     const [currency, setCurrency] = useState('GBP')
     const [participants, setParticipants] = useState<{id: string, name: string, selected: boolean}[]>([])
-    const [availableUsers, setAvailableUsers] = useState<{id: string, name: string}[]>([])
+    // const [availableUsers] = useState<{id: string, name: string}[]>([])
     const [saving, setSaving] = useState(false)
     const [isCalendarEvent, setIsCalendarEvent] = useState(false)
 
     useEffect(() => {
-      const fetchUsers = async () => {
-        try {
-          const users = await userService.getUsers()
-          setAvailableUsers(users.map(u => ({ id: u.id, name: u.name })))
-        } catch (error) {
-          console.error('Failed to fetch users:', error)
-        }
-      }
+      // const fetchUsers = async () => {
+      //   try {
+      //     const users = await userService.getUsers()
+      //     // setAvailableUsers(users.map(u => ({ id: u.id, name: u.name })))
+      //   } catch (error) {
+      //     console.error('Failed to fetch users:', error)
+      //   }
+      // }
 
       if (showEventSettings && eventData) {
         setEventName(eventData.title)
-        fetchUsers()
+        // fetchUsers()
         
         console.log('Event Settings Modal - eventId:', eventId)
         console.log('Event Settings Modal - eventData:', eventData)
@@ -841,7 +837,7 @@ export default function SplitPayEventDetailsTest() {
 
     if (!showExpenseDetails || !selectedExpense) return null
 
-    const isCreator = selectedExpense.paidBy === user?.name || selectedExpense.paidBy === 'You'
+    const isCreator = selectedExpense.paidBy === user?.id || selectedExpense.paidBy === 'You'
 
     return (
       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
