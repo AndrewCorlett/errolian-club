@@ -5,6 +5,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/',
   server: {
     host: true, // This makes it accessible from Windows
     port: 3000,
@@ -12,6 +13,20 @@ export default defineConfig({
   preview: {
     host: true, // This makes preview accessible from Windows
     port: 4173,
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu']
+        }
+      }
+    }
   },
   define: {
     'process.env': {}, // react-pdf still refers to process.env

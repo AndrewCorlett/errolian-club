@@ -3,6 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
+// Add error handling for CSS loading issues
+window.addEventListener('error', (e) => {
+  if (e.target && e.target instanceof HTMLLinkElement && e.target.rel === 'stylesheet') {
+    console.error('CSS loading failed:', e.target.href)
+    // Try to reload the CSS
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = e.target.href
+    document.head.appendChild(link)
+  }
+})
+
 // Configure PDF.js worker for react-pdf-viewer
 import { GlobalWorkerOptions } from 'pdfjs-dist'
 import workerSrc from 'pdfjs-dist/build/pdf.worker.js?url'
