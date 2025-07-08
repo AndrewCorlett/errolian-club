@@ -411,12 +411,14 @@ export default function Calendar() {
         try {
           console.log('Handling expense event for calendar event update:', eventData.id)
           
-          // Find the associated expense event
+          // Find the associated expense event using Universal ID
           const updatedEvent = await eventService.getEvent(eventData.id)
           if (updatedEvent) {
-            // Get all expense events to find the one linked to this calendar event
+            // Get all expense events to find the one linked to this calendar event via universal_id
             const { data: expenseEvents } = await expenseEventService.getExpenseEvents(1, 100)
-            let linkedExpenseEvent = expenseEvents.find(ee => ee.calendar_event_id === eventData.id)
+            let linkedExpenseEvent = expenseEvents.find(ee => 
+              ee.universal_id === updatedEvent.universal_id || ee.calendar_event_id === eventData.id
+            )
             
             // If no expense event exists, create one
             if (!linkedExpenseEvent) {
@@ -428,7 +430,8 @@ export default function Calendar() {
                 currency: 'GBP',
                 createdBy: user.id,
                 participants: eventData.selectedParticipants || [user.id],
-                calendar_event_id: eventData.id
+                calendar_event_id: eventData.id,
+                universal_id: updatedEvent.universal_id // Use Universal ID for linking
               }
               
               linkedExpenseEvent = await expenseEventService.createExpenseEvent(expenseEventData)
@@ -439,14 +442,14 @@ export default function Calendar() {
               // Update participants if needed
               if (eventData.selectedParticipants) {
                 console.log('📝 Updating expense event participants if needed')
-                const currentParticipants = linkedExpenseEvent.participants || []
-                const currentUserIds = currentParticipants.map((p: any) => p.user_id)
-                const newParticipants = eventData.selectedParticipants.filter((id: string) => !currentUserIds.includes(id))
                 
-                // Add new participants using the service
-                for (const userId of newParticipants) {
+                // Add new participants using the service (the service will handle duplicates)
+                for (const userId of eventData.selectedParticipants) {
                   try {
-                    await expenseEventService.addParticipant(linkedExpenseEvent.id, userId)
+                    // Get the event's universal_id for linking
+                    const currentEvent = await eventService.getEvent(eventData.id)
+                    const universalId = currentEvent?.universal_id
+                    await expenseEventService.addParticipant(linkedExpenseEvent.id, userId, universalId)
                     console.log('✅ Added participant to expense event:', userId)
                   } catch (error) {
                     console.error('❌ Failed to add participant to expense event:', userId, error)
@@ -457,7 +460,10 @@ export default function Calendar() {
             
             // Create expenses from new/updated itinerary items
             if (linkedExpenseEvent) {
-              await createExpensesFromItineraryItems(eventData.id, linkedExpenseEvent.id, itineraryItems)
+              // Get the event's universal_id for linking
+              const currentEvent = await eventService.getEvent(eventData.id)
+              const universalId = currentEvent?.universal_id || crypto.randomUUID()
+              await createExpensesFromItineraryItems(eventData.id, linkedExpenseEvent.id, itineraryItems, universalId)
             }
           }
         } catch (expenseError) {

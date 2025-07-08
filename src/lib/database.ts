@@ -943,17 +943,20 @@ export const expenseEventService = {
         .select('user_id')
         .eq('expense_event_id', expenseEvent.id)
 
-      const existingUserIds = existingParticipants?.map(p => p.user_id) || []
+      const existingUserIds = existingParticipants?.map((p: { user_id: string }) => p.user_id) || []
       const newParticipants = eventData.participants.filter(userId => !existingUserIds.includes(userId))
 
       if (newParticipants.length > 0) {
-        const participantInserts = newParticipants.map(userId => ({
+        const participantInserts = newParticipants.map((userId: string) => ({
           expense_event_id: expenseEvent.id,
           user_id: userId,
           universal_id: eventData.universal_id // Link participants using universal_id
         }))
 
         console.log('📝 Adding new participants to expense event:', participantInserts)
+        console.log('📝 Expense event ID:', expenseEvent.id)
+        console.log('📝 Existing participants:', existingUserIds)
+        console.log('📝 New participants to add:', newParticipants)
 
         const { error: participantsError } = await supabase
           .from('expense_event_participants')
@@ -961,6 +964,7 @@ export const expenseEventService = {
 
         if (participantsError) {
           console.error('❌ Database error creating expense event participants:', participantsError)
+          console.error('❌ Failed insert data:', participantInserts)
           // If participants creation fails, delete the event to maintain consistency
           await supabase.from('expense_events').delete().eq('id', expenseEvent.id)
           throw participantsError
@@ -996,7 +1000,7 @@ export const expenseEventService = {
     if (error) throw error
   },
 
-  async addParticipant(expenseEventId: string, userId: string): Promise<void> {
+  async addParticipant(expenseEventId: string, userId: string, universalId?: string): Promise<void> {
     // Check if participant already exists
     const { data: existing } = await supabase
       .from('expense_event_participants')
@@ -1015,7 +1019,8 @@ export const expenseEventService = {
       .from('expense_event_participants')
       .insert({
         expense_event_id: expenseEventId,
-        user_id: userId
+        user_id: userId,
+        universal_id: universalId // Include universal_id for linking if provided
       })
 
     if (error) throw error

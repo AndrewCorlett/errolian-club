@@ -61,7 +61,8 @@ export default function ExpenseEventDetail() {
           createdBy: eventData.created_by,
           totalAmount: 0,
           participantCount: eventData.participants?.length || 1,
-          createdAt: eventData.created_at
+          createdAt: eventData.created_at,
+          participants: eventData.participants || []
         }
         
         setExpenseEvent(mockExpenseEvent)
@@ -195,7 +196,9 @@ export default function ExpenseEventDetail() {
       await eventService.updateEvent(expenseEventId, updatePayload)
 
       // Handle participant changes for calendar events
-      const currentParticipants = participants.map(p => p.id)
+      // Get current participants from the event data, not from UI state
+      const eventData = await eventService.getEvent(expenseEventId)
+      const currentParticipants = eventData?.participants?.map((p: any) => p.user_id) || []
       const newParticipants = updatedData.participants || []
       
       // Find participants to add and remove
@@ -246,7 +249,8 @@ export default function ExpenseEventDetail() {
             createdBy: eventData.created_by,
             totalAmount: 0,
             participantCount: eventData.participants?.length || 1,
-            createdAt: eventData.created_at
+            createdAt: eventData.created_at,
+            participants: eventData.participants || []
           }
           
           setExpenseEvent(mockExpenseEvent)

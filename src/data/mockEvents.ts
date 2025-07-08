@@ -3,6 +3,7 @@ import type { Event, ItineraryItem } from '@/types/events'
 export const mockEvents: Event[] = [
   {
     id: '1',
+    universal_id: 'event-1-universal-id',
     title: 'Blue Mountains Hiking Adventure',
     description: 'A weekend hiking trip to the Blue Mountains with scenic views, waterfall visits, and camping under the stars.',
     type: 'adventure',
@@ -19,6 +20,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i1',
         eventId: '1',
+        universal_id: 'item-1-universal-id',
         type: 'travel',
         title: 'Departure from Sydney Central',
         description: 'Meet at Platform 1 for train departure',
@@ -34,6 +36,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i2',
         eventId: '1',
+        universal_id: 'item-2-universal-id',
         type: 'activity',
         title: 'Three Sisters Lookout',
         description: 'Photo stop and short walk around the famous Three Sisters rock formation',
@@ -49,6 +52,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i3',
         eventId: '1',
+        universal_id: 'item-3-universal-id',
         type: 'meal',
         title: 'Lunch at Mountain Cafe',
         description: 'Group lunch with mountain views',
@@ -67,6 +71,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '2',
+    universal_id: 'event-2-universal-id',
     title: 'Morning Coffee Meetup',
     description: 'Casual coffee meetup to discuss weekend plans and upcoming adventures.',
     type: 'social',
@@ -85,6 +90,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '6',
+    universal_id: 'event-6-universal-id',
     title: 'Monthly Club Meeting - January',
     description: 'Monthly meeting to discuss upcoming events, budget review, and new member introductions.',
     type: 'meeting',
@@ -103,6 +109,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '3',
+    universal_id: 'event-3-universal-id',
     title: 'Rock Climbing Workshop',
     description: 'Beginner-friendly rock climbing workshop with certified instructors. All equipment provided.',
     type: 'training',
@@ -119,6 +126,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i4',
         eventId: '3',
+        universal_id: 'item-4-universal-id',
         type: 'activity',
         title: 'Safety Briefing & Equipment Check',
         description: 'Introduction to climbing safety and equipment fitting',
@@ -134,6 +142,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i5',
         eventId: '3',
+        universal_id: 'item-5-universal-id',
         type: 'activity',
         title: 'Basic Climbing Techniques',
         description: 'Learn basic holds, body positioning, and movement',
@@ -149,6 +158,7 @@ export const mockEvents: Event[] = [
       {
         id: 'i6',
         eventId: '3',
+        universal_id: 'item-6-universal-id',
         type: 'meal',
         title: 'Lunch Break',
         description: 'Catered lunch and group discussion',
@@ -167,6 +177,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '4',
+    universal_id: 'event-4-universal-id',
     title: 'Summer BBQ & Social',
     description: 'End of summer BBQ party with games, music, and good food. Bring your family and friends!',
     type: 'social',
@@ -185,6 +196,7 @@ export const mockEvents: Event[] = [
   },
   {
     id: '5',
+    universal_id: 'event-5-universal-id',
     title: 'Coastal Kayaking Expedition',
     description: 'Three-day coastal kayaking adventure with overnight camping on secluded beaches.',
     type: 'adventure',
@@ -207,6 +219,7 @@ export const mockItinerary: ItineraryItem[] = [
   {
     id: 'i1',
     eventId: '1',
+    universal_id: 'item-7-universal-id',
     type: 'travel',
     title: 'Departure from Sydney',
     description: 'Meet at Central Station, Platform 1',
@@ -222,6 +235,7 @@ export const mockItinerary: ItineraryItem[] = [
   {
     id: 'i2',
     eventId: '1',
+    universal_id: 'item-8-universal-id',
     type: 'activity',
     title: 'Three Sisters Lookout',
     description: 'Photo stop and short walk around the famous Three Sisters rock formation',
@@ -237,6 +251,7 @@ export const mockItinerary: ItineraryItem[] = [
   {
     id: 'i3',
     eventId: '1',
+    universal_id: 'item-9-universal-id',
     type: 'meal',
     title: 'Lunch at Local Cafe',
     description: 'Delicious local cuisine with mountain atmosphere',
@@ -252,6 +267,7 @@ export const mockItinerary: ItineraryItem[] = [
   {
     id: 'i4',
     eventId: '1',
+    universal_id: 'item-10-universal-id',
     type: 'activity',
     title: 'Wentworth Falls Hike',
     description: 'Moderate 4km return hike to the base of Wentworth Falls',
@@ -267,6 +283,7 @@ export const mockItinerary: ItineraryItem[] = [
   {
     id: 'i5',
     eventId: '1',
+    universal_id: 'item-11-universal-id',
     type: 'accommodation',
     title: 'Camping Setup',
     description: 'Set up tents at designated camping area',

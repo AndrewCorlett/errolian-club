@@ -7,6 +7,7 @@ const tripEndDate = new Date('2025-06-23')
 
 export const portugalGolfTripEvent: Event = {
   id: 'portugal-golf-2025',
+  universal_id: 'portugal-golf-2025-universal-id',
   title: 'Portugal Golf Weekend',
   description: 'Four-day golf trip to Portugal featuring two championship courses, luxury accommodation, and authentic Portuguese dining experiences.',
   type: 'adventure',
@@ -29,6 +30,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-flight-outbound',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Flight to Faro',
     description: 'Direct flight from Glasgow to Faro Airport',
@@ -48,6 +50,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-transfer-airport-hotel',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Airport Transfer to Hotel',
     description: 'Private coach transfer from Faro Airport to Quinta do Lago resort',
@@ -67,6 +70,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-hotel-checkin',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'accommodation',
     title: 'Hotel Check-in',
     description: 'Check into Conrad Algarve luxury resort with golf course views',
@@ -87,6 +91,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-lunch-day1',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Welcome Lunch',
     description: 'Traditional Portuguese seafood lunch at Gigi Beach Bar',
@@ -105,6 +110,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-dinner-day1',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Dinner at Bovino Steakhouse',
     description: 'Premium steakhouse dinner with Portuguese wines',
@@ -125,6 +131,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-breakfast-day2',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Breakfast at Conrad',
     description: 'Continental breakfast at hotel restaurant',
@@ -143,6 +150,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-golf-round1',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'activity',
     title: 'Golf Round 1 - Quinta do Lago South',
     description: '18 holes at the prestigious South Course with spectacular ocean views',
@@ -162,6 +170,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-lunch-day2',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Lunch at Clubhouse',
     description: 'Post-golf lunch at Quinta do Lago Clubhouse',
@@ -180,6 +189,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-spa-time',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'activity',
     title: 'Spa & Pool Time',
     description: 'Relaxation time at Conrad Spa and pool complex',
@@ -199,6 +209,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-dinner-day2',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Dinner at Supper Club',
     description: 'Fine dining at Casa do Lago with lake views',
@@ -219,6 +230,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-breakfast-day3',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Breakfast at Conrad',
     description: 'Continental breakfast at hotel restaurant',
@@ -237,6 +249,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-transfer-to-laranjal',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Transfer to Laranjal Golf',
     description: 'Private coach to Quinta do Laranjal Golf Course',
@@ -256,6 +269,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-golf-round2',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'activity',
     title: 'Golf Round 2 - Laranjal Golf Course',
     description: '18 holes at this challenging parkland course with cork trees',
@@ -275,6 +289,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-lunch-day3',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Lunch at Laranjal Clubhouse',
     description: 'Traditional Portuguese lunch at the golf course restaurant',
@@ -293,6 +308,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-transfer-return-hotel',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Return Transfer to Hotel',
     description: 'Private coach back to Conrad Algarve',
@@ -312,6 +328,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-cigar-evening',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'activity',
     title: 'Cigar & Whisky Evening',
     description: 'Exclusive cigar tasting with premium Portuguese brandies and single malts',
@@ -331,6 +348,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-late-dinner-day3',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Late Dinner at Willie\'s Restaurant',
     description: 'Relaxed dinner with Portuguese comfort food',
@@ -351,6 +369,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-breakfast-day4',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'meal',
     title: 'Final Breakfast',
     description: 'Last breakfast at Conrad before departure',
@@ -369,6 +388,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-hotel-checkout',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'accommodation',
     title: 'Hotel Check-out',
     description: 'Check out of Conrad Algarve and collect luggage',
@@ -389,6 +409,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-transfer-hotel-airport',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Transfer to Airport',
     description: 'Private coach transfer from hotel to Faro Airport',
@@ -408,6 +429,7 @@ export const portugalGolfItinerary: ItineraryItem[] = [
   {
     id: 'pg-flight-return',
     eventId: 'portugal-golf-2025',
+    universal_id: 'portugal-golf-2025-universal-id',
     type: 'travel',
     title: 'Return Flight to Glasgow',
     description: 'Direct flight from Faro to Glasgow Airport',

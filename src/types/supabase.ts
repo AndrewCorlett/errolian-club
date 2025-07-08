@@ -170,6 +170,7 @@ export interface Database {
         Row: {
           id: string
           event_id: string
+          universal_id: string
           type: ItineraryType
           title: string
           description: string | null
