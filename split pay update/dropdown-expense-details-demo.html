@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Pay Dropdown & Expense Details Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50">
+    <!-- Demo Header -->
+    <div class="bg-white border-b border-blue-100 px-4 py-3">
+        <h1 class="text-xl font-bold text-purple-700 text-center">Split Pay Fixes Demo</h1>
+    </div>
+
+    <!-- Demo Content -->
+    <div class="max-w-4xl mx-auto p-4 space-y-8">
+        <!-- Summary -->
+        <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-3xl p-6 border border-purple-200">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Issues Fixed</h2>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Dropdown Visibility Fixed</h3>
+                        <p class="text-sm text-purple-600">The "Paid By" dropdown now displays properly with improved z-index and overflow handling.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Modal Height Increased</h3>
+                        <p class="text-sm text-purple-600">Add Expense modal now has more space (95vh) to prevent content from being cut off.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Expense Details Modal</h3>
+                        <p class="text-sm text-purple-600">Click any expense to view details, edit (if creator), or delete.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fix 1: Dropdown Visibility -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-6">Fix 1: Dropdown Visibility</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Before -->
+                <div>
+                    <h3 class="text-lg font-semibold text-red-600 mb-3">❌ Before</h3>
+                    <div class="bg-gray-100 rounded-2xl p-4">
+                        <div class="bg-white rounded-xl p-4 shadow">
+                            <label class="text-sm font-medium text-gray-700">Paid By</label>
+                            <div class="mt-2 relative">
+                                <div class="w-full px-3 py-3 bg-gray-100 rounded-xl text-gray-400 cursor-not-allowed">
+                                    Dropdown not visible
+                                </div>
+                                <div class="absolute top-12 left-0 bg-white rounded-lg shadow-lg p-2 opacity-20">
+                                    <div class="text-xs text-gray-500">Hidden dropdown</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- After -->
+                <div>
+                    <h3 class="text-lg font-semibold text-green-600 mb-3">✅ After</h3>
+                    <div class="bg-gray-100 rounded-2xl p-4">
+                        <div class="bg-white rounded-xl p-4 shadow">
+                            <label class="text-sm font-medium text-gray-700">Paid By</label>
+                            <div class="mt-2 relative">
+                                <select class="w-full px-3 py-3 pr-8 bg-gray-100 rounded-xl appearance-none cursor-pointer">
+                                    <option>Andrew (Me)</option>
+                                    <option>Patrick</option>
+                                    <option>Daniel</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 bg-blue-50 rounded-xl p-4">
+                <h4 class="font-semibold text-blue-800 mb-2">Code Changes:</h4>
+                <pre class="text-sm bg-blue-900 text-blue-100 p-3 rounded-lg overflow-x-auto">
+&lt;div className="relative"&gt;
+  &lt;select
+    style={{ position: 'relative', zIndex: 10 }}
+    className="w-full px-3 py-3 pr-8 ... cursor-pointer"
+  &gt;
+  &lt;/select&gt;
+  &lt;div className="pointer-events-none ..."&gt;
+    &lt;svg&gt;...&lt;/svg&gt;
+  &lt;/div&gt;
+&lt;/div&gt;</pre>
+            </div>
+        </section>
+
+        <!-- Fix 2: Modal Height -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-6">Fix 2: Modal Height Adjustment</h2>
+            
+            <div class="bg-gray-100 rounded-2xl p-4">
+                <div class="relative h-96 overflow-hidden">
+                    <!-- Mock Modal -->
+                    <div class="absolute inset-0 bg-black/20 flex items-end justify-center">
+                        <div class="bg-white rounded-t-3xl w-full max-w-md slide-up">
+                            <div class="p-4 border-b">
+                                <h3 class="text-center font-semibold">Add Expense</h3>
+                            </div>
+                            <div class="p-4 space-y-4">
+                                <div>
+                                    <label class="text-sm font-medium">Title</label>
+                                    <input type="text" placeholder="E.g. Drinks" class="w-full mt-1 px-3 py-2 bg-gray-100 rounded-lg" />
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium">Amount</label>
+                                    <input type="number" placeholder="0.00" class="w-full mt-1 px-3 py-2 bg-gray-100 rounded-lg" />
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="text-sm font-medium">Paid By</label>
+                                        <select class="w-full mt-1 px-3 py-2 bg-gray-100 rounded-lg">
+                                            <option>Andrew (Me)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="text-sm font-medium">When</label>
+                                        <input type="date" class="w-full mt-1 px-3 py-2 bg-gray-100 rounded-lg" />
+                                    </div>
+                                </div>
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <p class="text-sm text-green-700">✓ Modal height: 95vh<br>✓ Extra padding at bottom<br>✓ Proper overflow handling</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fix 3: Expense Details -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-6">Fix 3: Expense Details Modal</h2>
+            
+            <div class="space-y-4">
+                <!-- Clickable Expense -->
+                <div class="bg-gray-100 rounded-2xl p-4">
+                    <p class="text-sm text-gray-600 mb-3">Click expense to see details:</p>
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-purple-100 hover:shadow-md transition-all cursor-pointer">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-yellow-100 to-blue-100 rounded-xl flex items-center justify-center">
+                                <span class="text-lg">🍽️</span>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between">
+                                    <h3 class="font-medium">Dinner at The Witchery</h3>
+                                    <span class="font-bold">£250.00</span>
+                                </div>
+                                <div class="flex justify-between text-sm text-gray-600">
+                                    <span>Paid by Andrew</span>
+                                    <span class="text-red-600">Your share: £83.33 ⏳</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mock Details Modal -->
+                <div class="relative">
+                    <div class="bg-gray-900/10 rounded-2xl p-4">
+                        <div class="bg-white rounded-2xl p-4 shadow-lg max-w-sm mx-auto">
+                            <div class="flex items-center justify-between mb-4">
+                                <button class="text-blue-600">Close</button>
+                                <h3 class="font-semibold">Expense Details</h3>
+                                <button class="text-blue-600">Edit</button>
+                            </div>
+                            
+                            <div class="text-center mb-4">
+                                <div class="w-16 h-16 bg-gradient-to-br from-yellow-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                                    <span class="text-2xl">🍽️</span>
+                                </div>
+                                <h4 class="text-xl font-bold">Dinner at The Witchery</h4>
+                                <div class="text-2xl font-bold text-purple-700">£250.00</div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-xl p-3 space-y-2 mb-4">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Paid by</span>
+                                    <span class="font-medium">Andrew</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Date</span>
+                                    <span class="font-medium">18th June 2025</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Your share</span>
+                                    <span class="font-medium text-red-600">£83.33 ⏳ Pending</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <button class="w-full bg-blue-600 text-white py-2 rounded-lg">Mark as Paid</button>
+                                <button class="w-full bg-red-50 text-red-600 py-2 rounded-lg">Delete Expense</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 rounded-xl p-4">
+                        <h4 class="font-semibold text-blue-800 mb-2">For All Users</h4>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li>• View expense details</li>
+                            <li>• See payment status</li>
+                            <li>• Mark as paid</li>
+                        </ul>
+                    </div>
+                    <div class="bg-purple-50 rounded-xl p-4">
+                        <h4 class="font-semibold text-purple-800 mb-2">For Creators Only</h4>
+                        <ul class="text-sm text-purple-700 space-y-1">
+                            <li>• Edit expense details</li>
+                            <li>• Update amount</li>
+                            <li>• Delete expense</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Implementation Details -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Implementation Details</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">1. Modal Z-Index Hierarchy</h3>
+                    <div class="bg-gray-50 rounded-xl p-4">
+                        <code class="text-sm">
+                            • Add Expense Modal: z-[60]<br>
+                            • Event Settings Modal: z-[60]<br>
+                            • Expense Details Modal: z-[70] (highest)
+                        </code>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">2. Expense Click Handler</h3>
+                    <pre class="bg-gray-900 text-green-400 p-4 rounded-xl text-sm overflow-x-auto">
+const handleExpenseClick = (expense: EventExpense) => {
+  setSelectedExpense(expense)
+  setShowExpenseDetails(true)
+}</pre>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">3. Creator Detection</h3>
+                    <pre class="bg-gray-900 text-green-400 p-4 rounded-xl text-sm overflow-x-auto">
+const isCreator = selectedExpense.paidBy === user?.name || 
+                  selectedExpense.paidBy === 'You'</pre>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Demo interactivity
+        document.querySelectorAll('.hover\\:shadow-md').forEach(el => {
+            el.addEventListener('click', () => {
+                alert('In the app, this would open the expense details modal!');
+            });
+        });
+
+        // Animate elements on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        });
+
+        document.querySelectorAll('section').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>

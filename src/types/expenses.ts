@@ -65,6 +65,31 @@ export function getExpenseCategoryColor(category: ExpenseCategory): string {
   return colors[category]
 }
 
+// Expense Events - separate from calendar events but can be linked
+export interface ExpenseEvent {
+  id: string
+  title: string
+  description?: string
+  location?: string
+  currency: string
+  status: 'active' | 'settled' | 'archived'
+  createdBy: string
+  calendarEventId?: string
+  totalAmount: number
+  participantCount: number
+  createdAt: Date
+  updatedAt: Date
+  settledAt?: Date
+  expenses?: Expense[]
+}
+
+export interface ExpenseEventParticipant {
+  expenseEventId: string
+  userId: string
+  joinedAt: Date
+  isActive: boolean
+}
+
 export function calculateUserBalance(expenses: Expense[], userId: string): UserBalance {
   let totalOwed = 0
   let totalOwedTo = 0

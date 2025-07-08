@@ -23,6 +23,7 @@ import type {
   SettlementInsert,
   PaginatedResponse
 } from '@/types/supabase'
+import type { ExpenseEvent } from '@/types/expenses'
 
 export const eventService = {
   async getEvents(page = 1, pageSize = 20): Promise<PaginatedResponse<EventWithDetails>> {
@@ -820,5 +821,152 @@ export const availabilityService = {
       .eq('id', id)
 
     if (error) throw error
+  }
+}
+
+export const expenseEventService = {
+  async getExpenseEvents(page = 1, pageSize = 20): Promise<PaginatedResponse<ExpenseEvent>> {
+    const start = (page - 1) * pageSize
+    const end = start + pageSize - 1
+
+    const { data, error, count } = await supabase
+      .from('expense_events')
+      .select(`
+        *,
+        expenses:expenses(*)
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(start, end)
+
+    if (error) throw error
+
+    return {
+      data: data || [],
+      count: count || 0,
+      page,
+      pageSize,
+      totalPages: Math.ceil((count || 0) / pageSize)
+    }
+  },
+
+  async getExpenseEvent(id: string): Promise<ExpenseEvent | null> {
+    const { data, error } = await supabase
+      .from('expense_events')
+      .select(`
+        *,
+        expenses:expenses(*)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async createExpenseEvent(eventData: {
+    title: string
+    description?: string
+    location?: string
+    currency: string
+    createdBy: string
+    participants: string[]
+  }): Promise<ExpenseEvent> {
+    // Create the expense event
+    const { data: expenseEvent, error: eventError } = await supabase
+      .from('expense_events')
+      .insert({
+        title: eventData.title,
+        description: eventData.description,
+        location: eventData.location,
+        currency: eventData.currency,
+        created_by: eventData.createdBy,
+        participant_count: eventData.participants.length
+      })
+      .select()
+      .single()
+
+    if (eventError) throw eventError
+
+    // Add participants
+    if (eventData.participants.length > 0) {
+      const participantInserts = eventData.participants.map(userId => ({
+        expense_event_id: expenseEvent.id,
+        user_id: userId
+      }))
+
+      const { error: participantsError } = await supabase
+        .from('expense_event_participants')
+        .insert(participantInserts)
+
+      if (participantsError) {
+        // If participants creation fails, delete the event to maintain consistency
+        await supabase.from('expense_events').delete().eq('id', expenseEvent.id)
+        throw participantsError
+      }
+    }
+
+    return expenseEvent
+  },
+
+  async updateExpenseEvent(id: string, updates: Partial<ExpenseEvent>): Promise<ExpenseEvent> {
+    const { data, error } = await supabase
+      .from('expense_events')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  async deleteExpenseEvent(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('expense_events')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
+  },
+
+  async addParticipant(expenseEventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('expense_event_participants')
+      .insert({
+        expense_event_id: expenseEventId,
+        user_id: userId
+      })
+
+    if (error) throw error
+
+    // Update participant count
+    const { error: updateError } = await supabase
+      .from('expense_events')
+      .update({
+        participant_count: supabase.rpc('increment_participant_count', { expense_event_id: expenseEventId })
+      })
+      .eq('id', expenseEventId)
+
+    if (updateError) console.warn('Failed to update participant count:', updateError)
+  },
+
+  async removeParticipant(expenseEventId: string, userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('expense_event_participants')
+      .delete()
+      .eq('expense_event_id', expenseEventId)
+      .eq('user_id', userId)
+
+    if (error) throw error
+
+    // Update participant count
+    const { error: updateError } = await supabase
+      .from('expense_events')
+      .update({
+        participant_count: supabase.rpc('decrement_participant_count', { expense_event_id: expenseEventId })
+      })
+      .eq('id', expenseEventId)
+
+    if (updateError) console.warn('Failed to update participant count:', updateError)
   }
 }

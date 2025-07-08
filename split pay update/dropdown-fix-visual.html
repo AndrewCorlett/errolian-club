@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Fix Visualization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes dropIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .drop-in {
+            animation: dropIn 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50">
+    <!-- Header -->
+    <div class="bg-white border-b border-blue-100 px-4 py-3">
+        <h1 class="text-xl font-bold text-purple-700 text-center">Dropdown Fix - Custom Implementation</h1>
+    </div>
+
+    <div class="max-w-4xl mx-auto p-4 space-y-8">
+        <!-- Problem Explanation -->
+        <div class="bg-red-50 rounded-3xl p-6 border border-red-200">
+            <h2 class="text-2xl font-bold text-red-900 mb-4">❌ The Problem</h2>
+            <div class="space-y-3">
+                <p class="text-red-700">Native HTML select dropdowns can be cut off by modal boundaries due to browser rendering limitations.</p>
+                <div class="bg-white rounded-xl p-4 max-w-sm">
+                    <label class="text-sm font-medium text-gray-700">Paid By (Native Select)</label>
+                    <select class="w-full mt-2 px-3 py-3 bg-gray-100 rounded-xl border-b-4 border-red-300">
+                        <option>⚠️ Dropdown gets cut off</option>
+                    </select>
+                    <p class="text-xs text-red-600 mt-2">The browser renders this outside the modal's bounds</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Solution -->
+        <div class="bg-green-50 rounded-3xl p-6 border border-green-200">
+            <h2 class="text-2xl font-bold text-green-900 mb-4">✅ The Solution</h2>
+            <div class="space-y-3">
+                <p class="text-green-700">Custom dropdown implementation that renders within the modal bounds.</p>
+                
+                <!-- Working Demo -->
+                <div class="bg-white rounded-xl p-4 max-w-sm relative">
+                    <label class="text-sm font-medium text-gray-700">Paid By (Custom Dropdown)</label>
+                    <div class="relative mt-2">
+                        <button
+                            id="dropdownButton"
+                            onclick="toggleDropdown()"
+                            class="w-full px-3 py-3 pr-8 bg-gray-100 rounded-xl text-left hover:bg-gray-200 transition-colors"
+                        >
+                            <span id="selectedText">Andrew (Me)</span>
+                        </button>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                        
+                        <!-- Custom Dropdown Menu -->
+                        <div id="dropdownMenu" class="hidden absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-200 z-50 max-h-48 overflow-y-auto drop-in">
+                            <button onclick="selectOption('Andrew (Me)')" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between">
+                                <span>Andrew (Me)</span>
+                                <svg id="check-andrew" class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                            <button onclick="selectOption('Patrick')" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between">
+                                <span>Patrick</span>
+                                <svg id="check-patrick" class="w-4 h-4 text-blue-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                            <button onclick="selectOption('Daniel')" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between">
+                                <span>Daniel</span>
+                                <svg id="check-daniel" class="w-4 h-4 text-blue-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                            <button onclick="selectOption('Callum')" class="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center justify-between">
+                                <span>Callum</span>
+                                <svg id="check-callum" class="w-4 h-4 text-blue-600 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-green-600 mt-2">✓ Dropdown renders within modal bounds</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Code Implementation -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Implementation Details</h2>
+            
+            <div class="bg-gray-900 rounded-xl p-4 overflow-x-auto">
+                <pre class="text-sm text-green-400"><code>// State for dropdown visibility
+const [showPaidByDropdown, setShowPaidByDropdown] = useState(false)
+
+// Custom dropdown button
+&lt;button
+  type="button"
+  onClick={() => setShowPaidByDropdown(!showPaidByDropdown)}
+  className="w-full px-3 py-3 pr-8 bg-gray-100 rounded-xl text-left"
+&gt;
+  {participants.find(p => p.id === paidBy)?.name || 'Select person'}
+&lt;/button&gt;
+
+// Dropdown menu
+{showPaidByDropdown && (
+  &lt;div className="absolute top-full left-0 right-0 mt-1 
+                  bg-white rounded-xl shadow-lg border 
+                  z-50 max-h-48 overflow-y-auto"&gt;
+    {participants.map(participant => (
+      &lt;button
+        key={participant.id}
+        onClick={() => {
+          setPaidBy(participant.id)
+          setShowPaidByDropdown(false)
+        }}
+        className="w-full px-3 py-2 text-left hover:bg-gray-50"
+      &gt;
+        {participant.name}
+      &lt;/button&gt;
+    ))}
+  &lt;/div&gt;
+)}</code></pre>
+            </div>
+        </div>
+
+        <!-- Visual Comparison -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Visual Comparison</h2>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Before -->
+                <div class="text-center">
+                    <h3 class="text-lg font-semibold text-red-600 mb-3">Before (Native Select)</h3>
+                    <div class="bg-gray-100 rounded-xl p-4 relative overflow-hidden" style="height: 200px;">
+                        <div class="bg-white rounded-xl p-3 shadow">
+                            <div class="text-sm font-medium mb-2">Paid By</div>
+                            <div class="bg-gray-100 rounded px-3 py-2 text-gray-700">
+                                Andrew (Me) ▼
+                            </div>
+                            <div class="absolute top-20 left-0 right-0 h-px bg-red-500"></div>
+                            <div class="absolute top-20 left-0 bg-red-100 px-2 py-1 text-xs text-red-600 rounded">
+                                Dropdown cut off here
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- After -->
+                <div class="text-center">
+                    <h3 class="text-lg font-semibold text-green-600 mb-3">After (Custom Dropdown)</h3>
+                    <div class="bg-gray-100 rounded-xl p-4 relative" style="height: 200px;">
+                        <div class="bg-white rounded-xl p-3 shadow">
+                            <div class="text-sm font-medium mb-2">Paid By</div>
+                            <div class="bg-gray-100 rounded px-3 py-2 text-gray-700 mb-1">
+                                Andrew (Me) ▼
+                            </div>
+                            <div class="bg-white rounded-lg shadow-lg border text-sm">
+                                <div class="px-3 py-2 hover:bg-gray-50">Andrew (Me) ✓</div>
+                                <div class="px-3 py-2 hover:bg-gray-50">Patrick</div>
+                                <div class="px-3 py-2 hover:bg-gray-50">Daniel</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Features -->
+        <div class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Custom Dropdown Features</h2>
+            
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">📍</div>
+                    <h3 class="font-semibold text-blue-800 mb-1">Stays in Bounds</h3>
+                    <p class="text-sm text-blue-700">Always renders within modal container</p>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">✅</div>
+                    <h3 class="font-semibold text-purple-800 mb-1">Visual Feedback</h3>
+                    <p class="text-sm text-purple-700">Shows checkmark for selected option</p>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                    <div class="text-2xl mb-2">🎯</div>
+                    <h3 class="font-semibold text-green-800 mb-1">Click Away to Close</h3>
+                    <p class="text-sm text-green-700">Dropdown closes when clicking elsewhere</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let dropdownOpen = false;
+        
+        function toggleDropdown() {
+            const menu = document.getElementById('dropdownMenu');
+            dropdownOpen = !dropdownOpen;
+            
+            if (dropdownOpen) {
+                menu.classList.remove('hidden');
+            } else {
+                menu.classList.add('hidden');
+            }
+        }
+        
+        function selectOption(name) {
+            document.getElementById('selectedText').textContent = name;
+            
+            // Hide all checkmarks
+            document.querySelectorAll('[id^="check-"]').forEach(el => {
+                el.classList.add('hidden');
+            });
+            
+            // Show selected checkmark
+            const checkId = 'check-' + name.toLowerCase().replace(' (me)', '').replace(' ', '-');
+            const checkElement = document.getElementById(checkId);
+            if (checkElement) {
+                checkElement.classList.remove('hidden');
+            }
+            
+            toggleDropdown();
+        }
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (dropdownOpen && !e.target.closest('#dropdownButton') && !e.target.closest('#dropdownMenu')) {
+                toggleDropdown();
+            }
+        });
+    </script>
+</body>
+</html>

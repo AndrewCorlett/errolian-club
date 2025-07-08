@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Pay Event Features Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50">
+    <!-- Demo Header -->
+    <div class="bg-white border-b border-blue-100 px-4 py-3">
+        <h1 class="text-xl font-bold text-purple-700 text-center">Split Pay Event Features Demo</h1>
+    </div>
+
+    <!-- Demo Sections -->
+    <div class="max-w-4xl mx-auto p-4 space-y-8">
+        <!-- Homepage Create Event -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">1. Homepage: Create Expense Event</h2>
+            <p class="text-gray-600 mb-4">The plus button on the homepage now creates expense events instead of individual expenses.</p>
+            
+            <div class="bg-gray-50 rounded-2xl p-4 mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-purple-700">Split Pay</h3>
+                    <button onclick="showCreateEventModal()" class="bg-purple-600 hover:bg-purple-700 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="text-center py-8">
+                    <div class="text-4xl mb-2">💳</div>
+                    <p class="text-sm text-gray-600">Click the plus button to create a new expense event</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Event Details Menu -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">2. Event Details: Three-Dot Menu</h2>
+            <p class="text-gray-600 mb-4">The event details page now has a three-dot menu with event settings.</p>
+            
+            <div class="bg-gray-50 rounded-2xl p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <button class="text-purple-600">←</button>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">🏌️</span>
+                        <span class="font-semibold text-purple-700">Golf Weekend</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="bg-purple-600 text-white rounded-full w-8 h-8 flex items-center justify-center">+</button>
+                        <button onclick="toggleMenu()" class="text-purple-600 p-1.5 rounded-lg hover:bg-purple-50">⋮</button>
+                    </div>
+                </div>
+                
+                <!-- Dropdown Menu -->
+                <div id="menu" class="hidden relative">
+                    <div class="absolute right-0 top-0 w-56 bg-white rounded-2xl shadow-lg border border-blue-100 fade-in">
+                        <button onclick="showEventSettings()" class="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 rounded-t-2xl">
+                            <span>⚙️</span>
+                            <span>Event Settings</span>
+                        </button>
+                        <div class="border-t border-gray-100"></div>
+                        <button class="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3">
+                            <span>📥</span>
+                            <span>Export Expenses</span>
+                        </button>
+                        <button class="w-full px-4 py-3 text-left hover:bg-blue-50 flex items-center gap-3 rounded-b-2xl">
+                            <span>🔗</span>
+                            <span>Share Event</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Summary -->
+        <section class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-3xl p-6 border border-purple-200">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Feature Summary</h2>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">🎯</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Create Expense Events</h3>
+                        <p class="text-sm text-purple-600">The homepage plus button now creates expense event categories (like "Dinner in Glasgow") instead of individual expenses.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">⚙️</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Event Settings</h3>
+                        <p class="text-sm text-purple-600">Edit event name, currency, and manage participants from the three-dot menu.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">💱</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Multi-Currency Support</h3>
+                        <p class="text-sm text-purple-600">Each event can have its own currency (GBP, EUR, USD, PLN, etc.).</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">👥</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Simple Participant Selection</h3>
+                        <p class="text-sm text-purple-600">Toggle participants from a list of all platform users - no searching needed.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Create Event Modal -->
+    <div id="createEventModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden">
+        <div class="bg-white rounded-3xl w-full max-w-md m-4 fade-in">
+            <div class="flex items-center justify-between p-4 border-b border-gray-100">
+                <button onclick="hideCreateEventModal()" class="text-blue-600 font-medium">Cancel</button>
+                <h2 class="text-lg font-semibold text-gray-900">New Expense Event</h2>
+                <button class="text-blue-600 font-medium">Create</button>
+            </div>
+            <div class="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Event Name</label>
+                    <input type="text" placeholder="E.g. Dinner in Glasgow" class="w-full px-3 py-3 bg-gray-100 border-0 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Location (Optional)</label>
+                    <input type="text" placeholder="E.g. Glasgow, Scotland" class="w-full px-3 py-3 bg-gray-100 border-0 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                    <select class="w-full px-3 py-3 bg-gray-100 border-0 rounded-xl">
+                        <option>£ GBP - British Pound</option>
+                        <option>€ EUR - Euro</option>
+                        <option>$ USD - US Dollar</option>
+                        <option>zł PLN - Polish Złoty</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Participants</label>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-blue-600 border-blue-600 border-2 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <span class="select-none">Andrew (Me)</span>
+                            </div>
+                            <span class="text-xs text-gray-500">You</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border-gray-300 bg-white border-2"></div>
+                                <span class="select-none">Callum Forsyth</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border-gray-300 bg-white border-2"></div>
+                                <span class="select-none">Daniel Corrigan</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border-gray-300 bg-white border-2"></div>
+                                <span class="select-none">Patrick Montgomery</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">Click to toggle participant selection</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Settings Modal -->
+    <div id="eventSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden">
+        <div class="bg-white rounded-3xl w-full max-w-md m-4 fade-in">
+            <div class="flex items-center justify-between p-4 border-b border-gray-100">
+                <button onclick="hideEventSettings()" class="text-blue-600 font-medium">Cancel</button>
+                <h2 class="text-lg font-semibold text-gray-900">Event Settings</h2>
+                <button class="text-blue-600 font-medium">Save</button>
+            </div>
+            <div class="p-4 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Event Name</label>
+                    <input type="text" value="Golf Weekend" class="w-full px-3 py-3 bg-gray-100 border-0 rounded-xl">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Currency</label>
+                    <select class="w-full px-3 py-3 bg-gray-100 border-0 rounded-xl">
+                        <option>£ GBP - British Pound</option>
+                        <option>€ EUR - Euro</option>
+                        <option>$ USD - US Dollar</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">Participants</label>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-blue-600 border-blue-600 border-2 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <span class="select-none">Andrew Corlett</span>
+                            </div>
+                            <span class="text-xs text-gray-500">You</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full bg-blue-600 border-blue-600 border-2 flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                                <span class="select-none">Callum Forsyth</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border-gray-300 bg-white border-2"></div>
+                                <span class="select-none">Daniel Corrigan</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors cursor-pointer">
+                            <div class="flex items-center gap-3">
+                                <div class="w-6 h-6 rounded-full border-gray-300 bg-white border-2"></div>
+                                <span class="select-none">Patrick Montgomery</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-4 border-t border-gray-100">
+                    <button class="w-full bg-red-50 hover:bg-red-100 text-red-600 font-medium py-3 px-4 rounded-xl">
+                        Delete Event
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleMenu() {
+            const menu = document.getElementById('menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function showCreateEventModal() {
+            document.getElementById('createEventModal').classList.remove('hidden');
+        }
+
+        function hideCreateEventModal() {
+            document.getElementById('createEventModal').classList.add('hidden');
+        }
+
+        function showEventSettings() {
+            document.getElementById('eventSettingsModal').classList.remove('hidden');
+            document.getElementById('menu').classList.add('hidden');
+        }
+
+        function hideEventSettings() {
+            document.getElementById('eventSettingsModal').classList.add('hidden');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('menu');
+            if (!e.target.closest('button') && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

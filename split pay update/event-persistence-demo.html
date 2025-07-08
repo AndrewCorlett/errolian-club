@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Pay Event Persistence Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-yellow-50 via-blue-50 to-purple-50">
+    <!-- Demo Header -->
+    <div class="bg-white border-b border-blue-100 px-4 py-3">
+        <h1 class="text-xl font-bold text-purple-700 text-center">Split Pay Event Persistence Demo</h1>
+    </div>
+
+    <!-- Demo Steps -->
+    <div class="max-w-4xl mx-auto p-4 space-y-8">
+        <!-- Summary Card -->
+        <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-3xl p-6 border border-purple-200">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Issues Fixed</h2>
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Event Settings Persistence</h3>
+                        <p class="text-sm text-purple-600">Event name and participant changes now save to Supabase and persist after refresh.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Z-Index Fixed</h3>
+                        <p class="text-sm text-purple-600">Dropdowns in modals now display properly with correct layering.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Expense Creation</h3>
+                        <p class="text-sm text-purple-600">Expenses can be created with participants and proper split calculations.</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-3">
+                    <span class="text-2xl">✅</span>
+                    <div>
+                        <h3 class="font-semibold text-purple-800">Console Errors Fixed</h3>
+                        <p class="text-sm text-purple-600">Removed undefined variable errors from EventSettingsModal.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Demo Flow -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-6">Test Flow</h2>
+            
+            <!-- Step 1 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                    <h3 class="text-lg font-semibold text-purple-800">Create Expense Event</h3>
+                </div>
+                <div class="ml-11 space-y-2">
+                    <p class="text-gray-600">Click the plus button on homepage to create a new expense event.</p>
+                    <div class="bg-gray-50 rounded-xl p-4 text-sm font-mono">
+                        Event Name: "Weekend Trip to Edinburgh"<br>
+                        Location: "Edinburgh, Scotland"<br>
+                        Currency: GBP<br>
+                        Participants: Select 2-3 users
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+                    <h3 class="text-lg font-semibold text-purple-800">Edit Event Settings</h3>
+                </div>
+                <div class="ml-11 space-y-2">
+                    <p class="text-gray-600">Click into the event, then use the three-dot menu to access Event Settings.</p>
+                    <div class="bg-gray-50 rounded-xl p-4 text-sm">
+                        • Change event name to "Edinburgh Golf Weekend"<br>
+                        • Add another participant<br>
+                        • Click Save and verify changes persist
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
+                    <h3 class="text-lg font-semibold text-purple-800">Add Expense</h3>
+                </div>
+                <div class="ml-11 space-y-2">
+                    <p class="text-gray-600">Click the plus button in the event header to add an expense.</p>
+                    <div class="bg-gray-50 rounded-xl p-4 text-sm font-mono">
+                        Title: "Dinner at The Witchery"<br>
+                        Amount: £250.00<br>
+                        Paid By: Select yourself<br>
+                        Split: Equally among all participants
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="mb-8">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">4</div>
+                    <h3 class="text-lg font-semibold text-purple-800">Verify Persistence</h3>
+                </div>
+                <div class="ml-11 space-y-2">
+                    <p class="text-gray-600">Hard refresh the page (Ctrl/Cmd + Shift + R) and verify:</p>
+                    <div class="bg-green-50 rounded-xl p-4 text-sm">
+                        ✓ Event name remains "Edinburgh Golf Weekend"<br>
+                        ✓ All participants are still selected<br>
+                        ✓ Expense "Dinner at The Witchery" is visible<br>
+                        ✓ Amounts and splits are correct
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Code Changes -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Key Code Changes</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">1. Event Settings Save Implementation</h3>
+                    <pre class="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto text-sm">
+const handleSave = async () => {
+  setSaving(true)
+  
+  if (eventId) {
+    await eventService.updateEvent(eventId, {
+      title: eventName,
+      // Additional fields as needed
+    })
+    
+    window.location.reload() // Refresh to show updates
+  }
+  
+  setSaving(false)
+}</pre>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">2. Z-Index Fix for Modals</h3>
+                    <pre class="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto text-sm">
+// Changed from z-50 to z-[60] for proper layering
+&lt;div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"&gt;
+  &lt;div className="bg-white rounded-3xl w-full max-w-md max-h-[90vh] overflow-visible relative"&gt;</pre>
+                </div>
+
+                <div>
+                    <h3 class="font-semibold text-purple-800 mb-2">3. Expense Creation with Participants</h3>
+                    <pre class="bg-gray-900 text-green-400 p-4 rounded-xl overflow-x-auto text-sm">
+const newExpense = await expenseService.createExpense(expenseData)
+
+// Add participants with proper split
+const participantPromises = participants
+  .filter(p => p.selected)
+  .map(p => expenseService.addParticipant(newExpense.id, {
+    user_id: p.id,
+    share_amount: p.amount,
+    is_paid: p.id === paidBy
+  }))
+
+await Promise.all(participantPromises)</pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Visual Demo -->
+        <section class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 class="text-2xl font-bold text-purple-900 mb-4">Visual Demo</h2>
+            
+            <!-- Mock Event Settings Modal -->
+            <div class="relative mb-6">
+                <div class="bg-gray-100 rounded-2xl p-4">
+                    <div class="text-center text-gray-500 mb-4">Event Settings Modal Preview</div>
+                    <div class="bg-white rounded-2xl p-4 shadow-lg max-w-sm mx-auto">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Event Name</label>
+                                <input type="text" value="Edinburgh Golf Weekend" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg" />
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Currency</label>
+                                <select class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg">
+                                    <option>£ GBP - British Pound</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Participants</label>
+                                <div class="mt-2 space-y-2">
+                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                        <div class="w-5 h-5 bg-blue-600 rounded-full"></div>
+                                        <span class="text-sm">Andrew (You)</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                        <div class="w-5 h-5 bg-blue-600 rounded-full"></div>
+                                        <span class="text-sm">Patrick</span>
+                                    </div>
+                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                        <div class="w-5 h-5 border-2 border-gray-300 rounded-full"></div>
+                                        <span class="text-sm">Daniel</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="w-full bg-blue-600 text-white py-2 rounded-lg font-medium">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mock Add Expense Modal with Dropdown -->
+            <div class="relative">
+                <div class="bg-gray-100 rounded-2xl p-4">
+                    <div class="text-center text-gray-500 mb-4">Add Expense Modal - Dropdown Fixed</div>
+                    <div class="bg-white rounded-2xl p-4 shadow-lg max-w-sm mx-auto">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Title</label>
+                                <input type="text" placeholder="E.g. Drinks" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg" />
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="relative">
+                                    <label class="text-sm font-medium text-gray-700">Paid By</label>
+                                    <select class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg appearance-none">
+                                        <option>Andrew (Me)</option>
+                                        <option>Patrick</option>
+                                        <option>Daniel</option>
+                                    </select>
+                                    <!-- Dropdown indicator -->
+                                    <div class="absolute right-2 top-9 pointer-events-none">
+                                        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-medium text-gray-700">When</label>
+                                    <input type="date" class="w-full mt-1 px-3 py-2 bg-gray-50 rounded-lg" />
+                                </div>
+                            </div>
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p class="text-sm text-green-700 font-medium">✓ Dropdown now displays properly</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Demo interaction
+        document.querySelectorAll('input, select').forEach(element => {
+            element.addEventListener('focus', () => {
+                element.classList.add('ring-2', 'ring-blue-500');
+            });
+            element.addEventListener('blur', () => {
+                element.classList.remove('ring-2', 'ring-blue-500');
+            });
+        });
+    </script>
+</body>
+</html>
