@@ -4,14 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
-import { userService, eventService } from '@/lib/database'
+import { userService } from '@/lib/database'
 import type { ExpenseCategory } from '@/types/supabase'
-import type { UserProfile, EventWithDetails } from '@/types/supabase'
+import type { UserProfile } from '@/types/supabase'
 
 interface AddExpenseModalProps {
   isOpen: boolean
   onClose: () => void
   onExpenseCreate: (expense: any) => void
+  expenseEventParticipants?: UserProfile[] // Optional: restrict to specific participants
 }
 
 type SplitMethod = 'equal' | 'custom' | 'percentage' | null
@@ -24,14 +25,13 @@ interface ParticipantShare {
   percentage?: number
 }
 
-export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: AddExpenseModalProps) {
+export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate, expenseEventParticipants }: AddExpenseModalProps) {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     amount: '',
     category: 'other' as ExpenseCategory,
-    event_id: '',
     paid_by: ''
   })
 
@@ -44,24 +44,21 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
   const [splitMethod, setSplitMethod] = useState<SplitMethod>(null)
   const [participants, setParticipants] = useState<ParticipantShare[]>([])
   const [users, setUsers] = useState<UserProfile[]>([])
-  const [events, setEvents] = useState<EventWithDetails[]>([])
   const [, setLoading] = useState(false)
 
-  // Load users and events when modal opens
+  // Load users when modal opens
   useEffect(() => {
     if (isOpen) {
       const loadData = async () => {
         try {
           setLoading(true)
-          const [usersResponse, eventsResponse] = await Promise.all([
-            userService.getUsers(),
-            eventService.getEvents(1, 50)
-          ])
-          setUsers(usersResponse)
-          setEvents(eventsResponse.data)
           
-          // Initialize participants with all users
-          const initialParticipants = usersResponse.map(user => ({
+          // Use expense event participants if provided, otherwise load all users
+          const usersToUse = expenseEventParticipants || await userService.getUsers()
+          setUsers(usersToUse)
+          
+          // Initialize participants with available users
+          const initialParticipants = usersToUse.map(user => ({
             userId: user.id,
             shareAmount: 0,
             isSelected: false
@@ -75,7 +72,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       }
       loadData()
     }
-  }, [isOpen])
+  }, [isOpen, expenseEventParticipants])
 
   // Calculate equal split when amount changes and method is equal
   React.useEffect(() => {
@@ -94,35 +91,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
   if (!isOpen || !user) return null
 
   // Use the loaded data instead of mock functions
-
-  const handleEventChange = (eventId: string) => {
-    setFormData(prev => ({ ...prev, event_id: eventId }))
-    
-    if (eventId) {
-      const event = events.find(e => e.id === eventId)
-      if (event && event.participants) {
-        // Auto-select event participants
-        const eventParticipants = event.participants.map(participant => ({
-          userId: participant.id,
-          shareAmount: 0,
-          isSelected: true,
-          customAmount: 0,
-          percentage: 0
-        }))
-        setParticipants(eventParticipants)
-      }
-    } else {
-      // Reset to all users
-      const allParticipants = users.map(user => ({
-        userId: user.id,
-        shareAmount: 0,
-        isSelected: false,
-        customAmount: 0,
-        percentage: 0
-      }))
-      setParticipants(allParticipants)
-    }
-  }
 
   const toggleParticipant = (userId: string) => {
     setParticipants(prev => {
@@ -205,7 +173,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       currency: 'GBP',
       category: formData.category,
       status: 'pending',
-      event_id: formData.event_id || null,
       paid_by: formData.paid_by,
       participants: expenseParticipants
     }
@@ -218,7 +185,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
       description: '',
       amount: '',
       category: 'other',
-      event_id: '',
       paid_by: user.id
     })
     setParticipants([])
@@ -327,22 +293,6 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate }: Ad
                   </Select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event (Optional)
-                  </label>
-                  <Select
-                    value={formData.event_id}
-                    onChange={(e) => handleEventChange(e.target.value)}
-                  >
-                    <option value="">No event (standalone)</option>
-                    {events.map(event => (
-                      <option key={event.id} value={event.id}>
-                        {event.title}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
               </div>
             </div>
 

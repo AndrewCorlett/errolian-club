@@ -6,9 +6,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { AutocompleteInput } from '@/components/places/AutocompleteInput'
 import { MapPreview } from '@/components/places/MapPreview'
 import { useAuth } from '@/hooks/useAuth'
+import { userService } from '@/lib/database'
 import ItineraryBuilder from './ItineraryBuilder'
 import type { EventType, EventStatus, ItineraryItem } from '@/types/events'
-import type { EventWithDetails } from '@/types/supabase'
+import type { EventWithDetails, UserProfile } from '@/types/supabase'
 import type { Place } from '@/types/places'
 
 interface NewEventSheetProps {
@@ -61,6 +62,35 @@ export default function NewEventSheet({
   // Itinerary state
   const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([])
 
+  // User management state
+  const [availableUsers, setAvailableUsers] = useState<UserProfile[]>([])
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+
+
+  // Load available users
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoadingUsers(true)
+        const users = await userService.getUsers()
+        setAvailableUsers(users)
+        
+        // Auto-select current user if not already selected
+        if (user && !selectedParticipants.includes(user.id)) {
+          setSelectedParticipants(prev => [...prev, user.id])
+        }
+      } catch (error) {
+        console.error('Failed to load users:', error)
+      } finally {
+        setLoadingUsers(false)
+      }
+    }
+
+    if (isOpen) {
+      loadUsers()
+    }
+  }, [isOpen, user])
 
   useEffect(() => {
     if (isOpen) {
@@ -88,6 +118,11 @@ export default function NewEventSheet({
           color: colorValue,
           notes: editEvent.description || ''
         })
+        
+        // Set selected participants from existing event
+        if (editEvent.participants && editEvent.participants.length > 0) {
+          setSelectedParticipants(editEvent.participants.map(p => p.id))
+        }
         
         // Set itinerary items if they exist
         if (editEvent.itinerary_items) {
@@ -123,9 +158,11 @@ export default function NewEventSheet({
           notes: ''
         })
         setItineraryItems([])
+        // Reset participants to just current user
+        setSelectedParticipants(user ? [user.id] : [])
       }
     }
-  }, [isOpen, selectedDate, editEvent])
+  }, [isOpen, selectedDate, editEvent, user])
 
   if (!isOpen && !isClosing) return null
 
@@ -158,6 +195,18 @@ export default function NewEventSheet({
       location: place.address,
       locationPlace: place
     }))
+  }
+
+  const toggleParticipant = (userId: string) => {
+    setSelectedParticipants(prev => {
+      if (prev.includes(userId)) {
+        // Don't allow removing current user
+        if (userId === user?.id) return prev
+        return prev.filter(id => id !== userId)
+      } else {
+        return [...prev, userId]
+      }
+    })
   }
 
   const handleEventSubmit = () => {
@@ -193,7 +242,8 @@ export default function NewEventSheet({
       max_participants: null,
       created_by: user.id,
       estimated_cost: totalCost > 0 ? totalCost : null,
-      color: colorOptions.find(opt => opt.value === eventData.color)?.color || '#8b5cf6'
+      color: colorOptions.find(opt => opt.value === eventData.color)?.color || '#8b5cf6',
+      selectedParticipants: selectedParticipants // Include selected participants
     }
 
     if (editEvent && onEventUpdate) {
@@ -483,6 +533,56 @@ export default function NewEventSheet({
                   placeholder="Add notes, description, or special instructions..."
                   rows={4}
                 />
+              </div>
+
+              {/* Participant Selection */}
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-2">
+                  Invite Participants
+                </label>
+                <Card className="rounded-xl">
+                  <CardContent className="p-4">
+                    {loadingUsers ? (
+                      <div className="text-center py-4 text-gray-500">Loading users...</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {availableUsers.map(userProfile => (
+                          <div
+                            key={userProfile.id}
+                            className={`flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer ${
+                              selectedParticipants.includes(userProfile.id)
+                                ? 'bg-primary-50 border border-primary-200'
+                                : 'bg-gray-50 hover:bg-gray-100'
+                            }`}
+                            onClick={() => toggleParticipant(userProfile.id)}
+                          >
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                              selectedParticipants.includes(userProfile.id)
+                                ? 'bg-primary-600 border-primary-600'
+                                : 'border-gray-300'
+                            }`}>
+                              {selectedParticipants.includes(userProfile.id) && (
+                                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{userProfile.name}</div>
+                              <div className="text-sm text-gray-500">{userProfile.email}</div>
+                            </div>
+                            {userProfile.id === user?.id && (
+                              <div className="text-xs text-primary-600 font-medium">You</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 text-sm text-gray-500">
+                      {selectedParticipants.length} participant{selectedParticipants.length !== 1 ? 's' : ''} selected
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           )}

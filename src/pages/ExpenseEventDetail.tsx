@@ -535,6 +535,7 @@ export default function ExpenseEventDetail() {
       <AddExpenseModal
         isOpen={showAddExpenseModal}
         onClose={() => setShowAddExpenseModal(false)}
+        expenseEventParticipants={participants}
         onExpenseCreate={async (expense) => {
           try {
             // For now, we'll use event_id to store the expense event ID

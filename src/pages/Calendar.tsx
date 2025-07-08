@@ -159,7 +159,7 @@ export default function Calendar() {
           location: newEvent.location || undefined,
           currency: 'GBP',
           createdBy: user.id,
-          participants: [user.id], // Start with creator as participant, others will be added when they join
+          participants: eventData.selectedParticipants || [user.id], // Use selected participants from calendar event
           calendar_event_id: newEvent.id // Link to calendar event using correct database column name
         }
         
