@@ -888,6 +888,7 @@ export const expenseEventService = {
     currency: string
     createdBy: string
     participants: string[]
+    calendar_event_id?: string
   }): Promise<ExpenseEvent> {
     // Create the expense event
     const { data: expenseEvent, error: eventError } = await supabase
@@ -898,7 +899,8 @@ export const expenseEventService = {
         location: eventData.location,
         currency: eventData.currency,
         created_by: eventData.createdBy,
-        participant_count: eventData.participants.length
+        participant_count: eventData.participants.length,
+        calendar_event_id: eventData.calendar_event_id
       })
       .select()
       .single()

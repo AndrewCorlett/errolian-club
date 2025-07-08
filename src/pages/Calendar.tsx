@@ -159,15 +159,11 @@ export default function Calendar() {
           location: newEvent.location || undefined,
           currency: 'GBP',
           createdBy: user.id,
-          participants: [user.id] // Start with creator as participant, others will be added when they join
+          participants: [user.id], // Start with creator as participant, others will be added when they join
+          calendar_event_id: newEvent.id // Link to calendar event using correct database column name
         }
         
         const expenseEvent = await expenseEventService.createExpenseEvent(expenseEventData)
-        
-        // Link the expense event to the calendar event by updating the expense event
-        await expenseEventService.updateExpenseEvent(expenseEvent.id, {
-          calendarEventId: newEvent.id
-        })
         
         console.log('Expense event created for calendar event:', expenseEvent)
       } catch (expenseErr) {

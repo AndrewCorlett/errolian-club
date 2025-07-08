@@ -74,7 +74,7 @@ export interface ExpenseEvent {
   currency: string
   status: 'active' | 'settled' | 'archived'
   createdBy: string
-  calendarEventId?: string
+  calendar_event_id?: string
   totalAmount: number
   participantCount: number
   createdAt: Date
