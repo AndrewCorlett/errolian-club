@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { expenseService } from '@/lib/database'
 import type { ExpenseWithDetails, Event } from '@/types/supabase'
+import { getExpenseStatusColor, getExpenseCategoryBgColor } from '@/utils/colorMapping'
 
-interface EventDetailSheetProps {
+interface ExpenseEventDetailSheetProps {
   isOpen: boolean
   onClose: () => void
   event: Event | null
@@ -16,7 +17,7 @@ interface EventDetailSheetProps {
   onDeleteExpense?: (expenseId: string) => void
 }
 
-export default function EventDetailSheet({ isOpen, onClose, event, groupKey, onAddExpense, onEditExpense, onDeleteExpense }: EventDetailSheetProps) {
+export default function ExpenseEventDetailSheet({ isOpen, onClose, event, groupKey, onAddExpense, onEditExpense, onDeleteExpense }: ExpenseEventDetailSheetProps) {
   const { user } = useAuth()
   const [expenses, setExpenses] = useState<ExpenseWithDetails[]>([])
   const [loading, setLoading] = useState(false)
@@ -88,26 +89,6 @@ export default function EventDetailSheet({ isOpen, onClose, event, groupKey, onA
   const totalAmount = expenses.reduce((sum, expense) => sum + Number(expense.amount), 0)
   const netBalance = userBalance.owing - userBalance.owed
 
-  const getExpenseStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800'
-      case 'pending': return 'bg-yellow-100 text-yellow-800'
-      case 'draft': return 'bg-gray-100 text-gray-800'
-      case 'settled': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getExpenseCategoryColor = (category: string) => {
-    switch (category) {
-      case 'accommodation': return 'bg-purple-500'
-      case 'food': return 'bg-orange-500'
-      case 'transport': return 'bg-blue-500'
-      case 'activities': return 'bg-green-500'
-      case 'equipment': return 'bg-gray-500'
-      default: return 'bg-gray-500'
-    }
-  }
 
   return (
     <>
@@ -235,7 +216,7 @@ export default function EventDetailSheet({ isOpen, onClose, event, groupKey, onA
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
-                              <div className={`w-3 h-3 rounded-full ${getExpenseCategoryColor(expense.category)}`} />
+                              <div className={`w-3 h-3 rounded-full ${getExpenseCategoryBgColor(expense.category)}`} />
                               <CardTitle className="text-lg">{expense.title}</CardTitle>
                               <span className={`text-xs px-2 py-1 rounded-full ${getExpenseStatusColor(expense.status)}`}>
                                 {expense.status}

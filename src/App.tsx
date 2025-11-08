@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute'
 import MainLayout from './components/layout/MainLayout'
 import SplashScreen from './components/ui/SplashScreen'
 import { LocationPickerDemo } from './components/places/demo/LocationPickerDemo'
+import { PWAInstallPrompt } from './components/layout/PWAInstallPrompt'
 
 // Public pages
 import Login from './pages/Login'
@@ -18,9 +19,6 @@ import SplitPayEventDetails from './pages/SplitPayEventDetails'
 import ExpenseEventDetail from './pages/ExpenseEventDetail'
 import Documents from './pages/Documents'
 import Account from './pages/Account'
-
-// Test pages
-import LocationTest from './pages/LocationTest'
 
 function App() {
   const [showSplashScreen, setShowSplashScreen] = useState(() => {
@@ -63,17 +61,17 @@ function App() {
   return (
     <AuthProvider>
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <div 
-          className="min-h-screen safe-area-full" 
+        <div
+          className="min-h-screen safe-area-full"
           style={{ backgroundColor: 'rgb(225, 220, 200)' }}
           data-app-ready="true"
         >
+          <PWAInstallPrompt />
           <Routes>
             {/* Public routes */}
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/register" element={<Register />} />
             <Route path="/test-autocomplete" element={<LocationPickerDemo />} />
-            <Route path="/test/location" element={<LocationTest />} />
             
             {/* Protected routes */}
             <Route path="/" element={

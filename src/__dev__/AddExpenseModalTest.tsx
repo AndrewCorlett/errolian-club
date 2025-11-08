@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import AddExpenseModalRedesigned from '@/components/splitpay/AddExpenseModalRedesigned'
+import AddExpenseModal from '@/components/splitpay/AddExpenseModal'
 
 export default function AddExpenseModalTest() {
   const [showModal, setShowModal] = useState(false)
@@ -39,7 +39,7 @@ export default function AddExpenseModalTest() {
       </div>
 
       {/* Modal */}
-      <AddExpenseModalRedesigned
+      <AddExpenseModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onExpenseCreate={handleExpenseCreate}

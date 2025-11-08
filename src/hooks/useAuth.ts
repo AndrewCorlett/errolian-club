@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { UserProfile, UserWithRole } from '@/types/supabase'
+import { ROLE_PERMISSIONS, type UserRole } from '@/types/user'
 
 interface UseAuthReturn {
   user: User | null
@@ -18,92 +19,7 @@ interface UseAuthReturn {
 
 // Role-based permissions
 const getPermissions = (role: string) => {
-  switch (role) {
-    case 'super-admin':
-      return {
-        canCreateEvents: true,
-        canEditAllEvents: true,
-        canDeleteAllEvents: true,
-        canApproveEvents: true,
-        canCreateExpenses: true,
-        canEditAllExpenses: true,
-        canDeleteAllExpenses: true,
-        canSettleExpenses: true,
-        canUploadDocuments: true,
-        canApproveDocuments: true,
-        canDeleteAllDocuments: true,
-        canManageFolders: true,
-        canInviteUsers: true,
-        canManageUserRoles: true,
-        canDeactivateUsers: true,
-        canModifySettings: true,
-        canViewAnalytics: true,
-        canExportData: true
-      }
-    case 'commodore':
-      return {
-        canCreateEvents: true,
-        canEditAllEvents: true,
-        canDeleteAllEvents: true,
-        canApproveEvents: true,
-        canCreateExpenses: true,
-        canEditAllExpenses: true,
-        canDeleteAllExpenses: true,
-        canSettleExpenses: true,
-        canUploadDocuments: true,
-        canApproveDocuments: true,
-        canDeleteAllDocuments: true,
-        canManageFolders: true,
-        canInviteUsers: true,
-        canManageUserRoles: true,
-        canDeactivateUsers: true,
-        canModifySettings: false,
-        canViewAnalytics: true,
-        canExportData: true
-      }
-    case 'officer':
-      return {
-        canCreateEvents: true,
-        canEditAllEvents: false,
-        canDeleteAllEvents: false,
-        canApproveEvents: true,
-        canCreateExpenses: true,
-        canEditAllExpenses: false,
-        canDeleteAllExpenses: false,
-        canSettleExpenses: true,
-        canUploadDocuments: true,
-        canApproveDocuments: true,
-        canDeleteAllDocuments: false,
-        canManageFolders: true,
-        canInviteUsers: false,
-        canManageUserRoles: false,
-        canDeactivateUsers: false,
-        canModifySettings: false,
-        canViewAnalytics: false,
-        canExportData: false
-      }
-    default: // 'member'
-      return {
-        canCreateEvents: true,
-        canEditAllEvents: false,
-        canDeleteAllEvents: false,
-        canApproveEvents: false,
-        canCreateExpenses: true,
-        canEditAllExpenses: false,
-        canDeleteAllExpenses: false,
-        canSettleExpenses: false,
-        canUploadDocuments: true,
-        canApproveDocuments: false,
-        canDeleteAllDocuments: false,
-        canManageFolders: false,
-        canInviteUsers: false,
-        canManageUserRoles: false,
-        canDeactivateUsers: false,
-        canModifySettings: false,
-        canViewAnalytics: false,
-        canExportData: false
-      }
-  }
+  return ROLE_PERMISSIONS[role as UserRole] || ROLE_PERMISSIONS['member']
 }
 
 export function useAuth(): UseAuthReturn {
@@ -120,6 +36,8 @@ export function useAuth(): UseAuthReturn {
 
 
   useEffect(() => {
+    console.log('useAuth: Initializing authentication...')
+
     // Check for development auth bypass
     if (checkAuthBypass()) {
       console.log('🚀 Development auth bypass activated - God mode enabled!')
@@ -129,6 +47,7 @@ export function useAuth(): UseAuthReturn {
         id: 'dev-bypass-user',
         email: 'dev@bypass.local',
         user_metadata: { name: 'Dev Bypass User' },
+        app_metadata: { provider: 'email', providers: ['email'] },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         aud: 'authenticated',
@@ -140,6 +59,9 @@ export function useAuth(): UseAuthReturn {
         email: 'dev@bypass.local',
         name: 'Dev Bypass User',
         role: 'super-admin',
+        avatar_url: null,
+        member_since: new Date().toISOString(),
+        is_active: true,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         permissions: getPermissions('super-admin')
@@ -158,22 +80,42 @@ export function useAuth(): UseAuthReturn {
       return
     }
 
-    // Get initial session
+    // Get initial session with timeout
     const getInitialSession = async () => {
-      const { data: { session }, error } = await supabase.auth.getSession()
+      try {
+        console.log('useAuth: Fetching initial session from Supabase...')
 
-      if (error) {
-        console.error('Error getting session:', error)
-      } else {
-        setSession(session)
-        setUser(session?.user ?? null)
+        // Set a timeout to prevent infinite loading
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Session fetch timeout')), 5000)
+        )
 
-        if (session?.user) {
-          await fetchUserProfile(session.user.id)
+        const sessionPromise = supabase.auth.getSession()
+
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any
+
+        if (error) {
+          console.error('useAuth: Error getting session:', error)
+        } else {
+          console.log('useAuth: Session fetched successfully:', session ? 'User logged in' : 'No active session')
+          setSession(session)
+          setUser(session?.user ?? null)
+
+          if (session?.user) {
+            console.log('useAuth: Fetching user profile...')
+            await fetchUserProfile(session.user.id)
+          }
         }
+      } catch (error) {
+        console.error('useAuth: Failed to get initial session:', error)
+        // Still set loading to false even on error so app doesn't hang
+      } finally {
+        console.log('useAuth: Setting loading to false')
+        setLoading(false)
       }
-
-      setLoading(false)
     }
 
     getInitialSession()

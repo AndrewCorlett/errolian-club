@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { EventWithDetails } from '@/types/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { getEventTypeColor, getEventStatusColor, getItineraryTypeColor } from '@/utils/colorMapping'
 
-interface EventDetailSheetProps {
+interface CalendarEventDetailSheetProps {
   event: EventWithDetails | null
   isOpen: boolean
   onClose: () => void
@@ -13,14 +14,14 @@ interface EventDetailSheetProps {
   onJoinLeave?: (event: EventWithDetails, action: 'join' | 'leave') => void
 }
 
-export default function EventDetailSheet({ 
+export default function CalendarEventDetailSheet({ 
   event, 
   isOpen, 
   onClose, 
   onEdit, 
   onDelete,
-  onJoinLeave 
-}: EventDetailSheetProps) {
+  onJoinLeave
+}: CalendarEventDetailSheetProps) {
   const { user } = useAuth()
 
   if (!isOpen || !event) return null
@@ -33,26 +34,6 @@ export default function EventDetailSheet({
   const canDelete = user ? (isCreator || user.role === 'super-admin' || user.role === 'commodore') : false
   const isFull = event.max_participants ? participants.length >= event.max_participants : false
   
-  // Helper functions for colors
-  const getEventTypeColor = (type: string) => {
-    switch (type) {
-      case 'adventure': return '#10b981'
-      case 'meeting': return '#3b82f6'
-      case 'social': return '#f59e0b'
-      case 'training': return '#8b5cf6'
-      default: return '#6b7280'
-    }
-  }
-  
-  const getEventStatusColor = (status: string) => {
-    switch (status) {
-      case 'published': return '#10b981'
-      case 'draft': return '#f59e0b'
-      case 'cancelled': return '#ef4444'
-      case 'completed': return '#6b7280'
-      default: return '#6b7280'
-    }
-  }
 
   const handleJoinLeave = () => {
     if (!user || !onJoinLeave) return
@@ -254,7 +235,7 @@ export default function EventDetailSheet({
                             <p className="text-sm text-gray-600 mt-1">{event.itinerary_items[0].description}</p>
                           )}
                           <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                            <span className={`px-2 py-1 rounded ${getEventTypeColor(event.itinerary_items[0]?.type as any)}`}>
+                            <span className={`px-2 py-1 rounded ${getItineraryTypeColor(event.itinerary_items[0]?.type || 'other')}`}>
                               {event.itinerary_items[0]?.type || 'activity'}
                             </span>
                             {event.itinerary_items[0]?.location && (

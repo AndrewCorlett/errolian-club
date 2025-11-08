@@ -43,27 +43,7 @@ export interface UserBalance {
   netBalance: number // Positive = owed money, Negative = owes money
 }
 
-export function getExpenseStatusColor(status: ExpenseStatus): string {
-  const colors: Record<ExpenseStatus, string> = {
-    'draft': 'bg-gray-100 text-gray-800',
-    'pending': 'bg-yellow-100 text-yellow-800',
-    'approved': 'bg-green-100 text-green-800',
-    'settled': 'bg-blue-100 text-blue-800'
-  }
-  return colors[status]
-}
-
-export function getExpenseCategoryColor(category: ExpenseCategory): string {
-  const colors: Record<ExpenseCategory, string> = {
-    'accommodation': 'bg-blue-100 text-blue-800',
-    'food': 'bg-orange-100 text-orange-800',
-    'transport': 'bg-green-100 text-green-800',
-    'activities': 'bg-purple-100 text-purple-800',
-    'equipment': 'bg-gray-100 text-gray-800',
-    'other': 'bg-gray-100 text-gray-800'
-  }
-  return colors[category]
-}
+export { getExpenseStatusColor, getExpenseCategoryColor } from '@/utils/colorMapping'
 
 // Expense Events - separate from calendar events but can be linked
 export interface ExpenseEvent {

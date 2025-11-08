@@ -7,11 +7,12 @@ import { useAuth } from '@/hooks/useAuth'
 import { userService } from '@/lib/database'
 import type { ExpenseCategory } from '@/types/supabase'
 import type { UserProfile } from '@/types/supabase'
+import type { Expense } from '@/types/expenses'
 
 interface AddExpenseModalProps {
   isOpen: boolean
   onClose: () => void
-  onExpenseCreate: (expense: any) => void
+  onExpenseCreate: (expense: Partial<Expense>) => void
   expenseEventParticipants?: UserProfile[] // Optional: restrict to specific participants
 }
 
@@ -136,7 +137,7 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate, expe
 
 
   const selectedParticipants = participants.filter(p => p.isSelected)
-  const totalShares = selectedParticipants.reduce((sum: number, p: any) => sum + p.shareAmount, 0)
+  const totalShares = selectedParticipants.reduce((sum: number, p: ParticipantShare) => sum + p.shareAmount, 0)
   const totalAmount = parseFloat(formData.amount) || 0
   const isValidSplit = Math.abs(totalShares - totalAmount) < 0.01
 
@@ -160,20 +161,20 @@ export default function AddExpenseModal({ isOpen, onClose, onExpenseCreate, expe
     }
 
     const expenseParticipants = selectedParticipants.map(p => ({
-      user_id: p.userId,
-      share_amount: p.shareAmount,
-      is_paid: p.userId === formData.paid_by, // Mark as paid if they're the one who paid
-      paid_at: p.userId === formData.paid_by ? new Date().toISOString() : null
+      userId: p.userId,
+      shareAmount: p.shareAmount,
+      isPaid: p.userId === formData.paid_by, // Mark as paid if they're the one who paid
+      paidAt: p.userId === formData.paid_by ? new Date() : undefined
     }))
 
     const newExpense = {
       title: formData.title.trim(),
-      description: formData.description.trim() || null,
+      description: formData.description.trim() || undefined,
       amount: totalAmount,
       currency: 'GBP',
       category: formData.category,
-      status: 'pending',
-      paid_by: formData.paid_by,
+      status: 'pending' as const,
+      paidBy: formData.paid_by,
       participants: expenseParticipants
     }
 

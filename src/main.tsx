@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { registerSW } from 'virtual:pwa-register'
 
 // Add error handling for CSS loading issues
 window.addEventListener('error', (e) => {
@@ -21,6 +22,17 @@ import workerSrc from 'pdfjs-dist/build/pdf.worker.js?url'
 
 // Set worker source using local worker file (Vite ?url suffix returns the URL string)
 GlobalWorkerOptions.workerSrc = workerSrc
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('New content available. Reload?')) {
+      updateSW(true)
+    }
+  },
+  onOfflineReady() {
+    console.log('App ready to work offline')
+  },
+})
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

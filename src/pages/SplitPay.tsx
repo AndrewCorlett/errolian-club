@@ -6,11 +6,13 @@ import IOSHeader, { IOSActionButton } from '@/components/layout/IOSHeader'
 import { eventService } from '@/lib/database'
 import { useAuth } from '@/hooks/useAuth'
 import SettleUpModal from '@/components/splitpay/SettleUpModal'
+import { getStatusClasses } from '@/utils/colorMapping'
+import type { ExpenseEvent } from '@/types/expenses'
 
 export default function SplitPay() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [expenseEvents, setExpenseEvents] = useState<any[]>([])
+  const [expenseEvents, setExpenseEvents] = useState<ExpenseEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [userBalance, setUserBalance] = useState({ owed: 0, owing: 0 })
@@ -32,14 +34,15 @@ export default function SplitPay() {
         const mockExpenseEvents = eventsResponse.data.map(event => ({
           id: event.id,
           title: event.title,
-          description: event.description,
-          location: event.location,
+          description: event.description || undefined,
+          location: event.location || undefined,
           currency: 'GBP',
-          status: 'active',
+          status: 'active' as const,
           createdBy: event.created_by,
           totalAmount: 0,
           participantCount: event.participants?.length || 1,
-          createdAt: event.created_at
+          createdAt: new Date(event.created_at),
+          updatedAt: new Date(event.updated_at)
         }))
         
         setExpenseEvents(mockExpenseEvents)
@@ -65,7 +68,7 @@ export default function SplitPay() {
     navigate(`/split-pay/events/${expenseEventId}`)
   }
 
-  const getExpenseEventIcon = (expenseEvent: any) => {
+  const getExpenseEventIcon = (expenseEvent: ExpenseEvent) => {
     // Return appropriate icon based on event or default
     if (expenseEvent.location?.toLowerCase().includes('restaurant') || expenseEvent.title.toLowerCase().includes('dinner')) {
       return '🍽️'
@@ -82,14 +85,6 @@ export default function SplitPay() {
     return '💰'
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return 'bg-amber-100 text-amber-800'
-      case 'settled': return 'bg-green-100 text-green-800'
-      case 'active': return 'bg-blue-100 text-blue-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
 
 
   if (loading) {
@@ -215,7 +210,7 @@ export default function SplitPay() {
                   {/* Amount and Status */}
                   <div className="text-right">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(expenseEvent.status)}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${getStatusClasses(expenseEvent.status)}`}>
                         {expenseEvent.status}
                       </span>
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +257,7 @@ export default function SplitPay() {
             if (!user) return
             try {
               // TODO: Load expense events data
-              const expenseEventsData: any[] = []
+              const expenseEventsData: ExpenseEvent[] = []
               setExpenseEvents(expenseEventsData || [])
               // TODO: Update balance calculation
             } catch (err) {

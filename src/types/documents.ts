@@ -80,27 +80,7 @@ export function getDocumentTypeIcon(type: DocumentType): string {
   return icons[type]
 }
 
-export function getDocumentTypeColor(type: DocumentType): string {
-  const colors: Record<DocumentType, string> = {
-    'pdf': 'bg-red-100 text-red-800',
-    'image': 'bg-green-100 text-green-800',
-    'video': 'bg-purple-100 text-purple-800',
-    'audio': 'bg-blue-100 text-blue-800',
-    'doc': 'bg-blue-100 text-blue-800',
-    'spreadsheet': 'bg-green-100 text-green-800',
-    'other': 'bg-gray-100 text-gray-800'
-  }
-  return colors[type]
-}
-
-export function getDocumentStatusColor(status: DocumentStatus): string {
-  const colors: Record<DocumentStatus, string> = {
-    'pending': 'bg-yellow-100 text-yellow-800',
-    'approved': 'bg-green-100 text-green-800',
-    'rejected': 'bg-red-100 text-red-800'
-  }
-  return colors[status]
-}
+export { getDocumentTypeColor, getDocumentStatusColor } from '@/utils/colorMapping'
 
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'

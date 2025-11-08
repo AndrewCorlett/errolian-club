@@ -3,7 +3,7 @@ import VerticalCalendar from '@/components/calendar/VerticalCalendar'
 import DayViewSheet from '@/components/calendar/DayViewSheet'
 import NewEventSheet from '@/components/calendar/NewEventSheet'
 import CalendarFilters from '@/components/calendar/CalendarFilters'
-import EventDetailSheet from '@/components/calendar/EventDetailSheet'
+import CalendarEventDetailSheet from '@/components/calendar/CalendarEventDetailSheet'
 import ItineraryDetailSheet from '@/components/calendar/ItineraryDetailSheet'
 import CalendarActionDropdown from '@/components/calendar/CalendarActionDropdown'
 import AvailabilitySheet from '@/components/calendar/AvailabilitySheet'
@@ -601,7 +601,7 @@ export default function Calendar() {
       />
 
       {/* Event Detail Sheet */}
-      <EventDetailSheet
+      <CalendarEventDetailSheet
         event={selectedEvent}
         isOpen={showEventDetail}
         onClose={() => setShowEventDetail(false)}
