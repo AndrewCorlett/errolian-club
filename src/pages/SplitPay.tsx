@@ -58,7 +58,7 @@ export default function SplitPay() {
   }, [user])
 
   const handleCreateExpenseEvent = () => {
-    navigate('/split-pay/new-expense-event')
+    navigate('/split-pay/new-expense')
   }
 
   const handleExpenseEventClick = (expenseEventId: string) => {

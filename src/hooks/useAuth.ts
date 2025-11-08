@@ -112,42 +112,91 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Development auth bypass
+  const checkAuthBypass = () => {
+    const urlParams = new URLSearchParams(window.location.search)
+    return urlParams.has('bypass') && import.meta.env.DEV
+  }
+
 
   useEffect(() => {
+    // Check for development auth bypass
+    if (checkAuthBypass()) {
+      console.log('🚀 Development auth bypass activated - God mode enabled!')
+
+      // Create mock user with god permissions
+      const mockUser = {
+        id: 'dev-bypass-user',
+        email: 'dev@bypass.local',
+        user_metadata: { name: 'Dev Bypass User' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        aud: 'authenticated',
+        role: 'authenticated'
+      } as User
+
+      const mockProfile: UserWithRole = {
+        id: 'dev-bypass-user',
+        email: 'dev@bypass.local',
+        name: 'Dev Bypass User',
+        role: 'super-admin',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        permissions: getPermissions('super-admin')
+      }
+
+      setUser(mockUser)
+      setProfile(mockProfile)
+      setSession({
+        access_token: 'dev-bypass-token',
+        refresh_token: 'dev-bypass-refresh',
+        expires_at: Date.now() / 1000 + 3600, // 1 hour from now
+        token_type: 'bearer',
+        user: mockUser
+      } as Session)
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     const getInitialSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession()
-      
+
       if (error) {
         console.error('Error getting session:', error)
       } else {
         setSession(session)
         setUser(session?.user ?? null)
-        
+
         if (session?.user) {
           await fetchUserProfile(session.user.id)
         }
       }
-      
+
       setLoading(false)
     }
 
     getInitialSession()
 
+    // Skip auth state change listener if using bypass
+    if (checkAuthBypass()) {
+      return () => {}
+    }
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: any, session: any) => {
         console.log('Auth state changed:', event, session?.user?.email)
-        
+
         setSession(session)
         setUser(session?.user ?? null)
-        
+
         if (session?.user) {
           await fetchUserProfile(session.user.id)
         } else {
           setProfile(null)
         }
-        
+
         setLoading(false)
       }
     )
@@ -243,14 +292,26 @@ export function useAuth(): UseAuthReturn {
   }
 
   const signOut = async () => {
+    // Handle bypass mode sign out
+    if (checkAuthBypass()) {
+      setUser(null)
+      setProfile(null)
+      setSession(null)
+      // Remove bypass parameter from URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('bypass')
+      window.history.replaceState({}, '', url.toString())
+      return { error: null }
+    }
+
     const { error } = await supabase.auth.signOut()
-    
+
     if (!error) {
       setUser(null)
       setProfile(null)
       setSession(null)
     }
-    
+
     return { error }
   }
 
